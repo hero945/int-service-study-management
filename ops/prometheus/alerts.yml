@@ -1,0 +1,22 @@
+groups:
+  - name: study-management
+    rules:
+      - alert: StudyManagementDown
+        expr: up{job="study-management"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "研发管线服务不可用"
+      - alert: HighHttp5xxRate
+        expr: sum(rate(http_server_requests_seconds_count{application="study-management",status=~"5.."}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{application="study-management"}[5m])), 0.001) > 0.05
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "服务 5xx 比例连续 10 分钟超过 5%"
+      - alert: HighJvmHeapUsage
+        expr: sum(jvm_memory_used_bytes{application="study-management",area="heap"}) / sum(jvm_memory_max_bytes{application="study-management",area="heap"}) > 0.85
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "JVM 堆内存使用率超过 85%"
+

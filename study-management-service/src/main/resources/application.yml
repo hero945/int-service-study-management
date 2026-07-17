@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: study-management
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/study_management?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${DB_USERNAME:study_app}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+  flyway:
+    enabled: true
+  session:
+    timeout: ${SESSION_TIMEOUT:30m}
+    jdbc:
+      initialize-schema: never
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+  shutdown: graceful
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
+management:
+  server:
+    port: ${MANAGEMENT_PORT:9090}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,flyway
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+app:
+  bootstrap:
+    admin-username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+    admin-display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:系统管理员}

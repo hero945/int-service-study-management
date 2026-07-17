@@ -1,0 +1,16 @@
+/* Small cascade fixes kept separate from the minified base stylesheet. */
+[hidden] {
+  display: none !important;
+}
+
+.brand-panel h1 {
+  font-size: clamp(40px, 4.2vw, 60px);
+  letter-spacing: -2px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .brand-panel h1 {
+    white-space: normal;
+  }
+}

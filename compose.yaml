@@ -1,0 +1,91 @@
+name: study-management
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: study_management
+      MYSQL_USER: study_app
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      TZ: Asia/Shanghai
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysqladmin ping -h 127.0.0.1 -u$$MYSQL_USER --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [backend]
+
+  app:
+    build: .
+    image: ghcr.io/replace-with-org/study-management:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/study_management?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      DB_USERNAME: study_app
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_DISPLAY_NAME: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:-系统管理员}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      MANAGEMENT_PORT: 9090
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:8080:8080"
+    expose: ["9090"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080; printf \"GET /actuator/health/readiness HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    networks: [frontend, backend, monitoring]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=30d"]
+    volumes:
+      - ./ops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9091:9090"
+    networks: [monitoring]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks: [monitoring]
+
+networks:
+  frontend: {}
+  backend:
+    internal: true
+  monitoring:
+    internal: true
+volumes:
+  mysql-data: {}
+  prometheus-data: {}
+  grafana-data: {}

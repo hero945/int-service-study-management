@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>临床研发管理平台</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/overrides.css">
+</head>
+<body>
+  <main id="loginView" class="login-layout">
+    <section class="brand-panel">
+      <div class="brand-mark">HD</div>
+      <p class="eyebrow">RESEARCH OPERATIONS</p>
+      <h1>让研发管线<br>清晰、可信、可行动</h1>
+      <p class="brand-copy">统一管理研究项目、关键状态与平台配置。当前版本聚焦最小闭环，并为后续平台功能预留统一入口。</p>
+    </section>
+    <section class="login-panel">
+      <form id="loginForm" class="login-card">
+        <p class="eyebrow">WELCOME BACK</p>
+        <h2>登录管理平台</h2>
+        <p class="muted">使用管理员提供的内部账号登录</p>
+        <label>用户名<input name="username" autocomplete="username" required></label>
+        <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+        <p id="loginError" class="error" role="alert"></p>
+        <button class="primary" type="submit">登录平台</button>
+      </form>
+    </section>
+  </main>
+
+  <div id="appView" class="app-layout" hidden>
+    <aside class="sidebar">
+      <div class="logo-row"><div class="brand-mark small">HD</div><strong id="platformName">研发管理平台</strong></div>
+      <nav>
+        <button class="nav-item active" data-view="pipeline"><span>◫</span>临床研发管线</button>
+        <button id="adminNav" class="nav-item" data-view="admin" hidden><span>⚙</span>平台管理</button>
+      </nav>
+      <div class="sidebar-footer"><span class="status-dot"></span>服务运行正常</div>
+    </aside>
+    <section class="workspace">
+      <header class="topbar">
+        <div><p class="eyebrow">HUADONG R&D</p><strong>研发运营工作台</strong></div>
+        <div class="user-row"><div class="avatar" id="avatar">管</div><div><strong id="displayName"></strong><small id="userRole"></small></div><button id="logoutButton" class="text-button">退出</button></div>
+      </header>
+
+      <main id="pipelinePanel" class="content">
+        <div class="page-title"><div><p class="eyebrow">CLINICAL PIPELINE</p><h1>临床研发管线</h1><p class="muted">研究项目的统一视图，状态与统计由服务端实时计算。</p></div><button id="openStudyDialog" class="primary">＋ 新建项目</button></div>
+        <section id="metrics" class="metric-grid"></section>
+        <section class="card">
+          <div class="card-header"><div><h2>研究项目</h2><p class="muted">按最近更新时间排序</p></div><span id="studyCount" class="count-pill">0 项</span></div>
+          <div class="table-wrap"><table><thead><tr><th>项目编号</th><th>研究名称</th><th>适应症</th><th>分期</th><th>状态</th><th>负责人</th><th>启动日期</th></tr></thead><tbody id="studyRows"></tbody></table></div>
+          <div id="emptyStudies" class="empty"><div>◇</div><h3>还没有研究项目</h3><p>创建第一个项目，开始建立临床研发管线。</p></div>
+        </section>
+      </main>
+
+      <main id="adminPanel" class="content" hidden>
+        <div class="page-title"><div><p class="eyebrow">PLATFORM ADMIN</p><h1>平台管理</h1><p class="muted">账号与运行期业务配置在这里统一管理。</p></div></div>
+        <div class="admin-grid">
+          <section class="card"><div class="card-header"><div><h2>动态配置</h2><p class="muted">保存后立即生效，无需重启</p></div></div><div id="settingsList" class="settings-list"></div></section>
+          <section class="card"><div class="card-header"><div><h2>平台账号</h2><p class="muted">密码不会在页面或接口中返回</p></div><button id="openUserDialog" class="secondary">新建账号</button></div><div id="userList" class="user-list"></div></section>
+        </div>
+      </main>
+    </section>
+  </div>
+
+  <dialog id="studyDialog"><form id="studyForm" method="dialog"><div class="dialog-head"><div><p class="eyebrow">NEW STUDY</p><h2>新建研究项目</h2></div><button type="button" class="icon-button close-dialog">×</button></div><div class="form-grid"><label>项目编号<input name="code" maxlength="50" placeholder="例如 HD-001" required></label><label>研究名称<input name="name" maxlength="200" required></label><label>适应症<input name="indication" maxlength="200" required></label><label>研究分期<select name="phase" required><option>I期</option><option>II期</option><option>III期</option><option>IV期</option><option>其他</option></select></label><label>项目状态<select name="status"><option value="PLANNED">计划中</option><option value="ACTIVE">进行中</option><option value="ON_HOLD">已暂停</option><option value="COMPLETED">已完成</option></select></label><label>负责人<input name="ownerName" maxlength="100" required></label><label>启动日期<input name="startDate" type="date"></label></div><p class="error form-error"></p><div class="dialog-actions"><button type="button" class="secondary close-dialog">取消</button><button type="submit" class="primary">保存项目</button></div></form></dialog>
+
+<dialog id="userDialog"><form id="userForm" method="dialog"><div class="dialog-head"><div><p class="eyebrow">NEW ACCOUNT</p><h2>新建平台账号</h2></div><button type="button" class="icon-button close-dialog">×</button></div><div class="form-grid one"><label>用户名<input name="username" pattern="[A-Za-z0-9._\-]{3,64}" required></label><label>显示名称<input name="displayName" maxlength="100" required></label><label>初始密码<input name="password" type="password" minlength="12" maxlength="128" required><small>至少 12 位，请通过安全渠道告知用户</small></label><label>角色<select name="role"><option value="USER">普通用户</option><option value="ADMIN">管理员</option></select></label></div><p class="error form-error"></p><div class="dialog-actions"><button type="button" class="secondary close-dialog">取消</button><button type="submit" class="primary">创建账号</button></div></form></dialog>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

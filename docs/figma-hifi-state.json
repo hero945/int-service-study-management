@@ -1,0 +1,34 @@
+{
+  "runId": "pipeline-hifi-20260716",
+  "fileKey": "7N1zUSYoZKVFYR2L72KV1e",
+  "phase": "phase2",
+  "completedSteps": ["phase0", "phase1", "phase2.structure", "phase2.foundations"],
+  "entities": {
+    "collections": {"pipelineUiTokens": "VariableCollectionId:7:2"},
+    "pages": {
+      "screens": "0:1",
+      "foundations": "10:2",
+      "components": "10:3"
+    },
+    "documentationRoots": {
+      "foundations": "12:2"
+    },
+    "screenRoots": {
+      "pipeline": "2:2",
+      "study": "2:7",
+      "monthly": "2:12",
+      "risk": "2:17",
+      "team": "2:22",
+      "config": "2:27",
+      "report": "2:32",
+      "account": "2:37",
+      "milestone": "2:42"
+    }
+  },
+  "pendingValidations": ["foundationsScreenshot", "components", "screens"],
+  "resume": {
+    "blockedBy": "Figma Starter MCP tool call limit",
+    "nextStep": "Capture node 12:2 screenshot, then build Components and replace the nine screen roots in place",
+    "lastSuccessfulNode": "12:2"
+  }
+}

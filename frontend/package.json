@@ -1,0 +1,10 @@
+{
+  "name": "study-management-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "check": "node --check src/app.js && node scripts/build.js"
+  }
+}

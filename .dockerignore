@@ -1,0 +1,72 @@
+# -----------------------------------------------------------------------------
+# Version-control and local tooling metadata
+# -----------------------------------------------------------------------------
+.git
+.gitignore
+.gitattributes
+.github
+.idea
+.vscode
+.run
+.tools
+.codex
+.agents
+*.iml
+
+# -----------------------------------------------------------------------------
+# Secrets and machine-local configuration
+# -----------------------------------------------------------------------------
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+**/application-local.yml
+**/application-local.yaml
+**/application-local.properties
+**/application-*.local.yml
+**/application-*.local.yaml
+**/application-*.local.properties
+
+# -----------------------------------------------------------------------------
+# Build outputs, dependencies, caches, and local databases
+# -----------------------------------------------------------------------------
+**/target
+frontend/dist
+**/node_modules
+.npm
+coverage
+.nyc_output
+*.mv.db
+*.trace.db
+*.lock.db
+*.log
+*.tmp
+*.temp
+hs_err_pid*
+replay_pid*
+
+# -----------------------------------------------------------------------------
+# Files not used by the image build
+# Keep frontend/src/**/*.html: Maven packages the current frontend into the JAR.
+# -----------------------------------------------------------------------------
+docs
+tasks
+tests
+ops
+README.md
+AGENTS.md
+compose.yml
+compose.yaml
+compose.override.yml
+compose.override.yaml
+docker-compose.yml
+docker-compose.yaml
+docker-compose.override.yml
+docker-compose.override.yaml
+support.js
+管线总览 Coverpage.dc.html
+管线总览 Coverpage.test.js
