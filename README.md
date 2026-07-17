@@ -40,9 +40,32 @@ docker compose --profile monitoring up -d
 
 ```powershell
 mvn test
-node --check src/main/resources/static/app.js
+npm.cmd --prefix frontend run check
+node --test tests/backend-module-boundaries.test.js
 node --test "管线总览 Coverpage.test.js"
 ```
+
+当前前端源文件位于 `frontend/src/`。`npm.cmd --prefix frontend run build`
+生成 `frontend/dist/`，可以在未来直接发布到 Nginx；当前 Maven 构建会把同一份
+前端源文件收入 Spring Boot JAR，因此仍然只部署一个应用。
+
+## 后端模块结构
+
+后端是一个 Maven 多模块、单进程部署的模块化单体：
+
+```text
+study-management-api          对外 Java 接口和请求/响应契约
+study-management-common       共享异常、枚举等稳定基础类型
+study-management-domain       领域对象、业务端口和 Repository 接口
+study-management-manager      业务用例编排和事务边界
+study-management-repository   JDBC 与外部系统适配器，实现 Domain 端口
+study-management-service      API 实现、HTTP、安全配置和唯一启动入口
+study-management-test         跨模块集成测试
+```
+
+依赖方向为 `service → manager → domain ← repository`。Domain 不依赖
+Repository 实现；最终部署
+`study-management-service/target/study-management-service-*-exec.jar`。
 
 生产运维详见 [云上安全运维方案](./docs/云上安全运维方案_v1.0.md)，接口与数据库总设计详见 [前后端拆分技术设计](./docs/前后端拆分技术设计_v1.0.md)，本机实测证据详见 [MVP 验证记录](./docs/验证记录_v1.0.md)。
 

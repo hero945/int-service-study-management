@@ -1,0 +1,91 @@
+# -----------------------------------------------------------------------------
+# Build outputs
+# -----------------------------------------------------------------------------
+**/target/
+frontend/dist/
+out/
+
+# -----------------------------------------------------------------------------
+# Node.js dependencies, caches, and test reports
+# -----------------------------------------------------------------------------
+**/node_modules/
+.npm/
+.eslintcache
+coverage/
+.nyc_output/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------------------------------------------------------
+# Local runtime data
+# -----------------------------------------------------------------------------
+.run/
+*.mv.db
+*.trace.db
+*.lock.db
+*.pid
+*.pid.lock
+
+# -----------------------------------------------------------------------------
+# Environment files and secrets
+# Keep the placeholder template in version control.
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Local-only application configuration
+**/application-local.yml
+**/application-local.yaml
+**/application-local.properties
+**/application-*.local.yml
+**/application-*.local.yaml
+**/application-*.local.properties
+
+# Local Docker overrides
+compose.override.yml
+compose.override.yaml
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# -----------------------------------------------------------------------------
+# IDEs, editors, and local agent/tool state
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.tools/
+.codex/
+.agents/
+
+# -----------------------------------------------------------------------------
+# Logs, temporary files, and crash dumps
+# -----------------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+hs_err_pid*
+replay_pid*
+
+# -----------------------------------------------------------------------------
+# Operating-system metadata
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
