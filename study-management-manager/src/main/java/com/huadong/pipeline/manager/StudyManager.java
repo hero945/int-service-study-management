@@ -5,6 +5,10 @@ import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.study.DuplicateStudyCodeException;
 import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.StudyRepository;
+import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
+import com.huadong.pipeline.domain.study.StudyAccessScope;
+import com.huadong.pipeline.domain.user.DataScope;
+import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -15,13 +19,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class StudyManager {
   private final StudyRepository studies;
+  private final UserAccountRepository users;
 
-  public StudyManager(StudyRepository studies) {
+  public StudyManager(StudyRepository studies, UserAccountRepository users) {
     this.studies = studies;
+    this.users = users;
   }
 
-  public List<StudyView> list() {
-    return studies.findAll().stream()
+  public List<StudyView> list(String username) {
+    return studies.findAll(accessScope(username)).stream()
         .map(study -> new StudyView(
             study.id(),
             study.code(),
@@ -35,40 +41,72 @@ public class StudyManager {
         .toList();
   }
 
-  public PipelineOverview overview() {
+  public PipelineOverview overview(String username) {
+    var accessScope = accessScope(username);
     List<StatusMetric> metrics = Arrays.stream(StudyStatus.values())
         .map(status -> new StatusMetric(
             status,
-            studies.countByStatus(status)))
+            studies.countByStatus(status, accessScope)))
         .toList();
-    return new PipelineOverview("临床研发管线", studies.count(), metrics);
+    return new PipelineOverview("临床研发管线", studies.count(accessScope), metrics);
+  }
+
+  private StudyAccessScope accessScope(String username) {
+    var user = users.findByUsername(username)
+        .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "当前登录账号不存在"));
+    return user.dataScope() == DataScope.ALL
+        ? StudyAccessScope.all()
+        : StudyAccessScope.assignedTo(user.id());
   }
 
   @Transactional
   public void create(CreateStudyCommand command, String username) {
+    validateDates(command);
     Study study = Study.create(
         command.code(),
         command.name(),
-        command.indication(),
+        command.programCode(),
+        command.projectCode(),
+        command.therapeuticAreaCode(),
         command.phase(),
-        command.status(),
-        command.ownerName(),
-        command.startDate());
+        command.plannedStartDate(),
+        command.plannedEndDate(),
+        command.actualStartDate(),
+        command.actualEndDate(),
+        command.description());
     try {
       studies.save(study, username);
     } catch (DuplicateStudyCodeException ex) {
       throw new BusinessException("STUDY_CODE_EXISTS", "项目编号已存在");
+    } catch (InvalidStudyHierarchyException ex) {
+      throw new BusinessException(
+          "INVALID_STUDY_HIERARCHY", "Program、Project 或治疗领域不存在，或三者关系不匹配");
+    }
+  }
+
+  private static void validateDates(CreateStudyCommand command) {
+    if (command.plannedStartDate() != null && command.plannedEndDate() != null
+        && command.plannedEndDate().isBefore(command.plannedStartDate())) {
+      throw new BusinessException("INVALID_STUDY_DATES", "计划结束日期不能早于计划开始日期");
+    }
+    if (command.actualStartDate() != null && command.actualEndDate() != null
+        && command.actualEndDate().isBefore(command.actualStartDate())) {
+      throw new BusinessException("INVALID_STUDY_DATES", "实际结束日期不能早于实际开始日期");
     }
   }
 
   public record CreateStudyCommand(
       String code,
       String name,
-      String indication,
+      String programCode,
+      String projectCode,
+      String therapeuticAreaCode,
       String phase,
-      StudyStatus status,
-      String ownerName,
-      LocalDate startDate) {
+      LocalDate plannedStartDate,
+      LocalDate plannedEndDate,
+      LocalDate actualStartDate,
+      LocalDate actualEndDate,
+      String description) {
   }
 
   public record StatusMetric(StudyStatus status, long count) {

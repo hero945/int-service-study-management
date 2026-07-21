@@ -32,6 +32,17 @@ test('frontend exposes a typed API boundary instead of calling fetch from views'
   }
 });
 
+test('frontend navigation consumes permission codes instead of a coarse login role', () => {
+  const types = read('frontend/src/api/types.ts');
+  const router = read('frontend/src/router.ts');
+  const shell = read('frontend/src/layout/AppShell.vue');
+
+  assert.match(types, /permissions:\s*PermissionCode\[\]/);
+  assert.match(router, /requiredPermission/);
+  assert.doesNotMatch(router, /user\.role\s*[!=]==?\s*['"]ADMIN['"]/);
+  assert.doesNotMatch(shell, /user\.value\?\.role\s*[!=]==?\s*['"]ADMIN['"]/);
+});
+
 test('production packaging consumes the compiled frontend output', () => {
   const servicePom = read('study-management-service/pom.xml');
   const dockerfile = read('Dockerfile');

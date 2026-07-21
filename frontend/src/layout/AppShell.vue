@@ -9,10 +9,14 @@ const user = computed(() => session.currentUser.value)
 const pageTitle = computed(() => String(route.meta.title ?? '临床研发平台'))
 const pageSubtitle = computed(() => String(route.meta.subtitle ?? ''))
 const userInitials = computed(() => user.value?.displayName.slice(-2) ?? '?')
+const roleLabels: Record<string, string> = {
+  ADMIN: '管理员',
+  USER: '普通成员',
+  VIEWER: '只读者',
+}
 const roleLabel = computed(() => {
-  if (user.value?.role === 'ADMIN') return '管理员'
-  if (user.value?.role === 'VIEWER') return '只读者'
-  return '普通成员'
+  const roles = user.value?.roles ?? []
+  return roles.map((role) => roleLabels[role] ?? role).join('、') || '未分配角色'
 })
 
 const navItems = computed(() => [
@@ -23,7 +27,7 @@ const navItems = computed(() => [
   { label: '团队矩阵', icon: '◫', to: '/team' },
   { label: '管线配置', icon: '⚙', to: '/config' },
   { label: '月报导出', icon: '⭳', to: '/reports' },
-  ...(user.value?.role === 'ADMIN'
+  ...(user.value?.permissions.includes('account.page.view')
     ? [{ label: '账号管理', icon: '⚷', to: '/accounts' }]
     : []),
 ])

@@ -2,6 +2,7 @@ package com.huadong.pipeline.manager;
 
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,9 @@ public class UserManager {
             user.username(),
             user.passwordHash(),
             user.displayName(),
-            user.role(),
+            user.roles(),
+            user.permissions(),
+            user.dataScope().name(),
             user.enabled()));
   }
 
@@ -31,7 +34,9 @@ public class UserManager {
             user.id(),
             user.username(),
             user.displayName(),
-            user.role(),
+            user.roles(),
+            user.permissions(),
+            user.dataScope().name(),
             user.enabled()));
   }
 
@@ -41,24 +46,36 @@ public class UserManager {
             user.id(),
             user.username(),
             user.displayName(),
-            user.role(),
+            user.roles(),
+            user.permissions(),
+            user.dataScope().name(),
             user.enabled()))
         .toList();
   }
 
   @Transactional
-  public void create(String username, String passwordHash, String displayName, String role) {
+  public void create(
+      String username,
+      String passwordHash,
+      String displayName,
+      List<String> roleCodes) {
     if (users.findByUsername(username).isPresent()) {
       throw new BusinessException("USERNAME_EXISTS", "用户名已存在");
     }
-    users.create(username, passwordHash, displayName, role);
+    var distinctRoleCodes = List.copyOf(new LinkedHashSet<>(roleCodes));
+    if (distinctRoleCodes.isEmpty() || !users.rolesExist(distinctRoleCodes)) {
+      throw new BusinessException("INVALID_ROLE", "Role does not exist or is disabled");
+    }
+    users.create(username, passwordHash, displayName, distinctRoleCodes);
   }
 
   public record AuthenticationUser(
       String username,
       String passwordHash,
       String displayName,
-      String role,
+      List<String> roles,
+      List<String> permissions,
+      String dataScope,
       boolean enabled) {
   }
 
@@ -66,7 +83,9 @@ public class UserManager {
       long id,
       String username,
       String displayName,
-      String role,
+      List<String> roles,
+      List<String> permissions,
+      String dataScope,
       boolean enabled) {
   }
 }

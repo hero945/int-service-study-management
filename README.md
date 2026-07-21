@@ -23,7 +23,7 @@ Spring Boot 应用。
 - 逻辑库：`study_management`
 - 表数量：25张，统一使用 `hd_plt_` 前缀
 - 设计规格：[完整PRD数据库设计规格](./docs/database/完整PRD数据库设计规格.md)
-- 建表脚本：[hd_plt_full_schema.sql](./docs/database/hd_plt_full_schema.sql)
+- Flyway/MySQL建表脚本：[V1__hd_plt_full_schema.sql](./docs/database/V1__hd_plt_full_schema.sql)
 
 当前Java代码和 `V1__baseline.sql` 仍对应早期MVP表结构，尚未适配这25张目标表。
 不要在已经手工创建25张表且没有Flyway历史的数据库上直接启动旧应用。正式接入前，

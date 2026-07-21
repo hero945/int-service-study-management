@@ -74,7 +74,7 @@ export const router = createRouter({
           meta: {
             title: '账号管理',
             subtitle: '平台账号和角色管理',
-            requiresAdmin: true,
+            requiredPermission: 'account.page.view',
           },
         },
       ],
@@ -88,6 +88,10 @@ router.beforeEach(async (to) => {
     return user ? { name: 'pipeline' } : true
   }
   if (!user) return { name: 'login', query: { redirect: to.fullPath } }
-  if (to.meta.requiresAdmin && user.role !== 'ADMIN') return { name: 'pipeline' }
+  const requiredPermission = to.meta.requiredPermission
+  if (
+    typeof requiredPermission === 'string' &&
+    !user.permissions.includes(requiredPermission)
+  ) return { name: 'pipeline' }
   return true
 })

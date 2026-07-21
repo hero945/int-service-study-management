@@ -27,13 +27,13 @@ public class SettingsController {
   }
 
   @GetMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAuthority('platform.setting.read')")
   List<SettingApi.SettingResponse> all() {
     return settingApi.listAll();
   }
 
   @PutMapping
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAuthority('platform.setting.update')")
   SettingApi.SettingResponse update(
       @RequestParam String key,
       @Valid @RequestBody SettingApi.UpdateSettingRequest request,

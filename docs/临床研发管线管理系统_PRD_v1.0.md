@@ -378,7 +378,7 @@ flowchart LR
 | Members | MultiReference/String[] | 一个角色可多人；现状按“、”拆分 |
 | 注册状态 | Derived Boolean | 姓名是否存在账号表 |
 | 研究数 | Derived Integer | 横向Study搜索后，对当前权限范围内命中的Study ID去重计数 |
-| 角色数 | Derived Integer | 纵向角色搜索后，对命中的系统角色编码去重计数 |
+| 角色数 | Derived Integer | 纵向角色搜索后，对命中的团队角色编码去重计数 |
 
 ## 4.6 管线配置
 

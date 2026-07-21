@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/platform/users")
-@PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
   private final UserApi userApi;
 
@@ -23,11 +22,13 @@ public class AdminUserController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAuthority('account.page.view')")
   List<UserApi.UserResponse> list() {
     return userApi.list();
   }
 
   @PostMapping
+  @PreAuthorize("hasAuthority('account.create')")
   @ResponseStatus(HttpStatus.CREATED)
   void create(@Valid @RequestBody UserApi.CreateUserRequest request) {
     userApi.create(request);

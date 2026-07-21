@@ -8,5 +8,11 @@ public interface UserAccountRepository {
 
   List<UserAccount> findAll();
 
-  void create(String username, String passwordHash, String displayName, String role);
+  boolean rolesExist(List<String> roleCodes);
+
+  void create(String username, String passwordHash, String displayName, List<String> roleCodes);
+
+  default void create(String username, String passwordHash, String displayName, String roleCode) {
+    create(username, passwordHash, displayName, List.of(roleCode));
+  }
 }

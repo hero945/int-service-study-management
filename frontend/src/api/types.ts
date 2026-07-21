@@ -1,9 +1,13 @@
-export type UserRole = 'ADMIN' | 'USER' | 'VIEWER'
+export type RoleCode = string
+export type PermissionCode = string
+export type DataScope = 'ALL' | 'ASSIGNED_STUDY'
 
 export interface CurrentUser {
   username: string
   displayName: string
-  role: UserRole
+  roles: RoleCode[]
+  permissions: PermissionCode[]
+  dataScope: DataScope
   title?: string
 }
 
@@ -97,7 +101,7 @@ export interface PlatformUser {
   id: number
   username: string
   displayName: string
-  role: UserRole
+  roles: RoleCode[]
   enabled: boolean
 }
 

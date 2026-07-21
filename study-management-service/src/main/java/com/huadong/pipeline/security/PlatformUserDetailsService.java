@@ -21,7 +21,7 @@ public class PlatformUserDetailsService implements UserDetailsService {
         .orElseThrow(() -> new UsernameNotFoundException("账号或密码错误"));
     return User.withUsername(account.username())
         .password(account.passwordHash())
-        .roles(account.role())
+        .authorities(account.permissions().toArray(String[]::new))
         .disabled(!account.enabled())
         .build();
   }

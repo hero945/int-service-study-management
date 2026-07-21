@@ -14,8 +14,8 @@ public class StudyApiService implements StudyApi {
   }
 
   @Override
-  public PipelineOverviewResponse overview() {
-    var overview = manager.overview();
+  public PipelineOverviewResponse overview(String username) {
+    var overview = manager.overview(username);
     var metrics = overview.statuses().stream()
         .map(metric -> new StatusMetricResponse(
             metric.status().name(),
@@ -27,8 +27,8 @@ public class StudyApiService implements StudyApi {
   }
 
   @Override
-  public List<StudyResponse> list() {
-    return manager.list().stream()
+  public List<StudyResponse> list(String username) {
+    return manager.list(username).stream()
         .map(study -> new StudyResponse(
             study.id(),
             study.code(),
@@ -50,11 +50,15 @@ public class StudyApiService implements StudyApi {
         new StudyManager.CreateStudyCommand(
             request.code(),
             request.name(),
-            request.indication(),
+            request.programCode(),
+            request.projectCode(),
+            request.therapeuticAreaCode(),
             request.phase(),
-            request.status(),
-            request.ownerName(),
-            request.startDate()),
+            request.plannedStartDate(),
+            request.plannedEndDate(),
+            request.actualStartDate(),
+            request.actualEndDate(),
+            request.description()),
         username);
   }
 }

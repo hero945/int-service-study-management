@@ -30,8 +30,8 @@
       <aside class="rolecol"><div class="coltitle">用户角色</div>
         <article class="role viewer"><div class="avatar">只读</div><h3>只读用户</h3><p>查看授权页面、检索数据与进入详情</p></article>
         <article class="role member"><div class="avatar">业务</div><h3>业务成员</h3><p>在授权功能线内填报、维护与导出</p></article>
-        <article class="role admin"><div class="avatar">管理</div><h3>系统管理员</h3><p>维护配置、账号、权限与系统数据</p></article>
-        <div class="legend"><b>继承关系</b><br>业务成员包含只读能力；管理员拥有预置模板，但仍受权限开关与数据范围约束。</div>
+        <article class="role admin"><div class="avatar">管理</div><h3>系统管理员</h3><p>维护配置、账号、角色权限与系统数据</p></article>
+        <div class="legend"><b>权限关系</b><br>用户操作权限来自启用角色权限并集；ASSIGNED_STUDY范围来自团队分配。</div>
       </aside>
       <section class="domains">
         <article class="domain"><h2>通用查看</h2><p>所有角色按授权范围使用</p><div class="cases">
@@ -41,9 +41,9 @@
           <div class="case">月度汇报<small>monthly.create / update</small></div><div class="case">风险记录<small>risk.create / update / delete</small></div><div class="case">里程碑维护<small>milestone.update</small></div><div class="case">团队矩阵维护<small>team.edit_mode + team.update</small></div><div class="case">月报导出<small>输出 HTML / PDF / CSV / Excel</small></div>
         </div></article>
         <article class="domain govern"><h2>系统治理</h2><p>管理员按具体权限逐项使用</p><div class="cases">
-          <div class="case">管线配置<small>Program / Study 配置维护</small></div><div class="case">账号与角色<small>账号状态、角色与基础信息</small></div><div class="case">权限与数据范围<small>手动追加或禁用用户权限</small></div><div class="case">备份导入 / 导出<small>不包含会话与明文密码</small></div><div class="case">Project 顺序调整<small>仅允许同一 TA 内排序</small></div>
+          <div class="case">管线配置<small>Program / Project / Study 维护</small></div><div class="case">账号与角色<small>账号状态、用户角色与角色权限</small></div><div class="case">Study可见范围<small>ALL或团队分配的ASSIGNED_STUDY</small></div><div class="case">数据库运维<small>备份恢复不开放页面操作</small></div><div class="case">Project 顺序调整<small>仅允许同一 TA 内排序</small></div>
         </div></article>
-        <div class="guard"><div class="shield">◆</div><div><b>统一权限闸门</b><span>每次访问和操作都按顺序校验，任何一级失败立即拒绝，不先取全量数据再隐藏。</span></div><div class="steps">页面查看 → 页面操作 / 数据 CRUD → 数据范围</div></div>
+        <div class="guard"><div class="shield">◆</div><div><b>统一权限闸门</b><span>每次访问和操作都按顺序校验，任何一级失败立即拒绝，不先取全量数据再隐藏。</span></div><div class="steps">角色权限 → 页面 / 数据 CRUD → ALL或团队Study范围</div></div>
       </section>
     </main>
   </section>
@@ -53,7 +53,7 @@
     <main class="acceptbody">
       <div class="acceptintro"><div class="hub"><b>功能验收</b><span>从页面能力到数据口径逐项确认</span></div><div class="introline"></div><div class="metric"><div><b>10</b><span>验收模块</span></div><div><b>49</b><span>原子检查项</span></div><div><b>3</b><span>权限层级</span></div></div></div>
       <section class="acceptgrid">
-        <article class="acc violet"><div class="num">01</div><h2><span>权</span>全局与权限</h2><div class="check">未登录用户不能进入业务页面</div><div class="check">无页面权限时导航和页面均不可访问</div><div class="check">页面操作与数据 CRUD 可分别授权</div><div class="check">查询、统计、导出不超出数据范围</div><div class="check">用户禁用权限优先于角色与追加授权</div></article>
+        <article class="acc violet"><div class="num">01</div><h2><span>权</span>全局与权限</h2><div class="check">未登录用户不能进入业务页面</div><div class="check">无页面权限时导航和页面均不可访问</div><div class="check">页面操作与数据 CRUD 可分别授权</div><div class="check">查询、统计、导出不超出Study范围</div><div class="check">用户权限等于启用角色权限并集</div></article>
         <article class="acc"><div class="num">02</div><h2><span>管</span>管线总览</h2><div class="check">按 Project 聚合且数量去重正确</div><div class="check">TA、Program、阶段、状态筛选正确</div><div class="check">需关注、已获批、本月更新口径正确</div><div class="check">阶段回填显示来源提示</div><div class="check">仅能在同一 TA 内调整顺序</div></article>
         <article class="acc teal"><div class="num">03</div><h2><span>研</span>Study 列表</h2><div class="check">只展示授权范围内 Study</div><div class="check">搜索、筛选和表头排序结果正确</div><div class="check">Open 风险数与风险登记一致</div><div class="check">详情与里程碑入口可用</div></article>
         <article class="acc green"><div class="num">04</div><h2><span>报</span>研究月度汇报</h2><div class="check">月度切换后读取对应月份数据</div><div class="check">Study + 功能线 + 月份唯一键生效</div><div class="check">应填、已填、未填与完成率正确</div><div class="check">新增与修改分别执行权限校验</div><div class="check">非授权功能线保持只读</div></article>

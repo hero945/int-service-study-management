@@ -67,6 +67,7 @@ docker-compose.override.yaml
 .tools/
 .codex/
 .agents/
+.chrome-shot-batch/
 
 # -----------------------------------------------------------------------------
 # Logs, temporary files, and crash dumps

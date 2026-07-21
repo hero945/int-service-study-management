@@ -34,11 +34,12 @@ public class SecurityConfig {
                 "/favicon.ico",
                 "/favicon.svg",
                 "/api/v1/platform/auth/csrf",
+                "/api/v1/platform/settings/public",
                 "/actuator/health/**",
                 "/actuator/prometheus")
             .permitAll()
             .requestMatchers("/accounts")
-            .hasRole("ADMIN")
+            .hasAuthority("account.page.view")
             .anyRequest()
             .authenticated())
         .formLogin(form -> form

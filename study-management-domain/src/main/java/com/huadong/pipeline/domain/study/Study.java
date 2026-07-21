@@ -13,25 +13,46 @@ public record Study(
     StudyStatus status,
     String ownerName,
     LocalDate startDate,
-    LocalDateTime updatedAt) {
+    LocalDateTime updatedAt,
+    String programCode,
+    String projectCode,
+    String therapeuticAreaCode,
+    LocalDate plannedEndDate,
+    LocalDate actualStartDate,
+    LocalDate actualEndDate,
+    String description) {
 
   public static Study create(
       String code,
       String name,
-      String indication,
+      String programCode,
+      String projectCode,
+      String therapeuticAreaCode,
       String phase,
-      StudyStatus status,
-      String ownerName,
-      LocalDate startDate) {
+      LocalDate plannedStartDate,
+      LocalDate plannedEndDate,
+      LocalDate actualStartDate,
+      LocalDate actualEndDate,
+      String description) {
+    StudyStatus status = actualEndDate != null
+        ? StudyStatus.COMPLETED
+        : actualStartDate != null ? StudyStatus.ACTIVE : StudyStatus.PLANNED;
     return new Study(
         0,
         code.trim(),
         name.trim(),
-        indication.trim(),
+        "",
         phase.trim(),
         status,
-        ownerName.trim(),
-        startDate,
-        null);
+        "",
+        plannedStartDate,
+        null,
+        programCode.trim(),
+        projectCode.trim(),
+        therapeuticAreaCode.trim(),
+        plannedEndDate,
+        actualStartDate,
+        actualEndDate,
+        description == null ? null : description.trim());
   }
 }

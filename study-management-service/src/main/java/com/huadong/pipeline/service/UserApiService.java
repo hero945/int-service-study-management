@@ -19,7 +19,12 @@ public class UserApiService implements UserApi {
   @Override
   public CurrentUserResponse getCurrentUser(String username) {
     var user = manager.findByUsername(username).orElseThrow();
-    return new CurrentUserResponse(user.username(), user.displayName(), user.role());
+    return new CurrentUserResponse(
+        user.username(),
+        user.displayName(),
+        user.roles(),
+        user.permissions(),
+        user.dataScope());
   }
 
   @Override
@@ -29,7 +34,7 @@ public class UserApiService implements UserApi {
             user.id(),
             user.username(),
             user.displayName(),
-            user.role(),
+            user.roles(),
             user.enabled()))
         .toList();
   }
@@ -40,6 +45,6 @@ public class UserApiService implements UserApi {
         request.username(),
         passwordEncoder.encode(request.password()),
         request.displayName(),
-        request.role());
+        request.roleCodes());
   }
 }

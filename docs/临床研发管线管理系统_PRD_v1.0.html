@@ -38,7 +38,7 @@
 <h4 id="3-1-8-月报导出">3.1.8 月报导出<a class="anchor" href="#3-1-8-月报导出" aria-label="链接到本节">#</a></h4>
 <ul><li>通过报告月度查询数据；切换月度后立即按所选月份重建预览。</li><li>页面不提供文本搜索和结果排序；管线快照按TA及系统业务顺序展示，报告各分区按预设顺序输出。</li></ul>
 <h4 id="3-1-9-账号管理">3.1.9 账号管理<a class="anchor" href="#3-1-9-账号管理" aria-label="链接到本节">#</a></h4>
-<ul><li>现状账号列表不提供有效的搜索、筛选和表头排序，按照账号数据保存顺序展示。</li><li>顶部通用搜索框当前不参与账号列表计算；如正式产品需要账号查询，应另行定义姓名、登录邮箱、职务和角色的匹配规则。</li></ul>
+<ul><li>现状账号列表不提供有效的搜索、筛选和表头排序，按照账号数据保存顺序展示。</li><li>顶部通用搜索框当前不参与账号列表计算；正式产品账号查询匹配显示姓名、登录邮箱和角色。</li></ul>
 <h4 id="3-1-10-里程碑">3.1.10 里程碑<a class="anchor" href="#3-1-10-里程碑" aria-label="链接到本节">#</a></h4>
 <ul><li>从Study列表带入目标Study，仅展示该Study的里程碑，不提供跨Study搜索。</li><li>里程碑按阶段组和系统预置节点顺序展示，不提供筛选和表头排序。</li></ul>
 <h3 id="3-2-权限模型与鉴权">3.2 权限模型与鉴权<a class="anchor" href="#3-2-权限模型与鉴权" aria-label="链接到本节">#</a></h3>
@@ -92,7 +92,7 @@
 <h3 id="页面功能与交互-5">页面功能与交互<a class="anchor" href="#页面功能与交互-5" aria-label="链接到本节">#</a></h3>
 <ul><li>横向为Study，纵向为角色；顶部展示适应症和当前状态。</li><li>分别支持Study/适应症搜索和角色名称搜索。</li><li>拥有 <code>team.edit_mode</code> 和 <code>team.update</code> 权限，且目标Study属于用户可见范围时可进入编辑模式。</li><li>单元格支持从平台账号中搜索、添加和移除成员；数据库使用 <code>user_id</code> 关联，不保存姓名拼接字符串。</li><li>团队成员必须已有平台账号，不允许临时成员。</li><li>团队矩阵同时表达业务分工和 <code>ASSIGNED_STUDY</code> 用户的Study可见范围，不直接授予新增、修改、删除等操作权限。</li></ul>
 <h3 id="字段-2">字段<a class="anchor" href="#字段-2" aria-label="链接到本节">#</a></h3>
-<div class="table-wrap"><table><thead><tr><th>字段</th><th>类型</th><th>逻辑</th></tr></thead><tbody><tr><td>Study No.</td><td>Reference</td><td>列头，唯一标识Study</td></tr><tr><td>Indication</td><td>Derived String</td><td>Study适应症，只读</td></tr><tr><td>Status</td><td>Derived Enum</td><td>当前活动里程碑，只读</td></tr><tr><td>Role</td><td>Enum</td><td>纵向角色，见6.6</td></tr><tr><td>Members</td><td>MultiReference/String[]</td><td>一个角色可多人；现状按“、”拆分</td></tr><tr><td>注册状态</td><td>Derived Boolean</td><td>姓名是否存在账号表</td></tr><tr><td>研究数</td><td>Derived Integer</td><td>横向Study搜索后，对当前权限范围内命中的Study ID去重计数</td></tr><tr><td>角色数</td><td>Derived Integer</td><td>纵向角色搜索后，对命中的系统角色编码去重计数</td></tr></tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>字段</th><th>类型</th><th>逻辑</th></tr></thead><tbody><tr><td>Study No.</td><td>Reference</td><td>列头，唯一标识Study</td></tr><tr><td>Indication</td><td>Derived String</td><td>Study适应症，只读</td></tr><tr><td>Status</td><td>Derived Enum</td><td>当前活动里程碑，只读</td></tr><tr><td>Role</td><td>Enum</td><td>纵向角色，见6.6</td></tr><tr><td>Members</td><td>MultiReference/String[]</td><td>一个角色可多人；现状按“、”拆分</td></tr><tr><td>注册状态</td><td>Derived Boolean</td><td>姓名是否存在账号表</td></tr><tr><td>研究数</td><td>Derived Integer</td><td>横向Study搜索后，对当前权限范围内命中的Study ID去重计数</td></tr><tr><td>角色数</td><td>Derived Integer</td><td>纵向角色搜索后，对命中的团队角色编码去重计数</td></tr></tbody></table></div>
 <h2 id="4-6-管线配置">4.6 管线配置<a class="anchor" href="#4-6-管线配置" aria-label="链接到本节">#</a></h2>
 <figure class="doc-image"><button type="button" class="image-button" data-image="screenshots/06-pipeline-config.png" aria-label="放大查看：管线配置页面"><img src="screenshots/06-pipeline-config.png" alt="管线配置页面" loading="lazy"></button><figcaption>管线配置页面</figcaption></figure>
 <h3 id="页面功能与交互-6">页面功能与交互<a class="anchor" href="#页面功能与交互-6" aria-label="链接到本节">#</a></h3>
@@ -123,7 +123,7 @@
 <h2 id="4-9-里程碑">4.9 里程碑<a class="anchor" href="#4-9-里程碑" aria-label="链接到本节">#</a></h2>
 <figure class="doc-image"><button type="button" class="image-button" data-image="screenshots/09-milestones.png" aria-label="放大查看：里程碑页面"><img src="screenshots/09-milestones.png" alt="里程碑页面" loading="lazy"></button><figcaption>里程碑页面</figcaption></figure>
 <h3 id="页面功能与交互-8">页面功能与交互<a class="anchor" href="#页面功能与交互-8" aria-label="链接到本节">#</a></h3>
-<ul><li>从Study列表进入，只展示一个Study的里程碑。</li><li>按阶段组展示约60个节点。</li><li>拥有 <code>milestone.update</code> 且数据范围覆盖目标Study的用户可编辑；其他用户只读。</li><li>编辑状态下可维护计划V1.0、计划V2.0、实际开始、实际结束和偏差说明。</li></ul>
+<ul><li>从Study列表进入，只展示一个Study的里程碑。</li><li>按Java固定的阶段和里程碑节点顺序展示；数据库不建立阶段或节点配置表。</li><li>拥有 <code>milestone.update</code> 且数据范围覆盖目标Study的用户可编辑；其他用户只读。</li><li>编辑状态下可维护计划V1.0、计划V2.0、实际开始、实际结束和偏差说明。</li></ul>
 <h3 id="字段-5">字段<a class="anchor" href="#字段-5" aria-label="链接到本节">#</a></h3>
 <div class="table-wrap"><table><thead><tr><th>字段</th><th>类型</th><th>逻辑</th></tr></thead><tbody><tr><td>阶段组</td><td>Enum</td><td>PreIND、IND、Pre3、Protocol、SSU、Enrollment、IA、Data &amp; Report、PreNDA/BLA、NDA/BLA</td></tr><tr><td>Milestone</td><td>Enum/String</td><td>系统预置节点名称</td></tr><tr><td>Ver 1.0</td><td>Date</td><td>第一版计划日期</td></tr><tr><td>Ver 2.0</td><td>Date</td><td>第二版计划日期</td></tr><tr><td>Actual Start</td><td>Date</td><td>实际开始日期</td></tr><tr><td>Actual End</td><td>Date</td><td>实际结束日期</td></tr><tr><td>节点状态</td><td>Derived Enum</td><td>Actual Start和Actual End均为空时为“未开始”；Actual Start非空且Actual End为空时为“进行中”；Actual End非空时该节点为“已完成”，若不是阶段组最后节点则活动节点顺延到下一节点；阶段组最后节点已完成时阶段组显示“已完成”</td></tr><tr><td>Note</td><td>String/Text</td><td>延迟或提前原因</td></tr></tbody></table></div>
 <h2 id="五-关键交互流程">五、关键交互流程<a class="anchor" href="#五-关键交互流程" aria-label="链接到本节">#</a></h2>

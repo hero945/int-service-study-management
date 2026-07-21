@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,16 +23,19 @@ public class StudyController {
   }
 
   @GetMapping("/overview")
-  StudyApi.PipelineOverviewResponse overview() {
-    return studyApi.overview();
+  @PreAuthorize("hasAuthority('pipeline.page.view')")
+  StudyApi.PipelineOverviewResponse overview(Principal principal) {
+    return studyApi.overview(principal.getName());
   }
 
   @GetMapping("/studies")
-  List<StudyApi.StudyResponse> list() {
-    return studyApi.list();
+  @PreAuthorize("hasAuthority('study.read')")
+  List<StudyApi.StudyResponse> list(Principal principal) {
+    return studyApi.list(principal.getName());
   }
 
   @PostMapping("/studies")
+  @PreAuthorize("hasAuthority('config.create')")
   @ResponseStatus(HttpStatus.CREATED)
   void create(@Valid @RequestBody StudyApi.CreateStudyRequest request, Principal principal) {
     studyApi.create(request, principal.getName());

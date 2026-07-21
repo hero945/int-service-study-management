@@ -15,6 +15,24 @@ const modules = [
 
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
+const readJavaSources = (moduleName) => {
+  const sourceRoot = path.join(root, moduleName, 'src', 'main', 'java');
+  const sources = [];
+
+  const visit = (directory) => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(entryPath);
+      if (entry.isFile() && entry.name.endsWith('.java')) {
+        sources.push(fs.readFileSync(entryPath, 'utf8'));
+      }
+    }
+  };
+
+  visit(sourceRoot);
+  return sources.join('\n');
+};
+
 for (const moduleName of modules) {
   assert(
     fs.existsSync(path.join(root, moduleName, 'pom.xml')),
@@ -40,6 +58,32 @@ const repositoryPom = read('study-management-repository/pom.xml');
 assert(
   repositoryPom.includes('<artifactId>study-management-domain</artifactId>'),
   'repository must implement ports owned by domain',
+);
+assert(
+  repositoryPom.includes('<artifactId>mybatis-plus-spring-boot3-starter</artifactId>'),
+  'repository must use the MyBatis-Plus Spring Boot 3 starter',
+);
+
+for (const moduleName of [
+  'study-management-api',
+  'study-management-domain',
+  'study-management-manager',
+]) {
+  const sources = readJavaSources(moduleName);
+  assert(
+    !sources.includes('com.baomidou') && !sources.includes('org.apache.ibatis'),
+    `${moduleName} must not depend on MyBatis persistence types`,
+  );
+}
+
+const repositorySources = readJavaSources('study-management-repository');
+assert(
+  !repositorySources.includes('JdbcClient'),
+  'business repositories must not use JdbcClient after the MyBatis-Plus migration',
+);
+assert(
+  repositorySources.includes('BaseMapper'),
+  'repository must provide MyBatis-Plus mapper implementations',
 );
 
 const servicePom = read('study-management-service/pom.xml');

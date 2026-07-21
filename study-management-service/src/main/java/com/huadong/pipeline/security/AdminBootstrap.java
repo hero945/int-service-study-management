@@ -8,6 +8,7 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import java.util.List;
 
 @Component
 public class AdminBootstrap implements ApplicationRunner {
@@ -41,7 +42,7 @@ public class AdminBootstrap implements ApplicationRunner {
           properties.adminUsername(),
           encoder.encode(properties.adminPassword()),
           properties.adminDisplayName(),
-          "ADMIN");
+          List.of("ADMIN"));
       log.info("已创建首个管理员账号：{}；请在首次登录后移除引导密码", properties.adminUsername());
     }
   }

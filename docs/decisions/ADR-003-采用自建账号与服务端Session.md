@@ -14,7 +14,7 @@ Accepted（用户已确认采用自建账号）
 
 ## 决策
 
-1. 使用 Spring Security 的用户名/密码认证和服务端 Session。
+1. 使用Spring Security的邮箱/密码认证和服务端Session；邮箱转为小写后作为账号唯一标识。
 2. 会话通过 `HttpOnly + Secure + SameSite` Cookie 传递；浏览器不在 `localStorage` 保存 JWT 或 Session token。
 3. 使用 Spring Session JDBC 将 Session 存入 MySQL，以支持多实例、主动注销和并发会话控制。
 4. 密码使用 Argon2id 单向哈希和独立盐；参数以 OWASP 最低基线为下限，并按生产服务器性能调优。
