@@ -10,6 +10,7 @@ import TeamMatrixView from './views/TeamMatrixView.vue'
 import PipelineConfigView from './views/PipelineConfigView.vue'
 import MonthlyExportView from './views/MonthlyExportView.vue'
 import AccountManagementView from './views/AccountManagementView.vue'
+import RolePermissionManagementView from './views/RolePermissionManagementView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -75,6 +76,16 @@ export const router = createRouter({
             title: '账号管理',
             subtitle: '平台账号和角色管理',
             requiredPermission: 'account.page.view',
+          },
+        },
+        {
+          path: 'roles',
+          name: 'roles',
+          component: RolePermissionManagementView,
+          meta: {
+            title: '角色权限管理',
+            subtitle: '维护角色、数据范围与页面操作权限',
+            requiredPermission: 'role.page.view',
           },
         },
       ],

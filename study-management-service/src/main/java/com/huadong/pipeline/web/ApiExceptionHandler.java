@@ -15,7 +15,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ApiExceptionHandler {
   @ExceptionHandler(BusinessException.class)
   ResponseEntity<ApiError> business(BusinessException ex) {
-    return ResponseEntity.badRequest()
+    HttpStatus status = switch (ex.code()) {
+      case "ROLE_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+      case "ROLE_CODE_EXISTS", "SYSTEM_ROLE_PROTECTED", "ROLE_IN_USE",
+          "LAST_ROLE_ADMIN_PROTECTED" -> HttpStatus.CONFLICT;
+      case "INVALID_PERMISSION" -> HttpStatus.UNPROCESSABLE_ENTITY;
+      default -> HttpStatus.BAD_REQUEST;
+    };
+    return ResponseEntity.status(status)
         .body(new ApiError(ex.code(), ex.getMessage(), Map.of(), Instant.now()));
   }
 

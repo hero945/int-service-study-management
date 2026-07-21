@@ -1,5 +1,10 @@
 import type { ApiClient } from './client'
-import type { CurrentUser, Study } from './types'
+import type {
+  CurrentUser,
+  PlatformPermission,
+  PlatformRole,
+  Study,
+} from './types'
 
 const users: Array<CurrentUser & { password: string }> = [
   {
@@ -15,6 +20,10 @@ const users: Array<CurrentUser & { password: string }> = [
       'account.create',
       'platform.setting.read',
       'platform.setting.update',
+      'role.page.view',
+      'role.create',
+      'role.update',
+      'role.delete',
     ],
     dataScope: 'ALL',
     password: '1234',
@@ -107,6 +116,62 @@ export const demoStudies: Study[] = [
 
 export function createMockApiClient(): ApiClient {
   let currentUser: CurrentUser | undefined
+  const permissions: PlatformPermission[] = [
+    ['pipeline', 'pipeline.page.view', '查看管线总览', 'PAGE', 'view'],
+    ['study', 'study.read', '查看 Study', 'ACTION', 'read'],
+    ['config', 'config.create', '维护管线配置', 'ACTION', 'create'],
+    ['account', 'account.page.view', '查看账号管理', 'PAGE', 'view'],
+    ['account', 'account.create', '新增账号', 'ACTION', 'create'],
+    ['role', 'role.page.view', '查看角色权限管理', 'PAGE', 'view'],
+    ['role', 'role.create', '新增角色', 'ACTION', 'create'],
+    ['role', 'role.update', '编辑角色权限', 'ACTION', 'update'],
+    ['role', 'role.delete', '删除角色', 'ACTION', 'delete'],
+  ].map(([moduleCode, permissionCode, permissionName, permissionType, actionCode], index) => ({
+    id: index + 1,
+    moduleCode,
+    permissionCode,
+    permissionName,
+    permissionType,
+    actionCode,
+    permissionDescription: null,
+    sortOrder: (index + 1) * 10,
+  }))
+  let nextRoleId = 4
+  const roles: PlatformRole[] = [
+    {
+      id: 1,
+      roleCode: 'ADMIN',
+      roleDescription: '系统管理员',
+      dataScopeMode: 'ALL',
+      status: 'ACTIVE',
+      systemRole: true,
+      assignedUserCount: 1,
+      permissionCodes: permissions.map((permission) => permission.permissionCode),
+      updatedAt: '2026-07-21T09:00:00',
+    },
+    {
+      id: 2,
+      roleCode: 'USER',
+      roleDescription: '普通业务成员',
+      dataScopeMode: 'ALL',
+      status: 'ACTIVE',
+      systemRole: true,
+      assignedUserCount: 1,
+      permissionCodes: ['pipeline.page.view', 'study.read', 'config.create'],
+      updatedAt: '2026-07-21T09:00:00',
+    },
+    {
+      id: 3,
+      roleCode: 'VIEWER',
+      roleDescription: '只读成员',
+      dataScopeMode: 'ASSIGNED_STUDY',
+      status: 'ACTIVE',
+      systemRole: true,
+      assignedUserCount: 1,
+      permissionCodes: ['pipeline.page.view', 'study.read'],
+      updatedAt: '2026-07-21T09:00:00',
+    },
+  ]
 
   return {
     async getCurrentUser() {
@@ -185,6 +250,62 @@ export function createMockApiClient(): ApiClient {
         roles: user.roles,
         enabled: true,
       }))
+    },
+    async listRoles(filters = {}) {
+      const keyword = filters.keyword?.trim().toLowerCase() ?? ''
+      const filtered = roles.filter((role) =>
+        (!keyword || role.roleCode.toLowerCase().includes(keyword) ||
+          role.roleDescription?.toLowerCase().includes(keyword)) &&
+        (!filters.status || role.status === filters.status),
+      )
+      const page = filters.page ?? 1
+      const pageSize = filters.pageSize ?? 20
+      const start = (page - 1) * pageSize
+      return {
+        data: filtered.slice(start, start + pageSize),
+        page,
+        pageSize,
+        totalItems: filtered.length,
+        totalPages: Math.ceil(filtered.length / pageSize),
+      }
+    },
+    async listPermissions() {
+      return permissions
+    },
+    async createRole(input) {
+      if (roles.some((role) => role.roleCode === input.roleCode)) {
+        throw new Error('角色编码已存在且不可复用')
+      }
+      const role: PlatformRole = {
+        id: nextRoleId++,
+        roleCode: input.roleCode ?? '',
+        roleDescription: input.roleDescription,
+        dataScopeMode: input.dataScopeMode,
+        status: 'ACTIVE',
+        systemRole: false,
+        assignedUserCount: 0,
+        permissionCodes: [...input.permissionCodes],
+        updatedAt: new Date().toISOString(),
+      }
+      roles.push(role)
+      return role
+    },
+    async updateRole(roleId, input) {
+      const role = roles.find((item) => item.id === roleId)
+      if (!role) throw new Error('角色不存在')
+      role.roleDescription = input.roleDescription
+      role.dataScopeMode = input.dataScopeMode
+      role.status = input.status ?? role.status
+      role.permissionCodes = [...input.permissionCodes]
+      role.updatedAt = new Date().toISOString()
+      return { role, invalidatedUserCount: role.assignedUserCount, currentSessionInvalidated: false }
+    },
+    async deleteRole(roleId) {
+      const index = roles.findIndex((role) => role.id === roleId)
+      if (index < 0) throw new Error('角色不存在')
+      if (roles[index].systemRole) throw new Error('系统角色不可删除')
+      if (roles[index].assignedUserCount) throw new Error('角色仍关联用户，不能删除')
+      roles.splice(index, 1)
     },
   }
 }

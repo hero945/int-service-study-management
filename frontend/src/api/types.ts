@@ -105,6 +105,53 @@ export interface PlatformUser {
   enabled: boolean
 }
 
+export type RoleStatus = 'ACTIVE' | 'DISABLED'
+
+export interface PlatformRole {
+  id: number
+  roleCode: string
+  roleDescription: string | null
+  dataScopeMode: DataScope
+  status: RoleStatus
+  systemRole: boolean
+  assignedUserCount: number
+  permissionCodes: PermissionCode[]
+  updatedAt: string
+}
+
+export interface PlatformPermission {
+  id: number
+  moduleCode: string
+  permissionCode: PermissionCode
+  permissionName: string
+  permissionType: string
+  actionCode: string | null
+  permissionDescription: string | null
+  sortOrder: number
+}
+
+export interface RolePage {
+  data: PlatformRole[]
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+}
+
+export interface RoleInput {
+  roleCode?: string
+  roleDescription: string
+  dataScopeMode: DataScope
+  status?: RoleStatus
+  permissionCodes: PermissionCode[]
+}
+
+export interface RoleUpdateResult {
+  role: PlatformRole
+  invalidatedUserCount: number
+  currentSessionInvalidated: boolean
+}
+
 export interface LoginCredentials {
   username: string
   password: string

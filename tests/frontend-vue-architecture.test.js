@@ -43,6 +43,23 @@ test('frontend navigation consumes permission codes instead of a coarse login ro
   assert.doesNotMatch(shell, /user\.value\?\.role\s*[!=]==?\s*['"]ADMIN['"]/);
 });
 
+test('role permission management is a protected page after account management and uses the API boundary', () => {
+  const router = read('frontend/src/router.ts');
+  const shell = read('frontend/src/layout/AppShell.vue');
+  const apiClient = read('frontend/src/api/client.ts');
+  const roleView = read('frontend/src/views/RolePermissionManagementView.vue');
+
+  assert.match(router, /path:\s*'roles'/);
+  assert.match(router, /requiredPermission:\s*'role\.page\.view'/);
+  assert.ok(shell.indexOf("to: '/accounts'") < shell.indexOf("to: '/roles'"));
+  assert.match(apiClient, /listRoles/);
+  assert.match(apiClient, /listPermissions/);
+  assert.match(apiClient, /createRole/);
+  assert.match(apiClient, /updateRole/);
+  assert.match(apiClient, /deleteRole/);
+  assert.doesNotMatch(roleView, /\bfetch\s*\(/);
+});
+
 test('production packaging consumes the compiled frontend output', () => {
   const servicePom = read('study-management-service/pom.xml');
   const dockerfile = read('Dockerfile');

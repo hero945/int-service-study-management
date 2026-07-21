@@ -6,7 +6,13 @@ import type {
   PipelineConfig,
   PipelineOverview,
   PlatformUser,
+  PlatformPermission,
+  PlatformRole,
   Risk,
+  RoleInput,
+  RolePage,
+  RoleStatus,
+  RoleUpdateResult,
   Study,
   TeamAssignment,
 } from './types'
@@ -23,12 +29,18 @@ export interface ApiClient {
   listTeamAssignments(): Promise<TeamAssignment[]>
   listPipelineConfig(): Promise<PipelineConfig[]>
   listUsers(): Promise<PlatformUser[]>
+  listRoles(filters?: { page?: number; pageSize?: number; keyword?: string; status?: RoleStatus }): Promise<RolePage>
+  listPermissions(): Promise<PlatformPermission[]>
+  createRole(input: RoleInput): Promise<PlatformRole>
+  updateRole(roleId: number, input: RoleInput): Promise<RoleUpdateResult>
+  deleteRole(roleId: number): Promise<void>
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: string,
   ) {
     super(message)
   }
@@ -51,7 +63,11 @@ function createHttpApiClient(): ApiClient {
       ? JSON.parse(text)
       : undefined
     if (!response.ok) {
-      throw new ApiError(data?.message ?? `请求失败（${response.status}）`, response.status)
+      throw new ApiError(
+        data?.message ?? `请求失败（${response.status}）`,
+        response.status,
+        data?.code,
+      )
     }
     return data as T
   }
@@ -91,6 +107,34 @@ function createHttpApiClient(): ApiClient {
     listPipelineConfig: () =>
       request<PipelineConfig[]>('/api/v1/pipeline-config'),
     listUsers: () => request<PlatformUser[]>('/api/v1/platform/users'),
+    listRoles: (filters = {}) => {
+      const parameters = new URLSearchParams()
+      parameters.set('page', String(filters.page ?? 1))
+      parameters.set('pageSize', String(filters.pageSize ?? 20))
+      if (filters.keyword) parameters.set('keyword', filters.keyword)
+      if (filters.status) parameters.set('status', filters.status)
+      return request<RolePage>(`/api/v1/platform/roles?${parameters}`)
+    },
+    listPermissions: () =>
+      request<PlatformPermission[]>('/api/v1/platform/permissions'),
+    async createRole(input) {
+      await refreshCsrf()
+      return request<PlatformRole>('/api/v1/platform/roles', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+    },
+    async updateRole(roleId, input) {
+      await refreshCsrf()
+      return request<RoleUpdateResult>(`/api/v1/platform/roles/${roleId}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      })
+    },
+    async deleteRole(roleId) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/platform/roles/${roleId}`, { method: 'DELETE' })
+    },
   }
 }
 

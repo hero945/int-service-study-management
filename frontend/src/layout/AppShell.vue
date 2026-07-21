@@ -30,6 +30,9 @@ const navItems = computed(() => [
   ...(user.value?.permissions.includes('account.page.view')
     ? [{ label: '账号管理', icon: '⚷', to: '/accounts' }]
     : []),
+  ...(user.value?.permissions.includes('role.page.view')
+    ? [{ label: '角色权限管理', icon: '⌘', to: '/roles' }]
+    : []),
 ])
 
 async function logout() {

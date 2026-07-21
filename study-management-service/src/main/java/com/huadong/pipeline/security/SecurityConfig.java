@@ -40,6 +40,8 @@ public class SecurityConfig {
             .permitAll()
             .requestMatchers("/accounts")
             .hasAuthority("account.page.view")
+            .requestMatchers("/roles")
+            .hasAuthority("role.page.view")
             .anyRequest()
             .authenticated())
         .formLogin(form -> form
