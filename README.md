@@ -1,16 +1,33 @@
 # 临床研发管理平台 MVP
 
-这是从纯 HTML 原型拆出的最小可运行版本。它是一个模块化单体：浏览器端只处理平台导航、表单交互和数据渲染；Java 服务负责认证、权限、字段校验、状态文案、统计口径、动态配置和 MySQL 持久化。
+这是从纯 HTML 原型拆出的最小可运行版本。当前形态是“Vue 单页应用 +
+Java 模块化单体”：浏览器端负责路由、页面交互和数据渲染；Java 服务负责认证、
+权限、字段校验、统计口径、动态配置和 MySQL 持久化。生产环境仍然只交付一个
+Spring Boot 应用。
 
 ## 已实现
 
 - 自建账号、Argon2 密码散列、数据库 Session、CSRF 防护
 - 通过环境变量安全引导首个管理员
-- 平台壳，以及“临床研发管线”“平台管理”两个 Tab
-- 研究项目创建、列表、状态统计；展示文案由后端返回
+- Vue 登录页、平台壳和登录后的浏览器路由
+- 管线总览、Study 列表、月报、风险、团队矩阵、管线配置、导出和账号管理页面
+- 研究项目列表和管线总览读取真实后端接口
 - 管理员创建账号、在线修改业务配置
-- Flyway 建库、健康探针、Prometheus 指标
-- Docker Compose、GitHub Actions CI/镜像发布
+- 旧MVP Flyway基线、健康探针、Prometheus指标
+- Vite 生产构建、Spring Boot JAR 打包、Docker Compose 和 GitHub Actions
+
+## 数据库结构状态
+
+完整PRD目标数据库已经确认并在本机MySQL 8.0.46空库执行成功：
+
+- 逻辑库：`study_management`
+- 表数量：25张，统一使用 `hd_plt_` 前缀
+- 设计规格：[完整PRD数据库设计规格](./docs/database/完整PRD数据库设计规格.md)
+- 建表脚本：[hd_plt_full_schema.sql](./docs/database/hd_plt_full_schema.sql)
+
+当前Java代码和 `V1__baseline.sql` 仍对应早期MVP表结构，尚未适配这25张目标表。
+不要在已经手工创建25张表且没有Flyway历史的数据库上直接启动旧应用。正式接入前，
+需要把目标结构整理为新的Flyway基线，并同步Repository、Session表名和初始化数据。
 
 ## 最快启动方式
 
@@ -36,18 +53,53 @@ docker compose --profile monitoring up -d
 
 首个管理员创建后，应创建日常管理员账号，从部署环境移除 `BOOTSTRAP_ADMIN_PASSWORD`，再重启应用。数据库中已有同名账号时不会覆盖密码。
 
-## 开发验证
+## 前端开发
+
+前置条件：Node.js 24 和 npm。
+
+首次安装依赖：
 
 ```powershell
+npm.cmd --prefix frontend ci
+```
+
+不启动后端、使用演示数据查看全部页面：
+
+```powershell
+npm.cmd --prefix frontend run dev:mock
+```
+
+连接本地 Spring Boot；Vite 会把 `/api` 代理到 `http://localhost:8080`：
+
+```powershell
+npm.cmd --prefix frontend run dev
+```
+
+前端入口为 `frontend/index.html`，Vue 源代码位于 `frontend/src/`。所有后端请求
+统一通过 `frontend/src/api/client.ts`；页面组件不直接调用 `fetch`。
+
+## 本地构建与验证
+
+直接使用 Maven 打包前，必须先生成最新前端产物：
+
+```powershell
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run build
 mvn test
+```
+
+`frontend/dist/` 会被复制进 Spring Boot JAR。Docker 构建已经包含前端 Node
+构建阶段，不需要在宿主机预先生成 `dist/`。
+
+完整验证命令：
+
+```powershell
 npm.cmd --prefix frontend run check
+node --test tests/frontend-vue-architecture.test.js
+mvn test
 node --test tests/backend-module-boundaries.test.js
 node --test "管线总览 Coverpage.test.js"
 ```
-
-当前前端源文件位于 `frontend/src/`。`npm.cmd --prefix frontend run build`
-生成 `frontend/dist/`，可以在未来直接发布到 Nginx；当前 Maven 构建会把同一份
-前端源文件收入 Spring Boot JAR，因此仍然只部署一个应用。
 
 ## 后端模块结构
 
@@ -67,8 +119,19 @@ study-management-test         跨模块集成测试
 Repository 实现；最终部署
 `study-management-service/target/study-management-service-*-exec.jar`。
 
-生产运维详见 [云上安全运维方案](./docs/云上安全运维方案_v1.0.md)，接口与数据库总设计详见 [前后端拆分技术设计](./docs/前后端拆分技术设计_v1.0.md)，本机实测证据详见 [MVP 验证记录](./docs/验证记录_v1.0.md)。
+生产运维详见 [云上安全运维方案](./docs/云上安全运维方案_v1.0.md)，接口与架构设计详见 [前后端拆分技术设计](./docs/前后端拆分技术设计_v1.0.md)，目标数据库以[完整PRD数据库设计规格](./docs/database/完整PRD数据库设计规格.md)为准，本机实测证据详见 [MVP 验证记录](./docs/验证记录_v1.0.md)。
 
 ## MVP 边界
 
-原纯 HTML 文件仍保留作为需求与回归参考；新服务不迁移 localStorage 数据。月报、风险、里程碑和团队矩阵等功能尚未进入本次最小闭环。
+原纯 HTML 文件和 `support.js` 仍保留作为需求、样式与业务回归参考，不作为当前
+Vue 应用的运行依赖；新服务也不迁移原型中的 `localStorage` 数据。
+
+以下页面已经完成前端拆分，并可在 `dev:mock` 中查看；对应真实后端能力仍是预留接口：
+
+- 风险：`GET /api/v1/risk-management/risks`
+- 月报：`GET /api/v1/monthly-reports`
+- 团队矩阵：`GET /api/v1/team-assignments`
+- 管线配置：`GET /api/v1/pipeline-config`
+
+在这些接口落地之前，真实后端模式下相应页面会显示加载失败状态。前端路由守卫
+只改善导航体验，最终页面权限、操作权限和数据范围必须由服务端执行。

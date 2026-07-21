@@ -48,17 +48,22 @@ assert(
   'service must be the single deployable Spring Boot module',
 );
 assert(
-  servicePom.includes('<directory>../frontend/src</directory>'),
-  'service must package the independent frontend source',
+  servicePom.includes('<directory>../frontend/dist</directory>'),
+  'service must package the compiled frontend output',
 );
 
 assert(
   fs.existsSync(path.join(root, 'frontend', 'package.json')),
   'missing independent frontend project',
 );
-for (const asset of ['index.html', 'app.js', 'app.css', 'overrides.css']) {
+for (const asset of [
+  path.join('frontend', 'index.html'),
+  path.join('frontend', 'src', 'main.ts'),
+  path.join('frontend', 'src', 'App.vue'),
+  path.join('frontend', 'src', 'api', 'client.ts'),
+]) {
   assert(
-    fs.existsSync(path.join(root, 'frontend', 'src', asset)),
+    fs.existsSync(path.join(root, asset)),
     `missing frontend source asset: ${asset}`,
   );
 }

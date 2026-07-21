@@ -2,7 +2,9 @@
 
 ## 实现定位
 
-本版本是技术设计的第一条可运行纵切片。生产目标仍是技术设计中的 React + TypeScript 前端；为尽快验证平台壳、认证和数据闭环，MVP 使用无第三方运行依赖的 HTML/CSS/ES Modules。前后端边界已经通过 REST API 固定，后续替换前端框架不需要改数据库或核心业务服务。
+本文件记录早期MVP纵切片的运行接口和数据库基线。当前前端已经迁移为Vue +
+TypeScript + Vite；本文API和 `V1__baseline.sql` 说明仍用于识别旧MVP运行边界，
+不代表完整PRD的25表目标结构已经接入Java。
 
 ## API 清单
 
@@ -34,7 +36,9 @@
 
 ## 数据库版本
 
-`V1__baseline.sql` 创建：
+### 旧MVP运行基线
+
+当前Java运行时的 `V1__baseline.sql` 创建：
 
 - `plt_user`：自建账号及 Argon2 密码散列；用户名唯一。
 - `biz_study`：研究项目主数据；项目编号唯一，状态和更新时间有索引。
@@ -42,6 +46,17 @@
 - `SPRING_SESSION*`：服务端 Session，支持未来双实例部署。
 
 Flyway 在应用启动时迁移。生产数据库迁移账号与日常运行账号建议分离；MVP Compose 为简化首次运行暂使用同一个 schema 账号。
+
+### 完整PRD目标结构
+
+完整目标结构由
+[数据库设计规格](database/完整PRD数据库设计规格.md)和
+[25表建表脚本](database/hd_plt_full_schema.sql)定义，统一使用 `hd_plt_` 前缀。
+该脚本已在本机MySQL 8.0.46的 `study_management` 空库执行成功，但当前库没有
+`flyway_schema_history`，Java Repository和Spring Session表名也尚未完成适配。
+
+正式切换时必须创建新的Flyway基线并完成应用集成测试，不能让旧V1迁移与25表脚本
+在同一个schema中混合执行。
 
 ## 配置优先级
 

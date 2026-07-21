@@ -57,7 +57,7 @@ flowchart LR
 
 | 模块 | 页面/入口 | 核心能力 | HTML页面截图 |
 |---|---|---|---|
-| 登录与权限 | 登录页、全局导航 | 登录、退出、角色分配、用户授权和数据范围控制 | 纳入[08 账号与权限管理](screenshots/08-account-permissions.png) |
+| 登录与权限 | 登录页、全局导航 | 登录、退出、角色分配、角色权限和Study可见范围控制 | 纳入[08 账号与权限管理](screenshots/08-account-permissions.png) |
 | 管线总览 | 左侧导航“管线总览” | Project聚合、阶段门展示、筛选、状态提示 | [01 管线总览](screenshots/01-pipeline-overview.png) |
 | Study列表 | 左侧导航“研究 Study 列表” | Study明细、搜索、筛选、排序、进入详情/里程碑 | [02 Study列表](screenshots/02-study-list.png) |
 | 研究月度汇报 | 左侧导航“研究月度汇报” | 按Study和功能线逐月填写、查看完成率 | [03 研究月度汇报](screenshots/03-monthly-reporting.png) |
@@ -65,8 +65,8 @@ flowchart LR
 | 团队矩阵 | 左侧导航“团队矩阵” | Study×项目角色的业务分工维护 | [05 团队矩阵](screenshots/05-team-matrix.png) |
 | 管线配置 | 左侧导航“管线配置” | Program/Project/Study基础配置 | [06 管线配置](screenshots/06-pipeline-config.png) |
 | 月报导出 | 左侧导航“月报导出” | 月报预览、HTML/PDF/CSV/Excel输出 | [07 月报导出](screenshots/07-monthly-export.png) |
-| 账号管理 | 管理员导航“账号管理” | 账号、角色、权限和备份管理 | [08 账号与权限管理](screenshots/08-account-permissions.png) |
-| 里程碑 | Study列表“里程碑” | 计划版次、实际日期、偏差原因维护 | [09 里程碑](screenshots/09-milestones.png) |
+| 账号管理 | 管理员导航“账号管理” | 账号、角色和角色权限管理 | [08 账号与权限管理](screenshots/08-account-permissions.png) |
+| 里程碑 | Study列表“里程碑” | V1/V2计划日期、实际日期和偏差原因维护 | [09 里程碑](screenshots/09-milestones.png) |
 
 ## 三、全局产品规则
 
@@ -120,7 +120,7 @@ flowchart LR
 #### 3.1.7 管线配置
 
 - 现状不提供有效的文本搜索和下拉筛选，默认展示全部配置记录。
-- Source、Origin、Product、MOA、Program、Indication、Project、TA、Study No.、项目情况和Phase Status均可点击表头排序。
+- Source、Origin、Product、MOA、Program、Indication、Project、TA、Study No.、实时计算的项目状态和Phase Status均可点击表头排序。
 - 首次点击按升序排列，再次点击同一表头切换为降序；字符串比较不区分英文大小写。
 
 #### 3.1.8 月报导出
@@ -131,7 +131,7 @@ flowchart LR
 #### 3.1.9 账号管理
 
 - 现状账号列表不提供有效的搜索、筛选和表头排序，按照账号数据保存顺序展示。
-- 顶部通用搜索框当前不参与账号列表计算；如正式产品需要账号查询，应另行定义姓名、登录邮箱、职务和角色的匹配规则。
+- 顶部通用搜索框当前不参与账号列表计算；正式产品账号查询匹配显示姓名、登录邮箱和角色。
 
 #### 3.1.10 里程碑
 
@@ -146,16 +146,15 @@ flowchart LR
 
 1. 用户被管理员分配一个或多个角色。
 2. 每个角色配置一组标准权限，角色用于批量复用权限模板。
-3. 管理员可在角色权限基础上，对指定用户手动追加或收回权限。
-4. 用户最终权限由角色权限、用户单独授权和用户单独禁用共同决定，字段计算口径见4.8账号管理“最终权限”。
-5. 所有权限判断均使用不可变 `userId、roleId、permissionCode`，姓名只用于展示。
+3. 不支持对单个用户追加或禁用权限；用户最终操作权限为其所有启用角色权限的并集。
+4. 所有权限判断均使用稳定的 `userId、roleId、permissionCode`，姓名和邮箱快照只用于展示与审计。
 
 #### 3.2.2 权限维度
 
 | 权限层级 | 控制内容 | 权限示例 |
 |---|---|---|
 | 页面查看权限 | 是否显示导航、是否允许进入页面 | `pipeline.page.view`、`risk.page.view`、`account.page.view` |
-| 页面操作权限 | 页面级按钮和非单条数据操作 | `report.export.xlsx`、`backup.import`、`team.edit_mode` |
+| 页面操作权限 | 页面级按钮和非单条数据操作 | `report.export.xlsx`、`report.print`、`team.edit_mode` |
 | 数据查询权限 | 是否可以读取列表、详情、统计和导出数据 | `study.read`、`risk.read`、`monthly.read` |
 | 数据新增权限 | 是否可以创建业务记录 | `risk.create`、`monthly.create`、`account.create` |
 | 数据修改权限 | 是否可以修改业务记录 | `risk.update`、`milestone.update`、`config.update` |
@@ -163,14 +162,17 @@ flowchart LR
 
 #### 3.2.3 数据范围
 
-数据权限除CRUD动作外，还必须绑定数据范围：`全部数据、指定TA、指定Program、指定Project、指定Study、指定功能线、本人创建/负责的数据`。管理员在给用户授权时选择权限动作及其适用范围。
+角色的数据范围模式仅有：
 
-示例：用户可以拥有“风险管理页面查看 + 风险查询全部Study”，但只有“指定Study、指定功能线”的风险新增和修改权限。
+- `ALL`：查看全部Study及其关联数据。
+- `ASSIGNED_STUDY`：仅查看 `hd_plt_team_assignment` 中分配给当前账号的Study及其关联数据。
+
+管理员不再为用户手工选择TA、Program、Project、功能线或“本人创建”等范围。管理员将账号分配到某个Study团队后，该Study即进入用户可见范围；移除团队分配后不可见，但不会改变历史月报完成率。
 
 #### 3.2.4 鉴权顺序
 
 ```text
-登录用户 → 校验页面查看权限 → 校验页面操作权限 → 校验数据动作权限 → 校验数据范围 → 允许/拒绝
+登录用户 → 汇总角色权限 → 校验页面/数据动作权限 → 按角色范围模式取得可见Study → 允许/拒绝
 ```
 
 - 页面无查看权限：导航不展示，直接访问返回无权限页面。
@@ -223,7 +225,7 @@ flowchart LR
 | 阶段状态 | Config.phaseStatus、Milestone | Derived | 每个Study先由Phase Status映射到PreIND至Phase 3-2中的一列；当前阶段显示当前节点；当前阶段以前若无实际阶段项目则回填“已完成”并显示“实际无项目，由后续阶段回填”；PreIND/IND优先依据对应里程碑实际开始/结束日期推导节点；“未开始”和“不适用”不视为已进入该阶段 | 见6.3、6.4 |
 | 阶段筛选命中 | 阶段状态 | Derived Boolean | 所选阶段对应单元格不是“未开始”且不是“不适用”时为true；先按Study判断，再由Project行汇总为“任一Study命中即命中” | true/false |
 | 状态筛选命中 | 阶段状态 | Derived Boolean | Study任一阶段单元格与所选状态完全相同时为true；Project下任一Study为true则保留Project行 | true/false |
-| 项目状态 | Config.projectStatus、Risk、Milestone | Derived/Enum | 优先取管线配置的项目情况；配置缺失时依次依据是否存在逾期/风险状态、当前活动节点和已到达阶段兜底推导 | 进行中、已完成、准备中、延期 |
+| 项目状态 | Study、Risk、Milestone | Derived/Enum | 不落库、不配置；根据Project下属Study的阶段、里程碑和风险数据实时汇总计算，具体优先级由Java统一实现 | 进行中、已完成、准备中、延期 |
 | Open风险数 | Risk.status | Derived Integer | 统计Project下全部授权Study关联且 `status=Open` 的Risk记录数；同一Risk ID只计1次 | 非负整数 |
 | 需关注数 | 阶段状态 | Derived Integer | 先判断Study任一阶段是否为橙色状态“已反馈、补正中、已发补、已书补”或红色状态“逾期、风险”，再按Project ID去重计数；该数不等于Risk记录数 | 非负整数 |
 | 已获批数 | 阶段状态 | Derived Integer | Study任一阶段状态精确等于“已批准”即命中，再按Project ID去重计数；Close、DBL、CSR不计入已获批 | 非负整数 |
@@ -266,8 +268,9 @@ flowchart LR
 - 列表模式：按月查看全部Study的已填写功能线数量和完成情况。
 - 详情模式：查看选中Study各功能线本月填报、历史月份和完成率。
 - 新增时选择功能线、月度并填写进展；编辑时功能线锁定。
-- 用户仅能编辑管理员授权的数据范围和功能线；是否允许新增、修改分别校验 `monthly.create`、`monthly.update`。
-- 同一 `Study + 功能线 + 月度` 保存为同一记录，重复保存覆盖原值。
+- 用户仅能编辑自己可见Study中、团队角色所对应功能线的月报；新增、修改分别校验 `monthly.create`、`monthly.update`。
+- `Study + 功能线 + 月度` 对应一条月报应填项；一个月内每次汇报新增一条独立进展明细，不覆盖之前的汇报。
+- 月报不需要提交、审核、退回或批准流程。
 
 ### 列表字段
 
@@ -295,7 +298,8 @@ flowchart LR
 | Study | Reference | 是 | 由详情页带入并锁定 | 授权Study |
 | 功能线 | Enum | 是 | 新增可选；编辑锁定；受权限过滤 | 见6.5 |
 | 月度 | Month/Enum | 是 | 默认当前选择月份 | 系统月份列表 |
-| 月度进展 | Text | 否 | 可换行；空字符串表示本月未填写 | - |
+| 汇报日期 | Date | 是 | 默认当天；同月允许多次汇报 | 所选月度内日期 |
+| 月度进展 | Text | 否 | 可换行；至少一条未删除且非空的进展明细时，该功能线计为已填写 | - |
 
 ## 4.4 风险管理
 
@@ -307,7 +311,7 @@ flowchart LR
 - 支持功能线、状态筛选；支持描述/Owner/编号/Program搜索；支持表头排序。
 - 风险统计卡展示总数、Open、高危、中风险并可作为快捷筛选。
 - 点击风险打开查看/编辑抽屉；有额外措施时显示“含N项措施记录”。
-- 风险新增、编辑、删除分别校验 `risk.create`、`risk.update`、`risk.delete`，并校验管理员配置的Study及功能线数据范围。
+- 风险新增、编辑、删除分别校验 `risk.create`、`risk.update`、`risk.delete`，并校验目标Study属于当前用户可见范围。
 
 ### 列表字段
 
@@ -323,7 +327,7 @@ flowchart LR
 | 风险等级 | Derived Enum | 按风险总分计算：高危 `≥37`；中风险 `13~36`；低风险 `1~12` |
 | 风险归属 | Reference/String | Owner，必填 |
 | 状态 | Enum | Open或Closed |
-| 额外措施数量N | Derived Integer | 现状依次检查现有控制措施、风险沟通、临时措施日期、额外控制措施、行动责任人、完成日期、再评估原因、评估后行动8个字段，字段去除首尾空格后非空则计1，N为非空字段数而非独立措施条数；正式产品拆为措施子表后改为按措施记录ID去重计数 |
+| 风险措施数量N | Derived Integer | 对该风险关联且未逻辑删除的措施记录ID去重计数 |
 | 风险总数卡 | Derived Integer | 在当前权限范围、功能线筛选和文本搜索结果内，对Risk ID去重计数；不受状态和风险等级快捷筛选影响 |
 | 未关闭Open卡 | Derived Integer | 在风险总数卡口径内，统计 `status=Open` 的Risk ID去重数量 |
 | 高危卡 | Derived Integer | 在风险总数卡口径内，统计风险总分 `≥37` 的Risk ID去重数量 |
@@ -344,16 +348,11 @@ flowchart LR
 | 可探测性c | Integer/Enum | 是 | 风险评分因子；与a、b相乘生成风险总分 | 1、2、3、4、5 |
 | 风险总分 | Derived Integer | - | `a × b × c`，范围1~125；任一因子为空时不计算 | 1~125 |
 | 风险等级 | Derived Enum | - | 根据风险总分计算：高危 `≥37`；中风险 `13~36`；低风险 `1~12`；阈值正式上线前由业务确认并配置化、版本化 | 高危、中风险、低风险 |
-| 现有控制措施 | Text | 否 | 额外措施统计字段；去除首尾空格后非空则N加1 | - |
-| 风险沟通 | Text | 否 | 内部/外部沟通方式；去除首尾空格后非空则N加1 | - |
-| 临时措施日期 | Date | 否 | 有临时措施时填写；非空则N加1 | - |
-| 额外控制措施 | Text | 否 | 追加的控制方案；去除首尾空格后非空则N加1 | - |
-| 行动责任人 | String/Reference | 否 | 额外措施责任人；非空则N加1 | - |
-| 完成日期 | Date | 否 | 措施计划/实际完成日，现状未区分；非空则N加1 | - |
-| 再评估原因 | Text | 否 | 触发重新评分的原因；去除首尾空格后非空则N加1 | - |
-| 评估后行动 | Text | 否 | 再评估后的处置；去除首尾空格后非空则N加1 | - |
-| 额外措施数量N | Derived Integer | - | 对上述8个额外措施统计字段逐个执行非空判断并求和，取值0~8；现状不是措施记录条数。正式产品拆为一对多措施子表后，N改为关联措施记录ID去重数量 | 0~8 |
 | 状态 | Enum | 是 | 默认Open | Open、Closed |
+
+### 风险措施字段
+
+一条风险可以有多条独立措施；每条措施单独保存描述、责任人、计划完成日期、实际完成日期、状态和备注。责任人必须是平台账号，并且是该Study的团队成员。
 
 ## 4.5 团队矩阵
 
@@ -363,10 +362,10 @@ flowchart LR
 
 - 横向为Study，纵向为角色；顶部展示适应症和当前状态。
 - 分别支持Study/适应症搜索和角色名称搜索。
-- 拥有 `team.edit_mode` 和 `team.update` 权限，且数据范围覆盖目标Study的用户可进入编辑模式。
-- 单元格支持添加、回车确认、删除成员；成员以中文顿号分隔存储。
-- 姓名存在于账号表时显示正式成员；不存在时显示“临时”。
-- 团队矩阵仅表达项目业务分工，不直接产生系统权限；如人员分工变化，管理员需在权限管理中同步调整授权。
+- 拥有 `team.edit_mode` 和 `team.update` 权限，且目标Study属于用户可见范围时可进入编辑模式。
+- 单元格支持从平台账号中搜索、添加和移除成员；数据库使用 `user_id` 关联，不保存姓名拼接字符串。
+- 团队成员必须已有平台账号，不允许临时成员。
+- 团队矩阵同时表达业务分工和 `ASSIGNED_STUDY` 用户的Study可见范围，不直接授予新增、修改、删除等操作权限。
 
 ### 字段
 
@@ -404,8 +403,8 @@ flowchart LR
 | Indication 适应症 | String | 否 | - | - |
 | TA | Enum | 否 | 治疗领域 | 见6.1 |
 | Study 研究 | String | 是 | 保存必填 | - |
-| 现状记录键 | Derived String | - | 现状按Program与Study拼接生成并要求唯一；正式系统改用UUID作为主键，并对 `programId + studyId` 建立唯一约束 | - |
-| 项目情况 | Enum | 否 | 默认进行中；决定项目状态色 | 进行中、已完成、准备中、延期 |
+| 业务编码 | String | 是 | Program、Project、Study分别使用全局唯一且创建后不可修改的业务编码；数据库内部使用BIGINT主键关联 | - |
+| 项目状态 | Derived Enum | - | 不在管线配置中填写；根据Project下属Study状态实时计算并决定状态色 | 进行中、已完成、准备中、延期 |
 | Phase Status | Enum | 否 | 决定Study映射到管线哪个阶段列 | PreIND、IND、Phase 1、Phase 2、PRE-3、Phase 3-1、Phase 3-2 |
 
 ## 4.7 月报导出
@@ -424,10 +423,10 @@ flowchart LR
 | 分区 | 字段 | 逻辑 |
 |---|---|---|
 | 管线概览 | Study总数 | 对当前权限范围内的Study ID去重计数 |
-| 管线概览 | 进行中Study数 | 在可见Study中统计项目情况精确等于“进行中”的Study ID去重数量 |
-| 管线概览 | 已完成Study数 | 在可见Study中统计项目情况精确等于“已完成”的Study ID去重数量 |
-| 管线概览 | 准备中Study数 | 在可见Study中统计项目情况精确等于“准备中”的Study ID去重数量 |
-| 管线概览 | 延期Study数 | 在可见Study中统计项目情况精确等于“延期”的Study ID去重数量 |
+| 管线概览 | 进行中Study数 | 根据Study所属Project的实时计算状态，统计状态为“进行中”的可见Study ID去重数量 |
+| 管线概览 | 已完成Study数 | 根据Study所属Project的实时计算状态，统计状态为“已完成”的可见Study ID去重数量 |
+| 管线概览 | 准备中Study数 | 根据Study所属Project的实时计算状态，统计状态为“准备中”的可见Study ID去重数量 |
+| 管线概览 | 延期Study数 | 根据Study所属Project的实时计算状态，统计状态为“延期”的可见Study ID去重数量 |
 | 管线概览 | Open风险数 | 统计与可见Study关联且 `status=Open` 的Risk ID去重数量 |
 | 管线概览 | 有填报Study数 | 在所选月度内，至少一个在册功能线的月度进展文本去除首尾空格后非空的Study ID去重数量 |
 | 管线快照 | TA、Program、Compound、Study、适应症、当前阶段、项目状态 | Study级明细，按TA分组 |
@@ -449,48 +448,42 @@ flowchart LR
 
 ### 页面功能与交互
 
-- 需要 `account.page.view` 权限；新增、编辑、删除和备份操作分别独立授权。默认仅系统管理员角色拥有。
+- 需要 `account.page.view` 权限；新增、编辑和停用账号分别独立授权。默认仅系统管理员角色拥有。
 - 查看、新增、编辑、删除账号；当前账号显示“当前”。
 - 支持角色管理：创建角色、配置角色权限、停用角色、查看角色下用户。
-- 支持用户授权：管理员为用户分配角色，并手动追加或禁用单项权限及数据范围。
-- 权限配置采用树形结构：模块 → 页面查看/页面操作/数据CRUD → 数据范围。
-- 已有账号的登录邮箱锁定；姓名、职务、角色和密码可编辑。
+- 支持用户授权：管理员为用户分配一个或多个角色；不支持用户单独追加或禁用权限。
+- 权限配置采用树形结构：模块 → 页面查看/页面操作/数据CRUD。
+- 已有账号的登录邮箱锁定；显示姓名、角色、账号状态和密码可编辑。
 - 不能删除当前账号；不能删除最后一个具有权限管理能力的管理员账号。
-- 可导出/导入JSON备份，导入会覆盖浏览器内业务数据。
+- 不提供页面整库JSON导入或覆盖；数据库备份与恢复由运维流程完成。
 
 ### 字段
 
 | 字段 | 类型 | 必填 | 逻辑 | 枚举 |
 |---|---|---:|---|---|
-| 姓名 | String | 是 | 唯一；与团队矩阵精确匹配 | - |
+| 姓名 | String | 是 | 用于展示，不作为关联键或唯一标识 | - |
 | 登录账号 | Email/String | 是 | 转小写；新增时唯一；编辑锁定 | 合法邮箱格式 |
-| 职务 | String | 否 | 仅展示，不直接决定权限 | - |
 | 角色 | MultiReference/Enum | 是 | 由管理员分配一个或多个角色；角色提供标准权限模板 | 系统角色及自定义角色 |
-| 密码 | Password/String | 是 | 现状空值回退为1234 | - |
-| 用户单独授权 | Permission[] | 否 | 在角色权限基础上追加权限，并配置数据范围 | 页面、操作、CRUD权限 |
-| 用户单独禁用 | Permission[] | 否 | 从角色权限合集中排除指定权限 | 页面、操作、CRUD权限 |
-| 最终权限 | Derived Permission[] | - | `启用角色的权限编码并集 ∪ 用户单独授权 - 用户单独禁用`；同一权限编码去重，用户禁用优先级最高；数据权限还需按权限编码合并对应数据范围 | - |
-| 数据范围摘要 | Derived String | - | 系统管理员显示“全部项目”；只读者显示“全部只读”或实际授权范围；普通成员按最终权限覆盖的Study ID去重计数并显示“N个研究”，不得将Study数标为项目数 | - |
+| 密码 | Password/String | 是 | 仅提交明文到安全边界；数据库只保存Argon2id密码哈希 | - |
+| 最终权限 | Derived Permission[] | - | 当前用户全部启用角色所关联权限编码的并集 | - |
+| 数据范围摘要 | Derived String | - | `ALL`显示全部Study；`ASSIGNED_STUDY`按团队分配统计可见Study数量 | - |
 
 ### 角色配置字段
 
 | 字段 | 类型 | 必填 | 逻辑 |
 |---|---|---:|---|
 | 角色名称 | String | 是 | 系统内唯一 |
-| 角色编码 | String | 是 | 创建后不可修改，作为稳定标识 |
 | 角色说明 | String/Text | 否 | 描述适用人群和职责 |
 | 状态 | Enum | 是 | 启用、停用；停用后不再向用户提供权限 |
 | 角色权限 | Permission[] | 是 | 按页面、操作、CRUD勾选 |
-| 默认数据范围 | Scope[] | 否 | 全部或指定TA/Program/Project/Study/功能线 |
+| 数据范围模式 | Enum | 是 | `ALL`或`ASSIGNED_STUDY` |
 
 ### 用户授权交互
 
 1. 管理员进入账号详情，选择“权限配置”。
 2. 选择一个或多个角色，页面即时展示角色带来的权限。
-3. 管理员可对单个用户追加权限或禁用角色中的某项权限。
-4. 对数据CRUD权限选择适用数据范围；未选择范围时不得保存数据权限。
-5. 保存前展示“最终权限预览”，包括页面、操作、CRUD和数据范围。
-6. 保存后权限立即生效；若修改当前登录用户自身权限，刷新当前会话菜单和按钮。
+3. 保存前展示角色权限并集和角色数据范围模式。
+4. 保存后权限立即生效；若修改当前登录用户自身角色，刷新当前会话菜单和按钮。
 
 ### 权限配置字段
 
@@ -499,18 +492,9 @@ flowchart LR
 | 模块 | Enum | 是 | pipeline、study、monthly、risk、team、config、report、account、milestone |
 | 权限编码 | String/Enum | 是 | `risk.page.view`、`risk.create`、`report.export.xlsx` |
 | 权限名称 | String | 是 | 风险页面查看、风险新增、导出Excel |
-| 授权来源 | Derived Enum | - | 角色、用户追加、用户禁用 |
-| 授权状态 | Boolean/Enum | 是 | 允许、禁用 |
-| 数据范围类型 | Enum | 数据权限必填 | all、ta、program、project、study、function、own |
-| 数据范围值 | Reference[] | 条件必填 | 选择具体TA、Program、Project、Study或功能线 |
-| 生效时间 | DateTime | 否 | 默认立即生效 |
-| 失效时间 | DateTime | 否 | 可用于临时授权 |
+| 授权来源 | Derived Enum | - | 角色 |
 
-### 备份字段
-
-`schemaVersion、exportedAt、accounts、risks、config、monthlyReports、teamData、msEditData、order、overrides`。当前会话auth不进入备份。
-
-> 安全要求：正式产品不得在浏览器或备份中保存明文密码，应采用服务端认证、加盐哈希、复杂度策略、重置流程、登录失败限制和审计日志。
+> 安全要求：正式产品不得在浏览器、导出或日志中保存明文密码或密码哈希，应采用服务端认证、加盐哈希、复杂度策略、重置流程、登录失败限制和审计日志。
 
 ## 4.9 里程碑
 
@@ -519,7 +503,7 @@ flowchart LR
 ### 页面功能与交互
 
 - 从Study列表进入，只展示一个Study的里程碑。
-- 按阶段组展示约60个节点。
+- 按Java固定的阶段和里程碑节点顺序展示；数据库不建立阶段或节点配置表。
 - 拥有 `milestone.update` 且数据范围覆盖目标Study的用户可编辑；其他用户只读。
 - 编辑状态下可维护计划V1.0、计划V2.0、实际开始、实际结束和偏差说明。
 
@@ -591,7 +575,7 @@ flowchart LR
 ### 6.3 管线阶段与项目状态
 
 - Phase Status：`PreIND、IND、Phase 1、Phase 2、PRE-3、Phase 3-1、Phase 3-2`
-- 项目情况：`进行中、已完成、准备中、延期`
+- Project状态计算结果：`进行中、已完成、准备中、延期`；不落库，由下属Study状态实时汇总。
 - 阶段状态筛选：`已递交、已受理、已反馈、补正中、已发补、已书补、已批准、FPI、LPI、LPO、DBL、CSR、Close、逾期`
 
 ### 6.4 里程碑组
@@ -636,9 +620,9 @@ flowchart LR
 ### 6.9 权限动作枚举
 
 - 页面：`view`
-- 页面操作：`export、import、print、backup、edit_mode`
+- 页面操作：`export、print、edit_mode`
 - 数据动作：`read、create、update、delete`
-- 数据范围：`all、ta、program、project、study、function、own`
+- 角色数据范围模式：`ALL、ASSIGNED_STUDY`
 
 ## 七、数据与非功能要求
 
@@ -647,7 +631,7 @@ flowchart LR
 - Program、Project、Study应使用独立ID，不以名称或拼接字符串作为永久主键。
 - Study No.在有效数据集中唯一。
 - 风险必须关联Study和功能线。
-- 月度进展唯一键：`studyId + functionCode + month`。
+- 月报应填项唯一键：`studyId + functionLineId + reportMonth`；一个应填项可关联多条进展明细。
 - 团队指派唯一键：`studyId + roleCode + userId`。
 - 所有新增、修改、删除操作记录操作者和时间。
 
@@ -655,9 +639,9 @@ flowchart LR
 
 - 生产环境使用后端数据库和统一身份认证，不依赖localStorage。
 - 密码不得明文存储或导出。
-- 页面、操作、数据CRUD及数据范围必须在服务端校验，前端隐藏按钮不能作为安全边界。
-- 角色配置、用户授权、权限收回必须写入权限审计日志，记录管理员、变更前后值和时间。
-- 导入、删除、关闭风险等高影响操作需要确认和审计日志。
+- 页面、操作、数据CRUD及Study可见范围必须在服务端校验，前端隐藏按钮不能作为安全边界。
+- 角色配置、用户角色变更和团队分配变更必须写入权限审计日志，记录管理员、变更前后值和时间。
+- 删除、关闭风险等高影响操作需要确认和审计日志。
 - 若系统用于受监管的GxP活动，需要进一步评估电子记录、审计追踪、验证和数据完整性要求。
 
 ### 7.3 性能与可用性
@@ -679,15 +663,15 @@ flowchart LR
 | report_export | 点击导出 | month、format、study_count、success |
 | permission_denied | 越权操作被拦截 | action、object_type、object_id、role |
 
-验收重点：聚合口径正确；无页面权限时不可进入；页面操作和数据增删改查可分别授权；数据范围不越界；角色权限与用户单独授权合并正确；风险评分正确；措施N值口径明确；报告数据与页面一致；导入导出不丢字段。
+验收重点：聚合口径正确；无页面权限时不可进入；页面操作和数据增删改查可分别授权；`ASSIGNED_STUDY`用户只能访问团队分配的Study；角色权限并集正确；风险评分正确；措施N值口径明确；报告数据与页面一致；实时导出不超出数据范围。
 
 ## 九、现状问题与产品决策清单
 
 | 编号 | 现状问题 | 建议产品决策 |
 |---|---|---|
-| D-01 | 现状仅使用Admin/Member/Viewer粗粒度角色 | 改为角色权限模板，并由管理员为用户手动配置页面、操作、CRUD和数据范围权限 |
-| D-02 | 账号页数据范围摘要文案与实际统计对象不一致 | 统一采用4.8“数据范围摘要”字段口径 |
-| D-03 | 现状根据团队矩阵姓名自动推导权限 | 权限改用userId、roleId、permissionCode关联；团队矩阵只维护业务分工 |
+| D-01 | 现状仅使用Admin/Member/Viewer粗粒度角色 | 改为角色权限模板；用户操作权限只来自角色权限并集 |
+| D-02 | 复杂数据范围配置容易与团队分工不一致 | 角色范围仅保留ALL/ASSIGNED_STUDY；后者以团队分配作为Study可见范围 |
+| D-03 | 现状根据团队矩阵姓名自动推导权限 | 团队分配改用userId关联，既表达业务分工也决定ASSIGNED_STUDY可见范围；姓名仅展示 |
 | D-04 | 风险措施使用多个扁平字段保存，无法表达多条独立措施 | 建立一对多措施子表，字段与迁移口径见4.4 |
 | D-05 | 密码明文保存和备份 | 接入服务端认证，禁止导出密码 |
 | D-06 | 风险等级规则硬编码在前端 | 由业务确认后配置化并版本管理，字段口径见4.4 |

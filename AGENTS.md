@@ -52,12 +52,26 @@ test -> 需要验证的模块
 
 ### 前端与历史原型
 
-- `frontend/src/`：当前前端唯一源文件目录。
+- `frontend/index.html`：Vite HTML 入口，只保留挂载节点和静态元数据，不在这里堆业务页面。
+- `frontend/src/main.ts`、`frontend/src/App.vue`：Vue 应用启动入口和根组件。
+- `frontend/src/router.ts`、`frontend/src/session.ts`：页面路由、登录恢复和前端导航守卫。
+- `frontend/src/views/`：登录、管线、Study、月报、风险、团队、配置、导出和账号页面。
+- `frontend/src/layout/`、`frontend/src/components/`、`frontend/src/styles/`：共享布局、组件和原型视觉样式。
+- `frontend/src/api/`：前后端交互的唯一客户端边界；业务页面不得直接调用 `fetch`。
+- `frontend/src/domain/`：可独立测试的前端展示规则，不承载服务端权限或持久化规则。
+- `frontend/public/`：由 Vite 原样复制的静态资源。
 - `frontend/dist/`：构建产物，不手工编辑。
 - `管线总览 Coverpage.dc.html`、`管线总览 Coverpage.test.js`：历史离线原型及其测试。
 - `support.js`：生成的 DC 运行时，不手工编辑。
 
-前后端当前以一个 Spring Boot 服务交付：前端构建后进入后端 classpath。除非任务明确要求改变部署方式，不要新增第二个运行时或第二套前端源代码。
+前端使用 Vue、TypeScript、Vue Router 和 Vite。`npm run dev:mock` 使用前端演示数据；
+`npm run dev` 将 `/api` 代理到本地 Spring Boot。mock 只用于页面开发和视觉回归，
+不得被描述为真实后端、生产权限或数据库。
+
+前后端当前以一个 Spring Boot 服务交付：Vite 先生成 `frontend/dist/`，Maven 再把
+该目录复制到后端 classpath。Maven 不负责安装 npm 依赖或自动执行 Vite 构建；
+Dockerfile 会按 Node 构建前端、Maven 构建后端的顺序完成这两步。除非任务明确要求
+改变部署方式，不要新增第二个生产运行时或第二套前端源代码。
 
 ### 产品、架构与运行文档
 
@@ -76,7 +90,8 @@ test -> 需要验证的模块
 - 改认证、账号或权限：先读 ADR-003、安全配置和相关集成测试。
 - 改数据库、Repository 或迁移：先读 ADR-004、`db/migration/` 和 Domain 端口。
 - 改模块边界：先读 ADR-001、父 `pom.xml` 和边界测试。
-- 改页面：先读 `frontend/README.md`、`frontend/src/` 和相关 API。
+- 改页面：先读 `frontend/README.md`、`frontend/src/router.ts`、对应 `views/` 和
+  `frontend/src/api/`；样式调整还要对照历史原型。
 - 改产品规则：先读 PRD；若代码与 PRD 冲突，明确指出，不静默猜测。
 - 改部署或运维：先读前后端拆分设计、云上安全运维方案、`Dockerfile` 和 `compose.yaml`。
 
@@ -100,6 +115,10 @@ test -> 需要验证的模块
 - 不把 `localStorage` 演示数据描述成生产数据库。
 - 服务端必须在查询和聚合前执行页面访问权、操作/CRUD 权限和数据范围检查。
 - 客户端校验只是体验优化，不能代替服务端授权。
+- Vue 路由守卫只负责导航体验；页面、API 和数据范围权限仍必须由 Spring Security
+  及后端用例校验。`/accounts` 必须同时保持前端管理员守卫和服务端管理员校验。
+- 认证继续使用服务端 Session 与 CSRF，不在 `localStorage`、`sessionStorage`
+  或前端状态中保存认证令牌。
 - 登录接口不得返回密码或密码散列；日志不得记录凭据和敏感健康信息。
 - 数据库查询使用参数化语句；外部输入必须在系统边界完成校验。
 - 涉及医药或临床术语时，首次出现要附一句通俗解释。
@@ -108,7 +127,10 @@ test -> 需要验证的模块
 
 - 保留工作区中已有的用户改动；先看差异，再编辑重叠文件。
 - 只修改任务需要的文件，不进行无关重构、格式化或依赖升级。
-- 前端编辑 `frontend/src/`，通过构建生成 `frontend/dist/`。
+- 前端编辑 `frontend/index.html`、`frontend/public/`、`frontend/src/` 和必要的
+  Vite/TypeScript 配置，通过构建生成 `frontend/dist/`。
+- 新后端调用先扩展 `frontend/src/api/types.ts` 与 `frontend/src/api/client.ts`，
+  再由页面消费；mock 实现放在 `frontend/src/api/mock.ts`，不得散落到视图组件。
 - PRD 先改 Markdown，再运行生成器；不要直接修生成的 HTML。
 - 图表先改 `docs/diagram-source.html`，再更新 PNG。
 - 不手工编辑 `support.js`。
@@ -122,6 +144,9 @@ test -> 需要验证的模块
 ```powershell
 # 前端语法、资源和构建检查
 npm.cmd --prefix frontend run check
+
+# Vue 结构、API 边界和 Spring Boot 静态资源衔接
+node --test tests\frontend-vue-architecture.test.js
 
 # 后端全部模块及集成测试
 mvn test
@@ -138,12 +163,15 @@ node ".\管线总览 Coverpage.test.js"
 
 按改动范围选择最小充分验证：
 
-- `frontend/src/**`：运行前端检查；视觉改动还要在 Chrome 中检查交互、控制台、键盘访问、图片加载和 1440px 无裁切。
+- `frontend/index.html`、`frontend/public/**`、`frontend/src/**` 或前端配置：
+  运行前端检查和 Vue 架构测试；视觉改动还要在 Chrome 中检查登录前后跳转、
+  交互、控制台、键盘访问、图片加载和 1440px 无裁切。
 - 后端 Java、POM 或配置：运行 `mvn test`；改模块依赖时再运行边界测试。
 - API、认证、权限、数据库迁移：除单元测试外，必须运行相关集成测试。
 - PRD 或图表：运行 PRD 生成器并检查生成页面。
 - 历史原型：运行对应 Node 测试，并直接打开 HTML 检查。
-- Docker、Compose 或生产配置：至少完成配置解析和构建检查；没有实际启动就不要声称部署成功。
+- Docker、Compose 或生产配置：至少完成配置解析和构建检查；确认生产镜像使用
+  非 mock 前端，并且 JAR 中包含最新 `frontend/dist/`。没有实际启动就不要声称部署成功。
 
 若受环境限制无法运行某项验证，说明具体命令、阻塞原因和未验证风险。不要伪造通过结果。
 

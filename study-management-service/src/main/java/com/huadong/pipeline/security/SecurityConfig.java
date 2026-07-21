@@ -25,15 +25,20 @@ public class SecurityConfig {
     http.authorizeHttpRequests(auth -> auth
             .requestMatchers(
                 "/",
+                "/login",
                 "/index.html",
+                "/assets/**",
                 "/app.css",
                 "/overrides.css",
                 "/app.js",
                 "/favicon.ico",
+                "/favicon.svg",
                 "/api/v1/platform/auth/csrf",
                 "/actuator/health/**",
                 "/actuator/prometheus")
             .permitAll()
+            .requestMatchers("/accounts")
+            .hasRole("ADMIN")
             .anyRequest()
             .authenticated())
         .formLogin(form -> form

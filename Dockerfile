@@ -1,4 +1,11 @@
 # syntax=docker/dockerfile:1.7
+FROM node:24.18.0-alpine AS frontend-build
+WORKDIR /workspace/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+COPY frontend ./
+RUN npm run build
+
 FROM maven:3.9.11-eclipse-temurin-21 AS build
 WORKDIR /workspace
 COPY pom.xml ./
@@ -17,7 +24,7 @@ COPY study-management-manager ./study-management-manager
 COPY study-management-repository ./study-management-repository
 COPY study-management-service ./study-management-service
 COPY study-management-test ./study-management-test
-COPY frontend ./frontend
+COPY --from=frontend-build /workspace/frontend/dist ./frontend/dist
 RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp verify
 
 FROM eclipse-temurin:21-jre

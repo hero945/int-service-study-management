@@ -75,7 +75,7 @@
         <directory>src/main/resources</directory>
       </resource>
       <resource>
-        <directory>../frontend/src</directory>
+        <directory>../frontend/dist</directory>
         <targetPath>static</targetPath>
       </resource>
     </resources>
