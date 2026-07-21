@@ -1,4 +1,6 @@
 import type {
+  AssignRolesInput,
+  CreateUserInput,
   CsrfToken,
   CurrentUser,
   LoginCredentials,
@@ -15,6 +17,7 @@ import type {
   RoleUpdateResult,
   Study,
   TeamAssignment,
+  UpdateUserInput,
 } from './types'
 import { createMockApiClient } from './mock'
 
@@ -28,7 +31,11 @@ export interface ApiClient {
   listMonthlyReports(month?: string): Promise<MonthlyReport[]>
   listTeamAssignments(): Promise<TeamAssignment[]>
   listPipelineConfig(): Promise<PipelineConfig[]>
-  listUsers(): Promise<PlatformUser[]>
+  listUsers(keyword?: string, roleCode?: string): Promise<PlatformUser[]>
+  createUser(input: CreateUserInput): Promise<void>
+  updateUser(id: number, input: UpdateUserInput): Promise<void>
+  deleteUser(id: number): Promise<void>
+  assignRoles(id: number, input: AssignRolesInput): Promise<void>
   listRoles(filters?: { page?: number; pageSize?: number; keyword?: string; status?: RoleStatus }): Promise<RolePage>
   listPermissions(): Promise<PlatformPermission[]>
   createRole(input: RoleInput): Promise<PlatformRole>
@@ -106,7 +113,38 @@ function createHttpApiClient(): ApiClient {
       request<TeamAssignment[]>('/api/v1/team-assignments'),
     listPipelineConfig: () =>
       request<PipelineConfig[]>('/api/v1/pipeline-config'),
-    listUsers: () => request<PlatformUser[]>('/api/v1/platform/users'),
+    listUsers: (keyword = '', roleCode = '') => {
+      const params = new URLSearchParams()
+      if (keyword) params.set('keyword', keyword)
+      if (roleCode) params.set('roleCode', roleCode)
+      const qs = params.toString()
+      return request<PlatformUser[]>(`/api/v1/platform/users${qs ? `?${qs}` : ''}`)
+    },
+    async createUser(input) {
+      await refreshCsrf()
+      await request<void>('/api/v1/platform/users', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+    },
+    async updateUser(id, input) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/platform/users/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      })
+    },
+    async deleteUser(id) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/platform/users/${id}`, { method: 'DELETE' })
+    },
+    async assignRoles(id, input) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/platform/users/${id}/roles`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      })
+    },
     listRoles: (filters = {}) => {
       const parameters = new URLSearchParams()
       parameters.set('page', String(filters.page ?? 1))

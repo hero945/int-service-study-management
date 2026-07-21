@@ -6,6 +6,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 public interface UserAccountMapper extends BaseMapper<UserAccountEntity> {
   @Select("""
@@ -43,6 +44,7 @@ public interface UserAccountMapper extends BaseMapper<UserAccountEntity> {
   @Select("""
       <script>
       SELECT ur.user_id, r.role_name AS role_code,
+             r.role_description AS role_description,
              r.data_scope_mode AS data_scope, p.permission_code
       FROM hd_plt_user_role ur
       JOIN hd_plt_role r ON r.id = ur.role_id
@@ -58,6 +60,51 @@ public interface UserAccountMapper extends BaseMapper<UserAccountEntity> {
       </script>
       """)
   List<UserAuthorizationRow> findAuthorizationRows(@Param("userIds") List<Long> userIds);
+
+  @Select("""
+      <script>
+      SELECT ta.user_id, COUNT(DISTINCT ta.study_id) AS study_count
+      FROM hd_plt_team_assignment ta
+      WHERE ta.sys_deleted = 0 AND ta.user_id IN
+        <foreach item="userId" collection="userIds" open="(" separator="," close=")">
+          #{userId}
+        </foreach>
+      GROUP BY ta.user_id
+      </script>
+      """)
+  List<UserStudyCountRow> countStudyAssignmentsByUserIds(@Param("userIds") List<Long> userIds);
+
+  @Update("""
+      UPDATE hd_plt_user
+      SET display_name = #{displayName},
+          status_code = #{statusCode},
+          sys_update_by = #{operator},
+          sys_update_time = CURRENT_TIMESTAMP
+      WHERE id = #{id} AND sys_deleted = 0
+      """)
+  int updateUser(
+      @Param("id") long id,
+      @Param("displayName") String displayName,
+      @Param("statusCode") String statusCode,
+      @Param("operator") String operator);
+
+  @Update("""
+      UPDATE hd_plt_user
+      SET sys_deleted = 1,
+          sys_update_by = #{operator},
+          sys_update_time = CURRENT_TIMESTAMP
+      WHERE id = #{id} AND sys_deleted = 0
+      """)
+  int softDeleteUser(@Param("id") long id, @Param("operator") String operator);
+
+  @Update("""
+      UPDATE hd_plt_user_role
+      SET sys_deleted = 1,
+          sys_update_by = #{operator},
+          sys_update_time = CURRENT_TIMESTAMP
+      WHERE user_id = #{userId} AND sys_deleted = 0
+      """)
+  int deleteUserRoles(@Param("userId") long userId, @Param("operator") String operator);
 
   @Select("""
       <script>
@@ -80,6 +127,42 @@ public interface UserAccountMapper extends BaseMapper<UserAccountEntity> {
       WHERE role_name = #{roleCode} AND status_code = 'ACTIVE' AND sys_deleted = 0
       """)
   int insertUserRole(
+      @Param("userId") long userId,
+      @Param("roleCode") String roleCode,
+      @Param("operator") String operator);
+
+  @Select("""
+      SELECT DISTINCT ur.user_id
+      FROM hd_plt_user_role ur
+      JOIN hd_plt_role r ON r.id = ur.role_id
+      WHERE ur.sys_deleted = 0
+        AND r.sys_deleted = 0 AND r.status_code = 'ACTIVE'
+        AND r.role_name = #{roleCode}
+      """)
+  List<Long> findUserIdsByRole(@Param("roleCode") String roleCode);
+
+  @Select("""
+      SELECT r.role_name
+      FROM hd_plt_user_role ur
+      JOIN hd_plt_role r ON r.id = ur.role_id
+      WHERE ur.user_id = #{userId} AND ur.sys_deleted = 0
+        AND r.sys_deleted = 0 AND r.status_code = 'ACTIVE'
+      ORDER BY r.role_name
+      """)
+  List<String> findActiveRoleCodes(@Param("userId") long userId);
+
+  @Update("""
+      UPDATE hd_plt_user_role
+      SET sys_deleted = 1,
+          sys_update_by = #{operator},
+          sys_update_time = CURRENT_TIMESTAMP
+      WHERE user_id = #{userId} AND sys_deleted = 0
+        AND role_id = (
+          SELECT id FROM hd_plt_role
+          WHERE role_name = #{roleCode} AND sys_deleted = 0
+        )
+      """)
+  int softDeleteUserRole(
       @Param("userId") long userId,
       @Param("roleCode") String roleCode,
       @Param("operator") String operator);

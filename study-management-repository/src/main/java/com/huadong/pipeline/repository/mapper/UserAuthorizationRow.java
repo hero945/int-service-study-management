@@ -3,6 +3,7 @@ package com.huadong.pipeline.repository.mapper;
 public class UserAuthorizationRow {
   private long userId;
   private String roleCode;
+  private String roleDescription;
   private String permissionCode;
   private String dataScope;
 
@@ -20,6 +21,14 @@ public class UserAuthorizationRow {
 
   public void setRoleCode(String roleCode) {
     this.roleCode = roleCode;
+  }
+
+  public String getRoleDescription() {
+    return roleDescription;
+  }
+
+  public void setRoleDescription(String roleDescription) {
+    this.roleDescription = roleDescription;
   }
 
   public String getPermissionCode() {

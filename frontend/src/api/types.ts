@@ -102,7 +102,26 @@ export interface PlatformUser {
   username: string
   displayName: string
   roles: RoleCode[]
+  roleDescriptions: string[]
+  dataScope: DataScope
+  visibleStudyCount: number
   enabled: boolean
+}
+
+export interface CreateUserInput {
+  username: string
+  displayName: string
+  password: string
+  roleCodes: RoleCode[]
+}
+
+export interface UpdateUserInput {
+  displayName: string
+  enabled: boolean
+}
+
+export interface AssignRolesInput {
+  roleCodes: RoleCode[]
 }
 
 export type RoleStatus = 'ACTIVE' | 'DISABLED'

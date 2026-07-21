@@ -35,20 +35,45 @@ public class UserManager {
             user.username(),
             user.displayName(),
             user.roles(),
-            user.permissions(),
+            user.roleDescriptions(),
             user.dataScope().name(),
+            0,
             user.enabled()));
   }
 
-  public List<UserView> list() {
-    return users.findAll().stream()
+  public Optional<UserView> findById(long id) {
+    return users.findById(id)
         .map(user -> new UserView(
             user.id(),
             user.username(),
             user.displayName(),
             user.roles(),
-            user.permissions(),
+            user.roleDescriptions(),
             user.dataScope().name(),
+            0,
+            user.enabled()));
+  }
+
+  public List<UserView> list() {
+    return list(null, null);
+  }
+
+  public List<UserView> list(String keyword, String roleCode) {
+    var accounts = users.findAll(keyword, roleCode);
+    if (accounts.isEmpty()) {
+      return List.of();
+    }
+    var userIds = accounts.stream().map(u -> u.id()).toList();
+    var studyCounts = users.countStudyAssignments(userIds);
+    return accounts.stream()
+        .map(user -> new UserView(
+            user.id(),
+            user.username(),
+            user.displayName(),
+            user.roles(),
+            user.roleDescriptions(),
+            user.dataScope().name(),
+            studyCounts.getOrDefault(user.id(), 0L),
             user.enabled()))
         .toList();
   }
@@ -69,6 +94,31 @@ public class UserManager {
     users.create(username, passwordHash, displayName, distinctRoleCodes);
   }
 
+  @Transactional
+  public void update(long id, String displayName, boolean enabled, String operator) {
+    var existing = users.findById(id)
+        .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
+    users.update(id, displayName, enabled, operator);
+  }
+
+  @Transactional
+  public void softDelete(long id, String operator) {
+    var existing = users.findById(id)
+        .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
+    users.softDelete(id, operator);
+  }
+
+  @Transactional
+  public void assignRoles(long userId, List<String> roleCodes, String operator) {
+    var existing = users.findById(userId)
+        .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
+    var distinctRoleCodes = List.copyOf(new LinkedHashSet<>(roleCodes));
+    if (distinctRoleCodes.isEmpty() || !users.rolesExist(distinctRoleCodes)) {
+      throw new BusinessException("INVALID_ROLE", "Role does not exist or is disabled");
+    }
+    users.assignRoles(userId, distinctRoleCodes, operator);
+  }
+
   public record AuthenticationUser(
       String username,
       String passwordHash,
@@ -84,8 +134,10 @@ public class UserManager {
       String username,
       String displayName,
       List<String> roles,
-      List<String> permissions,
+      List<String> roleDescriptions,
       String dataScope,
+      long visibleStudyCount,
       boolean enabled) {
   }
+
 }

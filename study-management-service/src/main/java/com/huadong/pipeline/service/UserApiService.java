@@ -18,7 +18,7 @@ public class UserApiService implements UserApi {
 
   @Override
   public CurrentUserResponse getCurrentUser(String username) {
-    var user = manager.findByUsername(username).orElseThrow();
+    var user = manager.findForAuthentication(username).orElseThrow();
     return new CurrentUserResponse(
         user.username(),
         user.displayName(),
@@ -28,13 +28,16 @@ public class UserApiService implements UserApi {
   }
 
   @Override
-  public List<UserResponse> list() {
-    return manager.list().stream()
+  public List<UserResponse> list(String keyword, String roleCode) {
+    return manager.list(keyword, roleCode).stream()
         .map(user -> new UserResponse(
             user.id(),
             user.username(),
             user.displayName(),
             user.roles(),
+            user.roleDescriptions(),
+            user.dataScope(),
+            user.visibleStudyCount(),
             user.enabled()))
         .toList();
   }
@@ -46,5 +49,20 @@ public class UserApiService implements UserApi {
         passwordEncoder.encode(request.password()),
         request.displayName(),
         request.roleCodes());
+  }
+
+  @Override
+  public void update(long id, UpdateUserRequest request, String operator) {
+    manager.update(id, request.displayName(), request.enabled(), operator);
+  }
+
+  @Override
+  public void delete(long id, String operator) {
+    manager.softDelete(id, operator);
+  }
+
+  @Override
+  public void assignRoles(long id, AssignRolesRequest request, String operator) {
+    manager.assignRoles(id, request.roleCodes(), operator);
   }
 }

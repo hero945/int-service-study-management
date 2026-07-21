@@ -1,9 +1,12 @@
 import type { ApiClient } from './client'
 import type {
+  AssignRolesInput,
+  CreateUserInput,
   CurrentUser,
   PlatformPermission,
   PlatformRole,
   Study,
+  UpdateUserInput,
 } from './types'
 
 const users: Array<CurrentUser & { password: string }> = [
@@ -242,14 +245,61 @@ export function createMockApiClient(): ApiClient {
         phaseStatus: study.phase,
       }))
     },
-    async listUsers() {
-      return users.map((user, index) => ({
+    async listUsers(keyword = '', roleCode = '') {
+      let filtered = users.map((user, index) => ({
         id: index + 1,
         username: user.username,
         displayName: user.displayName,
         roles: user.roles,
+        roleDescriptions: user.roles.map(r => {
+          switch (r) {
+            case 'ADMIN': return '系统管理员'
+            case 'USER': return '项目负责人'
+            case 'VIEWER': return '只读成员'
+            default: return r
+          }
+        }),
+        dataScope: user.dataScope,
+        visibleStudyCount: user.roles.includes('ADMIN') ? 3 : (user.roles.includes('USER') ? 2 : 1),
         enabled: true,
       }))
+      if (keyword) {
+        const lower = keyword.toLowerCase()
+        filtered = filtered.filter(u =>
+          u.displayName.toLowerCase().includes(lower) ||
+          u.username.toLowerCase().includes(lower))
+      }
+      if (roleCode) {
+        filtered = filtered.filter(u => u.roles.includes(roleCode))
+      }
+      return filtered
+    },
+    async createUser(input: CreateUserInput) {
+      if (users.some(u => u.username === input.username)) {
+        throw new Error('用户名已存在')
+      }
+      users.push({
+        username: input.username,
+        displayName: input.displayName,
+        title: '',
+        roles: input.roleCodes,
+        permissions: [],
+        dataScope: 'ALL',
+        password: input.password,
+      })
+    },
+    async updateUser(id: number, input: UpdateUserInput) {
+      const index = id - 1
+      if (index < 0 || index >= users.length) throw new Error('用户不存在')
+      users[index].displayName = input.displayName
+    },
+    async deleteUser(id: number) {
+      const index = id - 1
+      if (index < 0 || index >= users.length) throw new Error('用户不存在')
+      users.splice(index, 1)
+    },
+    async assignRoles(_id: number, _input: AssignRolesInput) {
+      // mock: no-op, just return
     },
     async listRoles(filters = {}) {
       const keyword = filters.keyword?.trim().toLowerCase() ?? ''
