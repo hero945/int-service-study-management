@@ -131,7 +131,7 @@ Vue 应用的运行依赖；新服务也不迁移原型中的 `localStorage` 数
 
 - 风险：`GET /api/v1/risk-management/risks`
 - 月报：`GET /api/v1/monthly-reports`
-- 团队矩阵：`GET /api/v1/team-assignments`
+- 团队矩阵：`GET /api/v1/team-matrix`、`PUT /api/v1/team-matrix/assignments`
 - 管线配置：`GET /api/v1/clinical-pipeline/pipeline-config`、`/programs`、`/projects`、`/therapeutic-areas`，以及对应 CRUD/重命名影响预览接口
 
 除已落地的管线配置接口外，其余预留接口在真实后端模式下会显示加载失败状态。前端路由守卫

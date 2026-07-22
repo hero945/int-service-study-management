@@ -73,13 +73,65 @@ export interface MonthlyReport {
   updatedAt: string
 }
 
-export interface TeamAssignment {
+export interface TeamMatrixStudy {
+  studyId: number
   studyCode: string
-  project: string
+  indication: string
+  statusCode: string
+  statusLabel: string
+  version: number
+}
+
+export interface TeamMatrixRole {
   roleCode: string
   roleName: string
-  department: string
-  members: string[]
+  functionCode: string | null
+  functionName: string | null
+}
+
+export interface TeamMatrixMember {
+  userId: number
+  email: string
+  displayName: string
+  enabled: boolean
+}
+
+export interface TeamMatrixAssignment {
+  studyId: number
+  roleCode: string
+  members: TeamMatrixMember[]
+}
+
+export interface TeamMatrixPage {
+  studies: TeamMatrixStudy[]
+  roles: TeamMatrixRole[]
+  assignments: TeamMatrixAssignment[]
+  totalRoles: number
+  pagination: {
+    page: number
+    pageSize: number
+    totalItems: number
+    totalPages: number
+  }
+}
+
+export interface TeamMatrixQuery {
+  studyQuery?: string
+  roleQuery?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface TeamMatrixBatchInput {
+  studies: Array<{
+    studyId: number
+    expectedVersion: number
+    roles: Array<{ roleCode: string; userIds: number[] }>
+  }>
+}
+
+export interface TeamMatrixBatchResult {
+  studies: Array<{ studyId: number; version: number }>
 }
 
 export interface PipelineConfigRow {
