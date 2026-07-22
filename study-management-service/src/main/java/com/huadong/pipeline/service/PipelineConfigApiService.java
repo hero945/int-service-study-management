@@ -4,7 +4,6 @@ import com.huadong.pipeline.api.PipelineConfigApi;
 import com.huadong.pipeline.domain.config.PipelineConfigRow;
 import com.huadong.pipeline.domain.config.Program;
 import com.huadong.pipeline.domain.config.Project;
-import com.huadong.pipeline.domain.config.RenameImpact;
 import com.huadong.pipeline.manager.PipelineConfigManager;
 import java.util.List;
 import org.springframework.stereotype.Service;
@@ -43,21 +42,15 @@ public class PipelineConfigApiService implements PipelineConfigApi {
   @Override
   public ProgramResponse createProgram(CreateProgramRequest request, String username) {
     return toResponse(manager.createProgram(new PipelineConfigManager.ProgramCommand(
-        request.code(), request.name(), request.productName(), request.moa(),
+        request.code(), request.productName(), request.moa(),
         request.sourceCode(), request.originCode()), username));
   }
 
   @Override
   public ProgramResponse updateProgram(long id, UpdateProgramRequest request, String username) {
     return toResponse(manager.updateProgram(id, new PipelineConfigManager.ProgramUpdate(
-        request.name(), request.productName(), request.moa(), request.sourceCode(),
-        request.originCode(), request.confirmRename(), request.expectedUpdatedAt(),
-        request.expectedProjectCount(), request.expectedStudyCount()), username));
-  }
-
-  @Override
-  public RenameImpactResponse previewProgramRename(long id, RenameRequest request) {
-    return toResponse(manager.previewProgramRename(id, request.newName()));
+        request.productName(), request.moa(), request.sourceCode(),
+        request.originCode()), username));
   }
 
   @Override
@@ -68,20 +61,14 @@ public class PipelineConfigApiService implements PipelineConfigApi {
   @Override
   public ProjectResponse createProject(CreateProjectRequest request, String username) {
     return toResponse(manager.createProject(new PipelineConfigManager.ProjectCommand(
-        request.code(), request.name(), request.programId(), request.indication(),
+        request.code(), request.programId(), request.indication(),
         request.therapeuticAreaCode()), username));
   }
 
   @Override
   public ProjectResponse updateProject(long id, UpdateProjectRequest request, String username) {
     return toResponse(manager.updateProject(id, new PipelineConfigManager.ProjectUpdate(
-        request.name(), request.indication(), request.therapeuticAreaCode(),
-        request.confirmRename(), request.expectedUpdatedAt(), request.expectedStudyCount()), username));
-  }
-
-  @Override
-  public RenameImpactResponse previewProjectRename(long id, RenameRequest request) {
-    return toResponse(manager.previewProjectRename(id, request.newName()));
+        request.indication(), request.therapeuticAreaCode()), username));
   }
 
   @Override
@@ -93,7 +80,7 @@ public class PipelineConfigApiService implements PipelineConfigApi {
   public PipelineConfigRowResponse updateStudy(
       long id, UpdateStudyConfigRequest request, String username) {
     return toResponse(manager.updateStudy(
-        id, request.name(), request.projectId(), request.phaseStatusCode(), username));
+        id, request.projectId(), request.phaseStatusCode(), username));
   }
 
   @Override
@@ -103,31 +90,25 @@ public class PipelineConfigApiService implements PipelineConfigApi {
 
   private static ProgramResponse toResponse(Program value) {
     return new ProgramResponse(
-        value.id(), value.code(), value.name(), value.productName(), value.moa(),
+        value.id(), value.code(), value.productName(), value.moa(),
         value.sourceCode(), sourceLabel(value.sourceCode()), value.originCode(),
         originLabel(value.originCode()), value.projectCount(), value.studyCount(), value.updatedAt());
   }
 
   private static ProjectResponse toResponse(Project value) {
     return new ProjectResponse(
-        value.id(), value.code(), value.name(), value.programId(), value.programCode(),
+        value.id(), value.code(), value.programId(), value.programCode(),
         value.indication(), value.therapeuticAreaId(), value.therapeuticAreaCode(),
         value.therapeuticAreaName(), value.studyCount(), value.updatedAt());
   }
 
   private static PipelineConfigRowResponse toResponse(PipelineConfigRow value) {
     return new PipelineConfigRowResponse(
-        value.studyId(), value.studyCode(), value.studyName(), value.phaseStatusCode(),
-        phaseLabel(value.phaseStatusCode()), value.projectId(), value.projectCode(),
-        value.projectName(), value.indication(), value.therapeuticAreaCode(),
-        value.therapeuticAreaName(), value.programId(), value.programCode(), value.programName(),
+        value.studyId(), value.studyCode(), value.phaseStatusCode(),
+        value.projectId(), value.projectCode(), value.indication(), value.therapeuticAreaCode(),
+        value.therapeuticAreaName(), value.programId(), value.programCode(),
         value.productName(), value.moa(), value.sourceCode(), sourceLabel(value.sourceCode()),
         value.originCode(), originLabel(value.originCode()), value.updatedAt());
-  }
-
-  private static RenameImpactResponse toResponse(RenameImpact value) {
-    return new RenameImpactResponse(
-        value.projectCount(), value.studyCount(), value.expectedUpdatedAt());
   }
 
   private static String sourceLabel(String code) {
@@ -147,16 +128,4 @@ public class PipelineConfigApiService implements PipelineConfigApi {
     };
   }
 
-  private static String phaseLabel(String code) {
-    return switch (code) {
-      case "PRE_IND" -> "Pre-IND";
-      case "IND" -> "IND";
-      case "PHASE_1" -> "I期";
-      case "PHASE_2" -> "II期";
-      case "PRE_3" -> "Pre-III";
-      case "PHASE_3_1" -> "III期-1";
-      case "PHASE_3_2" -> "III期-2";
-      default -> code;
-    };
-  }
 }

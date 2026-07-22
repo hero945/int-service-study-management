@@ -9,7 +9,7 @@ const query = ref('')
 const loading = ref(true)
 const error = ref('')
 const filtered = computed(() => studies.value.filter((study) =>
-  `${study.code} ${study.name} ${study.indication} ${study.ownerName}`
+  `${study.code} ${study.indication} ${study.ownerName}`
     .toLowerCase()
     .includes(query.value.toLowerCase()),
 ))
@@ -34,11 +34,10 @@ onMounted(async () => {
     <PageState :loading :error :empty="!filtered.length">
       <div class="data-card">
         <table class="data-table">
-          <thead><tr><th>Study No.</th><th>研究名称</th><th>适应症</th><th>阶段</th><th>状态</th><th>负责人</th><th>更新时间</th></tr></thead>
+          <thead><tr><th>Study No.</th><th>适应症</th><th>阶段</th><th>状态</th><th>负责人</th><th>更新时间</th></tr></thead>
           <tbody>
             <tr v-for="study in filtered" :key="study.id">
               <td class="mono strong">{{ study.code }}</td>
-              <td>{{ study.name }}</td>
               <td>{{ study.indication }}</td>
               <td>{{ study.phase }}</td>
               <td><span class="status-chip status-chip--blue">{{ study.statusLabel }}</span></td>

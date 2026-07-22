@@ -127,10 +127,12 @@ flowchart LR
 
 #### 3.1.7 管线配置
 
-- 页面提供两个视图：“Study 明细”按一个 Study 一行平铺 Program/Project/Study 关系；“Program / Project 管理”提供父子实体维护入口。
-- Program 或 Project 编号输入后先查询实体：编号已存在时加载原数据并进入更新模式，不存在时进入新建模式；编号创建后不可修改。新建时数据库名称字段自动取相同编号，页面不单独要求名称。
-- Study 表单只绑定已保存的 Project ID；允许在表单内快捷新建 Project，但必须先创建真实 Project 实体，成功后再回填选择结果。
-- Program、Project 重命名前必须展示关联 Project/Study 数量并再次确认；预览后数据发生变化时拒绝提交并要求重新预览。
+- 页面提供两个视图：“Study 明细”按一个 Study 一行平铺 Program/Project/Study 关系；“Program / Project 管理”以 Program 表格作为入口。
+- Program、Project、Study 均不维护名称字段，Program Code、Project Code 和 Study No. 是各自唯一的展示标识；实体创建后不可修改业务编号。
+- Study 明细列固定按 Source、Origin、Product、Program、MOA、Project、TA、Indication、Study No、Phase Status 排列；Phase Status 只在前端显示英文标签。
+- Study 明细支持按 Study No.、TA 或 Program 关键字统一搜索，并按每页 10 条分页；Study 表单的 Program、Project 下拉框只展示对应 Code，点击下拉框外的空白区域时自动收起。
+- 下拉底部可快捷新建 Program 或 Project，成功后自动返回 Study 表单、保留草稿并选中新实体。Program 和 Project 新增/编辑均使用右侧表单抽屉；Program 依次填写 Product、Program、MOA、Source、Origin，Project 依次填写所属 Program、Project 编号、TA、Indication 适应症。
+- Program 管理表展示 Program 全部业务字段；点击“管理”从右侧打开 Project 管理抽屉，在当前 Program 下新增、编辑和删除 Project。
 - 有下游引用时删除返回冲突，不做级联删除。配置页不展示或维护 Project 状态；Project 状态由管线总览根据下属 Study 实时计算。
 
 #### 3.1.8 月报导出
@@ -396,9 +398,11 @@ flowchart LR
 
 ### 页面功能与交互
 
-- 使用 Study 扁平明细与 Program/Project 管理两个视图维护实体及其层级关系。
+- 使用 Study 扁平明细与 Program/Project 管理两个视图维护实体及其层级关系；Program、Project、Study 不维护名称字段，只使用业务编号展示。
 - 页面访问、新增、编辑、删除分别校验 `config.page.view`、`config.create`、`config.update`、`config.delete`；默认仅授予系统管理员角色。
-- 重命名采用“影响面预览 + 带版本时间确认”；不建设单独的改名审计和实体合并工具，既有拖拽排序规则不变。
+- Study 明细列固定为 Source、Origin、Product、Program、MOA、Project、TA、Indication、Study No、Phase Status；阶段只显示英文标签。
+- Study 明细提供 Study No.、TA、Program 统一搜索和每页 10 条分页；Study 表单的 Program/Project 下拉仅显示 Code，点击下拉外空白区域自动收起，快捷新建成功后自动回到原表单并回填新实体。
+- Program 与 Project 表单均从右侧抽屉打开；Program 字段顺序为 Product、Program、MOA、Source、Origin，Project 字段顺序为所属 Program、Project 编号、TA、Indication 适应症。Program 列表的“管理”操作通过另一层右侧抽屉维护下属 Project。
 - Program 有 Project/Study、Project 有 Study、Study 有团队/里程碑/月报/风险引用时，删除返回 HTTP 409 并给出引用数量。
 - 保存后作为管线总览、Study列表和报告的基础数据来源。
 

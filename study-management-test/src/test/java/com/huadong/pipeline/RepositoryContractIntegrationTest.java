@@ -85,8 +85,8 @@ class RepositoryContractIntegrationTest {
   @Test
   void studiesUseHierarchySnapshotsDerivedStatusAndDuplicateCodeTranslation() {
     seedStudyHierarchy();
-    studies.save(study("STUDY-OLDER", "Older", true), "seed@example.com");
-    studies.save(study("STUDY-NEWER", "Newer", false), "seed@example.com");
+    studies.save(study("STUDY-OLDER", true), "seed@example.com");
+    studies.save(study("STUDY-NEWER", false), "seed@example.com");
     jdbc.update("UPDATE hd_plt_study SET sys_update_time = ? WHERE study_code = ?",
         LocalDate.of(2026, 1, 1).atStartOfDay(), "STUDY-OLDER");
     jdbc.update("UPDATE hd_plt_study SET sys_update_time = ? WHERE study_code = ?",
@@ -116,7 +116,7 @@ class RepositoryContractIntegrationTest {
           assertThat(study.ownerName()).isEqualTo("seed@example.com");
         });
 
-    var generated = study("STUDY-GENERATED", "Generated", true);
+    var generated = study("STUDY-GENERATED", true);
     studies.save(generated, "tester@example.com");
     assertThat(studies.findAll())
         .filteredOn(study -> study.code().equals("STUDY-GENERATED"))
@@ -127,7 +127,7 @@ class RepositoryContractIntegrationTest {
         });
 
     assertThatThrownBy(() -> studies.save(
-        study("STUDY-OLDER", "Duplicate", true), "tester@example.com"))
+        study("STUDY-OLDER", true), "tester@example.com"))
         .isInstanceOf(DuplicateStudyCodeException.class);
   }
 
@@ -135,16 +135,16 @@ class RepositoryContractIntegrationTest {
   void studyListKeepsItsFiveHundredRowLimit() {
     seedStudyHierarchy();
     IntStream.range(0, 501).forEach(index -> studies.save(
-        study("STUDY-%03d".formatted(index), "Study %03d".formatted(index), true),
+        study("STUDY-%03d".formatted(index), true),
         "seed@example.com"));
 
     assertThat(studies.findAll()).hasSize(500);
   }
 
-  private Study study(String code, String name, boolean active) {
+  private Study study(String code, boolean active) {
     var start = LocalDate.of(2026, 1, 1);
     return Study.create(
-        code, name, "PROGRAM-001", "PROJECT-001", "ONCOLOGY", "PHASE_1",
+        code, "PROGRAM-001", "PROJECT-001", "ONCOLOGY", "PHASE_1",
         start, LocalDate.of(2026, 12, 31), active ? start : null, null, "Description");
   }
 
@@ -161,15 +161,15 @@ class RepositoryContractIntegrationTest {
         """);
     jdbc.update("""
         INSERT INTO hd_plt_program(
-            program_code, program_name, product_name, status_code,
+            program_code, product_name, status_code,
             sys_create_by, sys_update_by)
-        VALUES ('PROGRAM-001', '肿瘤产品管线', 'HD-001', 'ACTIVE', 'seed', 'seed')
+        VALUES ('PROGRAM-001', 'HD-001', 'ACTIVE', 'seed', 'seed')
         """);
     jdbc.update("""
         INSERT INTO hd_plt_project(
-            project_code, project_name, program_id, indication_description,
+            project_code, program_id, indication_description,
             therapeutic_area_id, sys_create_by, sys_update_by)
-        SELECT 'PROJECT-001', '实体瘤项目', p.id, '实体瘤', ta.id, 'seed', 'seed'
+        SELECT 'PROJECT-001', p.id, '实体瘤', ta.id, 'seed', 'seed'
         FROM hd_plt_program p CROSS JOIN hd_plt_therapeutic_area ta
         WHERE p.program_code = 'PROGRAM-001' AND ta.area_code = 'ONCOLOGY'
         """);

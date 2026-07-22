@@ -10,7 +10,6 @@ public class ProgramEntity {
   @TableId(type = IdType.AUTO)
   private Long id;
   private String programCode;
-  private String programName;
   private String productName;
   private String moa;
   private String sourceCode;
@@ -25,8 +24,6 @@ public class ProgramEntity {
   public Long getId() { return id; }
   public String getProgramCode() { return programCode; }
   public void setProgramCode(String value) { programCode = value; }
-  public String getProgramName() { return programName; }
-  public void setProgramName(String value) { programName = value; }
   public String getProductName() { return productName; }
   public void setProductName(String value) { productName = value; }
   public String getMoa() { return moa; }

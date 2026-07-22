@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 public record ProgramSummaryData(
     long id,
     String code,
-    String name,
     String productName,
     String moa,
     String sourceCode,

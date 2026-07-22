@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Select;
 
 public interface PipelineConfigMapper {
   @Select("""
-      SELECT p.id, p.program_code AS code, p.program_name AS name, p.product_name,
+      SELECT p.id, p.program_code AS code, p.product_name,
              p.moa, p.source_code, p.origin_code,
              (SELECT COUNT(*) FROM hd_plt_project pr
               WHERE pr.program_id = p.id AND pr.sys_deleted = 0) AS project_count,
@@ -16,7 +16,6 @@ public interface PipelineConfigMapper {
       FROM hd_plt_program p
       WHERE p.sys_deleted = 0
         AND (#{keyword} = '' OR LOWER(p.program_code) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
-          OR LOWER(p.program_name) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
           OR LOWER(p.product_name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
       ORDER BY p.sort_order, p.program_code
       LIMIT 500
@@ -24,7 +23,7 @@ public interface PipelineConfigMapper {
   List<ProgramSummaryData> findPrograms(@Param("keyword") String keyword);
 
   @Select("""
-      SELECT p.id, p.program_code AS code, p.program_name AS name, p.product_name,
+      SELECT p.id, p.program_code AS code, p.product_name,
              p.moa, p.source_code, p.origin_code,
              (SELECT COUNT(*) FROM hd_plt_project pr
               WHERE pr.program_id = p.id AND pr.sys_deleted = 0) AS project_count,
@@ -37,7 +36,7 @@ public interface PipelineConfigMapper {
   ProgramSummaryData findProgram(@Param("id") long id);
 
   @Select("""
-      SELECT p.id, p.program_code AS code, p.program_name AS name, p.product_name,
+      SELECT p.id, p.program_code AS code, p.product_name,
              p.moa, p.source_code, p.origin_code,
              (SELECT COUNT(*) FROM hd_plt_project pr
               WHERE pr.program_id = p.id AND pr.sys_deleted = 0) AS project_count,
@@ -50,11 +49,11 @@ public interface PipelineConfigMapper {
   ProgramSummaryData findProgramByCode(@Param("code") String code);
 
   @Select("""
-      SELECT s.id AS study_id, s.study_code, s.study_name, s.phase_status_code,
-             pr.id AS project_id, pr.project_code, pr.project_name,
+      SELECT s.id AS study_id, s.study_code, s.phase_status_code,
+             pr.id AS project_id, pr.project_code,
              pr.indication_description AS indication,
              ta.area_code AS therapeutic_area_code, ta.area_name AS therapeutic_area_name,
-             p.id AS program_id, p.program_code, p.program_name, p.product_name,
+             p.id AS program_id, p.program_code, p.product_name,
              p.moa, p.source_code, p.origin_code, s.sys_update_time AS updated_at
       FROM hd_plt_study s
       JOIN hd_plt_project pr ON pr.id = s.project_id AND pr.sys_deleted = 0
@@ -67,7 +66,7 @@ public interface PipelineConfigMapper {
   List<PipelineConfigRowData> findRows();
 
   @Select("""
-      SELECT pr.id, pr.project_code AS code, pr.project_name AS name,
+      SELECT pr.id, pr.project_code AS code,
              pr.program_id, p.program_code, pr.indication_description AS indication,
              ta.id AS therapeutic_area_id, ta.area_code AS therapeutic_area_code,
              ta.area_name AS therapeutic_area_name,
@@ -80,15 +79,14 @@ public interface PipelineConfigMapper {
         ON ta.id = pr.therapeutic_area_id AND ta.sys_deleted = 0
       WHERE pr.sys_deleted = 0
         AND (#{programId} IS NULL OR pr.program_id = #{programId})
-        AND (#{keyword} = '' OR LOWER(pr.project_code) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
-          OR LOWER(pr.project_name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
+        AND (#{keyword} = '' OR LOWER(pr.project_code) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
       ORDER BY pr.sort_order, pr.project_code
       """)
   List<ProjectSummaryData> findProjects(
       @Param("programId") Long programId, @Param("keyword") String keyword);
 
   @Select("""
-      SELECT pr.id, pr.project_code AS code, pr.project_name AS name,
+      SELECT pr.id, pr.project_code AS code,
              pr.program_id, p.program_code, pr.indication_description AS indication,
              ta.id AS therapeutic_area_id, ta.area_code AS therapeutic_area_code,
              ta.area_name AS therapeutic_area_name,
@@ -115,9 +113,9 @@ public interface PipelineConfigMapper {
   List<TherapeuticAreaData> findTherapeuticAreas();
 
   @Select("""
-      SELECT p.id AS program_id, p.program_code, p.program_name, p.product_name,
+      SELECT p.id AS program_id, p.program_code, p.product_name,
              p.moa, p.source_code, p.origin_code,
-             pr.id AS project_id, pr.project_code, pr.project_name,
+             pr.id AS project_id, pr.project_code,
              ta.id AS therapeutic_area_id, ta.area_code AS therapeutic_area_code,
              ta.area_name AS therapeutic_area_name, pr.indication_description
       FROM hd_plt_program p

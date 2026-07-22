@@ -62,13 +62,6 @@ public class PipelineConfigController {
     return api.updateProgram(id, request, principal.getName());
   }
 
-  @PostMapping("/programs/{id}/rename-impact")
-  @PreAuthorize("hasAuthority('config.update')")
-  PipelineConfigApi.RenameImpactResponse previewProgramRename(
-      @PathVariable long id, @Valid @RequestBody PipelineConfigApi.RenameRequest request) {
-    return api.previewProgramRename(id, request);
-  }
-
   @DeleteMapping("/programs/{id}")
   @PreAuthorize("hasAuthority('config.delete')")
   @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -99,13 +92,6 @@ public class PipelineConfigController {
       @Valid @RequestBody PipelineConfigApi.UpdateProjectRequest request,
       Principal principal) {
     return api.updateProject(id, request, principal.getName());
-  }
-
-  @PostMapping("/projects/{id}/rename-impact")
-  @PreAuthorize("hasAuthority('config.update')")
-  PipelineConfigApi.RenameImpactResponse previewProjectRename(
-      @PathVariable long id, @Valid @RequestBody PipelineConfigApi.RenameRequest request) {
-    return api.previewProjectRename(id, request);
   }
 
   @DeleteMapping("/projects/{id}")

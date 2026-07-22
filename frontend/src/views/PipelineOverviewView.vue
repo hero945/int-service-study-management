@@ -17,7 +17,7 @@ const areas = computed(() => [
   ...new Set(studies.value.map((study) => study.therapeuticArea).filter(Boolean)),
 ])
 const filteredStudies = computed(() => studies.value.filter((study) => {
-  const text = `${study.code} ${study.name} ${study.indication} ${study.program} ${study.project}`.toLowerCase()
+  const text = `${study.code} ${study.indication} ${study.program} ${study.project}`.toLowerCase()
   const matchesQuery = text.includes(query.value.toLowerCase())
   const matchesArea =
     therapeuticArea.value === '全部' || study.therapeuticArea === therapeuticArea.value
@@ -107,7 +107,7 @@ onMounted(async () => {
           <tr v-for="study in rows" :key="study.id">
             <td><strong>{{ study.product || study.code }}</strong><small>{{ study.source }} · {{ study.origin }}</small></td>
             <td><strong class="mono">{{ study.program || study.code }}</strong><small>{{ study.moa }}</small></td>
-            <td><strong>{{ study.project || study.name }}</strong><small>{{ study.indication }}</small></td>
+            <td><strong>{{ study.project || study.code }}</strong><small>{{ study.indication }}</small></td>
             <td v-for="phase in phases" :key="phase">
               <span
                 class="status-chip"

@@ -61,6 +61,7 @@ test('role permission management is a protected page after account management an
 });
 
 test('pipeline entity forms use the reduced fields and database-backed therapeutic area options', () => {
+  const types = read('frontend/src/api/types.ts');
   const apiClient = read('frontend/src/api/client.ts');
   const configView = read('frontend/src/views/PipelineConfigView.vue');
 
@@ -72,6 +73,33 @@ test('pipeline entity forms use the reduced fields and database-backed therapeut
   assert.doesNotMatch(configView, />Program 名称 \*</);
   assert.doesNotMatch(configView, />Project 名称 \*</);
   assert.doesNotMatch(configView, />TA 编码 \*</);
+  assert.doesNotMatch(configView, /Study 名称/);
+  assert.doesNotMatch(types, /(?:studyName|programName|projectName|phaseStatusLabel)/);
+  const columns = ['Source', 'Origin', 'Product', 'Program', 'MOA', 'Project', 'TA', 'Indication', 'Study No.', 'Phase Status'];
+  for (let index = 1; index < columns.length; index += 1) {
+    assert.ok(configView.indexOf(`<th>${columns[index - 1]}</th>`) < configView.indexOf(`<th>${columns[index]}</th>`));
+  }
+  assert.match(configView, /class="[^"]*entity-program-table/);
+  assert.match(configView, /class="project-drawer"/);
+  assert.match(configView, /class="[^"]*entity-form-drawer/);
+  assert.match(configView, /ref="studyProgramDetails"/);
+  assert.match(configView, /ref="studyProjectDetails"/);
+  assert.match(configView, /onDocumentPointerDown/);
+  assert.match(configView, /placeholder="搜索 Study \/ TA \/ Program"/);
+  assert.match(configView, /pagedStudyRows/);
+  assert.match(configView, /study-pagination/);
+  assert.match(configView, /保存 Program/);
+  assert.match(configView, /保存 Project/);
+  const programForm = configView.slice(
+    configView.indexOf('v-if="entityDialog === \'program\'"'),
+    configView.indexOf('<div v-else class="role-form-grid">'),
+  );
+  const programFields = ['Product *', 'Program *', 'MOA', 'Source *', 'Origin *'];
+  for (let index = 1; index < programFields.length; index += 1) {
+    assert.ok(programForm.indexOf(`>${programFields[index - 1]}`) < programForm.indexOf(`>${programFields[index]}`));
+  }
+  assert.match(configView, /新建 Program/);
+  assert.match(configView, /新建 Project/);
 });
 
 test('production packaging consumes the compiled frontend output', () => {

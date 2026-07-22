@@ -35,7 +35,6 @@ public class StudyManager {
         .map(study -> new StudyView(
             study.id(),
             study.code(),
-            study.name(),
             study.indication(),
             study.phase(),
             study.status(),
@@ -80,7 +79,6 @@ public class StudyManager {
     }
     Study study = Study.create(
         command.code(),
-        command.name(),
         programCode,
         projectCode,
         therapeuticAreaCode,
@@ -117,7 +115,6 @@ public class StudyManager {
 
   public record CreateStudyCommand(
       String code,
-      String name,
       Long projectId,
       String programCode,
       String projectCode,
@@ -139,7 +136,6 @@ public class StudyManager {
   public record StudyView(
       long id,
       String code,
-      String name,
       String indication,
       String phase,
       StudyStatus status,

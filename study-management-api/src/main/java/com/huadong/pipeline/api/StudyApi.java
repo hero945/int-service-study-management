@@ -17,7 +17,6 @@ public interface StudyApi {
 
   record CreateStudyRequest(
       @NotBlank @Size(max = 64) String code,
-      @NotBlank @Size(max = 200) String name,
       @Positive Long projectId,
       @Size(max = 64) String programCode,
       @Size(max = 64) String projectCode,
@@ -33,7 +32,6 @@ public interface StudyApi {
   record StudyResponse(
       long id,
       String code,
-      String name,
       String indication,
       String phase,
       String status,

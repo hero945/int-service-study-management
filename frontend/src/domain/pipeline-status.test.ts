@@ -5,7 +5,6 @@ import { PHASE_TAGS, getPipelineCell } from './pipeline-status'
 const study = (phase: string, statusLabel = '进行中'): Study => ({
   id: 1,
   code: 'S1',
-  name: '研究一',
   indication: '适应症',
   phase,
   status: 'ACTIVE',

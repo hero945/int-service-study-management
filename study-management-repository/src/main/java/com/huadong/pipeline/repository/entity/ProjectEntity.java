@@ -10,7 +10,6 @@ public class ProjectEntity {
   @TableId(type = IdType.AUTO)
   private Long id;
   private String projectCode;
-  private String projectName;
   private Long programId;
   private String indicationDescription;
   private Long therapeuticAreaId;
@@ -24,8 +23,6 @@ public class ProjectEntity {
   public Long getId() { return id; }
   public String getProjectCode() { return projectCode; }
   public void setProjectCode(String value) { projectCode = value; }
-  public String getProjectName() { return projectName; }
-  public void setProjectName(String value) { projectName = value; }
   public Long getProgramId() { return programId; }
   public void setProgramId(Long value) { programId = value; }
   public String getIndicationDescription() { return indicationDescription; }

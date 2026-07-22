@@ -74,7 +74,7 @@ class PlatformIntegrationTest {
                                 new SimpleGrantedAuthority("config.create"))).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"code":"HD-MVP-001","name":"MVP 临床研究",
+                                {"code":"HD-MVP-001",
                                  "programCode":"PROGRAM-001","projectCode":"PROJECT-001",
                                  "therapeuticAreaCode":"ONCOLOGY","phase":"PHASE_1",
                                  "plannedStartDate":"2026-07-17","actualStartDate":"2026-07-17"}
@@ -85,6 +85,7 @@ class PlatformIntegrationTest {
                         .with(user(userDetailsService.loadUserByUsername("admin@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].name").doesNotExist())
                 .andExpect(jsonPath("$[0].statusLabel").value("进行中"))
                 .andExpect(jsonPath("$[0].statusTone").value("positive"));
         mvc.perform(get("/api/v1/clinical-pipeline/overview")
@@ -152,15 +153,15 @@ class PlatformIntegrationTest {
                 """);
         jdbc.update("""
                 INSERT INTO hd_plt_program(
-                    program_code, program_name, product_name, status_code,
+                    program_code, product_name, status_code,
                     sys_create_by, sys_update_by)
-                VALUES ('PROGRAM-001', '肿瘤产品管线', 'HD-001', 'ACTIVE', 'seed', 'seed')
+                VALUES ('PROGRAM-001', 'HD-001', 'ACTIVE', 'seed', 'seed')
                 """);
         jdbc.update("""
                 INSERT INTO hd_plt_project(
-                    project_code, project_name, program_id, indication_description,
+                    project_code, program_id, indication_description,
                     therapeutic_area_id, sys_create_by, sys_update_by)
-                SELECT 'PROJECT-001', '实体瘤项目', p.id, '实体瘤', ta.id, 'seed', 'seed'
+                SELECT 'PROJECT-001', p.id, '实体瘤', ta.id, 'seed', 'seed'
                 FROM hd_plt_program p CROSS JOIN hd_plt_therapeutic_area ta
                 WHERE p.program_code = 'PROGRAM-001' AND ta.area_code = 'ONCOLOGY'
                 """);

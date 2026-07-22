@@ -11,7 +11,6 @@ public class StudyEntity {
   @TableId(type = IdType.AUTO)
   private Long id;
   private String studyCode;
-  private String studyName;
   private String phaseStatusCode;
   private LocalDate plannedStartDate;
   private LocalDate plannedEndDate;
@@ -20,14 +19,12 @@ public class StudyEntity {
   private String studyDescription;
   private Long programId;
   private String programCodeSnapshot;
-  private String programNameSnapshot;
   private String productNameSnapshot;
   private String moaSnapshot;
   private String sourceCodeSnapshot;
   private String originCodeSnapshot;
   private Long projectId;
   private String projectCodeSnapshot;
-  private String projectNameSnapshot;
   private Long therapeuticAreaId;
   private String therapeuticAreaCodeSnapshot;
   private String therapeuticAreaNameSnapshot;
@@ -41,8 +38,6 @@ public class StudyEntity {
   public void setId(Long value) { id = value; }
   public String getStudyCode() { return studyCode; }
   public void setStudyCode(String value) { studyCode = value; }
-  public String getStudyName() { return studyName; }
-  public void setStudyName(String value) { studyName = value; }
   public String getPhaseStatusCode() { return phaseStatusCode; }
   public void setPhaseStatusCode(String value) { phaseStatusCode = value; }
   public LocalDate getPlannedStartDate() { return plannedStartDate; }
@@ -59,8 +54,6 @@ public class StudyEntity {
   public void setProgramId(Long value) { programId = value; }
   public String getProgramCodeSnapshot() { return programCodeSnapshot; }
   public void setProgramCodeSnapshot(String value) { programCodeSnapshot = value; }
-  public String getProgramNameSnapshot() { return programNameSnapshot; }
-  public void setProgramNameSnapshot(String value) { programNameSnapshot = value; }
   public String getProductNameSnapshot() { return productNameSnapshot; }
   public void setProductNameSnapshot(String value) { productNameSnapshot = value; }
   public String getMoaSnapshot() { return moaSnapshot; }
@@ -73,8 +66,6 @@ public class StudyEntity {
   public void setProjectId(Long value) { projectId = value; }
   public String getProjectCodeSnapshot() { return projectCodeSnapshot; }
   public void setProjectCodeSnapshot(String value) { projectCodeSnapshot = value; }
-  public String getProjectNameSnapshot() { return projectNameSnapshot; }
-  public void setProjectNameSnapshot(String value) { projectNameSnapshot = value; }
   public Long getTherapeuticAreaId() { return therapeuticAreaId; }
   public void setTherapeuticAreaId(Long value) { therapeuticAreaId = value; }
   public String getTherapeuticAreaCodeSnapshot() { return therapeuticAreaCodeSnapshot; }

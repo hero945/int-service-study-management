@@ -112,4 +112,60 @@ for (const asset of [
   );
 }
 
+const mysqlNameRemoval = read(
+  'study-management-service/src/main/resources/db/migration/mysql/V9__remove_pipeline_entity_names.sql',
+);
+const h2NameRemoval = read(
+  'study-management-service/src/main/resources/db/migration/h2/V9__remove_pipeline_entity_names.sql',
+);
+for (const column of [
+  'study_name',
+  'program_name_snapshot',
+  'project_name_snapshot',
+  'project_name',
+  'program_name',
+]) {
+  assert(
+    mysqlNameRemoval.includes(`DROP COLUMN ${column}`),
+    `MySQL V9 must remove ${column}`,
+  );
+  assert(
+    h2NameRemoval.includes(`DROP COLUMN ${column}`),
+    `H2 V9 must remove ${column}`,
+  );
+}
+
+const pipelineJavaSources = [
+  'study-management-api',
+  'study-management-domain',
+  'study-management-manager',
+  'study-management-repository',
+  'study-management-service',
+].map(readJavaSources).join('\n');
+assert(
+  !/(studyName|programName|projectName|phaseStatusLabel|rename-impact|RenameImpact)/.test(pipelineJavaSources),
+  'pipeline Java contracts must not expose removed name, phase label, or rename-impact fields',
+);
+
+for (const database of ['mysql', 'h2']) {
+  const migrationDirectory = path.join(
+    root, 'study-management-service', 'src', 'main', 'resources', 'db', 'migration', database,
+  );
+  const versions = fs.readdirSync(migrationDirectory)
+    .map((name) => /^V([^_]+)__/.exec(name)?.[1])
+    .filter(Boolean);
+  assert.equal(
+    new Set(versions).size,
+    versions.length,
+    `${database} Flyway migrations must not reuse a version`,
+  );
+}
+assert(
+  fs.existsSync(path.join(
+    root,
+    'study-management-service/src/main/resources/db/migration/mysql/V8__team_matrix.sql',
+  )),
+  'MySQL migration history must retain the already-applied V8 team matrix migration',
+);
+
 console.log('PASS backend Maven modules and dependency direction');

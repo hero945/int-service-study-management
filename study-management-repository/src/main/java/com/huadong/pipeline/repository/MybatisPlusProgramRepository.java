@@ -49,11 +49,10 @@ public class MybatisPlusProgramRepository implements ProgramRepository {
   }
 
   @Override
-  public Program create(String code, String name, String productName, String moa,
+  public Program create(String code, String productName, String moa,
       String sourceCode, String originCode, String username) {
     var entity = new ProgramEntity();
     entity.setProgramCode(code);
-    entity.setProgramName(name);
     entity.setProductName(productName);
     entity.setMoa(moa);
     entity.setSourceCode(sourceCode);
@@ -67,10 +66,9 @@ public class MybatisPlusProgramRepository implements ProgramRepository {
   }
 
   @Override
-  public boolean update(long id, String name, String productName, String moa,
-      String sourceCode, String originCode, LocalDateTime expectedUpdatedAt, String username) {
+  public void update(long id, String productName, String moa,
+      String sourceCode, String originCode, String username) {
     var update = Wrappers.<ProgramEntity>lambdaUpdate()
-        .set(ProgramEntity::getProgramName, name)
         .set(ProgramEntity::getProductName, productName)
         .set(ProgramEntity::getMoa, moa)
         .set(ProgramEntity::getSourceCode, sourceCode)
@@ -78,8 +76,7 @@ public class MybatisPlusProgramRepository implements ProgramRepository {
         .set(ProgramEntity::getSysUpdateBy, username)
         .set(ProgramEntity::getSysUpdateTime, LocalDateTime.now())
         .eq(ProgramEntity::getId, id).eq(ProgramEntity::getSysDeleted, 0);
-    if (expectedUpdatedAt != null) update.eq(ProgramEntity::getSysUpdateTime, expectedUpdatedAt);
-    return mapper.update(null, update) == 1;
+    mapper.update(null, update);
   }
 
   @Override
@@ -92,7 +89,7 @@ public class MybatisPlusProgramRepository implements ProgramRepository {
   }
 
   private static Program toDomain(ProgramSummaryData value) {
-    return new Program(value.id(), value.code(), value.name(), value.productName(), value.moa(),
+    return new Program(value.id(), value.code(), value.productName(), value.moa(),
         value.sourceCode(), value.originCode(), value.projectCount(), value.studyCount(),
         value.updatedAt());
   }

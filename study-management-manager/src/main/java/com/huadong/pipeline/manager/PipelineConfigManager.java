@@ -7,9 +7,7 @@ import com.huadong.pipeline.domain.config.Program;
 import com.huadong.pipeline.domain.config.ProgramRepository;
 import com.huadong.pipeline.domain.config.Project;
 import com.huadong.pipeline.domain.config.ProjectRepository;
-import com.huadong.pipeline.domain.config.RenameImpact;
 import com.huadong.pipeline.domain.config.TherapeuticArea;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,41 +61,24 @@ public class PipelineConfigManager {
       throw new BusinessException("PRODUCT_NAME_EXISTS", "Product 已关联其他 Program");
     }
     validateProgramEnums(command.sourceCode(), command.originCode());
-    String name = trimToNull(command.name());
-    return programs.create(code, name == null ? code : name, command.productName().trim(),
+    return programs.create(code, command.productName().trim(),
         trimToNull(command.moa()), command.sourceCode(), command.originCode(), username);
   }
 
   @Transactional
   public Program updateProgram(long id, ProgramUpdate command, String username) {
     Program existing = requireProgram(id);
-    String name = valueOr(command.name(), existing.name());
     String productName = valueOr(command.productName(), existing.productName());
     String source = valueOr(command.sourceCode(), existing.sourceCode());
     String origin = valueOr(command.originCode(), existing.originCode());
     String moa = command.moa() == null ? existing.moa() : trimToNull(command.moa());
-    requireText(name, "Program 名称不能为空");
     requireText(productName, "Product 不能为空");
     validateProgramEnums(source, origin);
     if (programs.existsByProductName(productName, id)) {
       throw new BusinessException("PRODUCT_NAME_EXISTS", "Product 已关联其他 Program");
     }
-    LocalDateTime expected = renameConfirmation(
-        !name.equals(existing.name()), command.confirmRename(), command.expectedUpdatedAt());
-    if (expected != null) {
-      requireImpactCount(command.expectedProjectCount(), existing.projectCount());
-      requireImpactCount(command.expectedStudyCount(), existing.studyCount());
-    }
-    if (!programs.update(id, name, productName, moa, source, origin, expected, username)) {
-      throw new BusinessException("RENAME_IMPACT_CHANGED", "影响范围已变化，请重新预览");
-    }
+    programs.update(id, productName, moa, source, origin, username);
     return requireProgram(id);
-  }
-
-  public RenameImpact previewProgramRename(long id, String newName) {
-    Program program = requireProgram(id);
-    requireDifferentName(program.name(), newName);
-    return new RenameImpact(program.projectCount(), program.studyCount(), program.updatedAt());
   }
 
   @Transactional
@@ -118,9 +99,8 @@ public class PipelineConfigManager {
     if (projects.findByCode(code).isPresent()) {
       throw new BusinessException("PROJECT_CODE_EXISTS", "Project 编码已存在");
     }
-    String name = trimToNull(command.name());
     try {
-      return projects.create(code, name == null ? code : name, command.programId(),
+      return projects.create(code, command.programId(),
           command.indication().trim(), command.therapeuticAreaCode().trim().toUpperCase(), username);
     } catch (IllegalArgumentException ex) {
       throw new BusinessException("INVALID_THERAPEUTIC_AREA", "治疗领域不存在或已停用");
@@ -130,28 +110,15 @@ public class PipelineConfigManager {
   @Transactional
   public Project updateProject(long id, ProjectUpdate command, String username) {
     Project existing = requireProject(id);
-    String name = valueOr(command.name(), existing.name());
     String indication = valueOr(command.indication(), existing.indication());
     String area = valueOr(command.therapeuticAreaCode(), existing.therapeuticAreaCode()).toUpperCase();
-    requireText(name, "Project 名称不能为空");
     requireText(indication, "Indication 不能为空");
-    LocalDateTime expected = renameConfirmation(
-        !name.equals(existing.name()), command.confirmRename(), command.expectedUpdatedAt());
-    if (expected != null) requireImpactCount(command.expectedStudyCount(), existing.studyCount());
     try {
-      if (!projects.update(id, name, indication, area, expected, username)) {
-        throw new BusinessException("RENAME_IMPACT_CHANGED", "影响范围已变化，请重新预览");
-      }
+      projects.update(id, indication, area, username);
     } catch (IllegalArgumentException ex) {
       throw new BusinessException("INVALID_THERAPEUTIC_AREA", "治疗领域不存在或已停用");
     }
     return requireProject(id);
-  }
-
-  public RenameImpact previewProjectRename(long id, String newName) {
-    Project project = requireProject(id);
-    requireDifferentName(project.name(), newName);
-    return new RenameImpact(0, project.studyCount(), project.updatedAt());
   }
 
   @Transactional
@@ -166,11 +133,11 @@ public class PipelineConfigManager {
 
   @Transactional
   public PipelineConfigRow updateStudy(
-      long id, String name, long projectId, String phaseStatusCode, String username) {
+      long id, long projectId, String phaseStatusCode, String username) {
     requireStudy(id);
     requireProject(projectId);
     String phase = normalizePhase(phaseStatusCode);
-    configuration.updateStudy(id, name.trim(), projectId, phase, username);
+    configuration.updateStudy(id, projectId, phase, username);
     return requireStudy(id);
   }
 
@@ -203,21 +170,6 @@ public class PipelineConfigManager {
         .orElseThrow(() -> new BusinessException("STUDY_NOT_FOUND", "Study 不存在"));
   }
 
-  private static LocalDateTime renameConfirmation(
-      boolean renamed, Boolean confirmed, LocalDateTime expectedUpdatedAt) {
-    if (!renamed) return null;
-    if (!Boolean.TRUE.equals(confirmed) || expectedUpdatedAt == null) {
-      throw new BusinessException("RENAME_CONFIRMATION_REQUIRED", "请先预览并确认重命名影响范围");
-    }
-    return expectedUpdatedAt;
-  }
-
-  private static void requireDifferentName(String currentName, String newName) {
-    if (currentName.equals(newName.trim())) {
-      throw new BusinessException("NAME_UNCHANGED", "新名称与当前名称相同");
-    }
-  }
-
   private static void validateProgramEnums(String source, String origin) {
     if (!SOURCES.contains(source) || !ORIGINS.contains(origin)) {
       throw new BusinessException("INVALID_CONFIG_ENUM", "Source 或 Origin 不合法");
@@ -243,34 +195,25 @@ public class PipelineConfigManager {
     }
   }
 
-  private static void requireImpactCount(Long expected, long current) {
-    if (expected == null || expected != current) {
-      throw new BusinessException("RENAME_IMPACT_CHANGED", "影响范围已变化，请重新预览");
-    }
-  }
-
   private static String trimToNull(String value) {
     if (value == null || value.isBlank()) return null;
     return value.trim();
   }
 
   public record ProgramCommand(
-      String code, String name, String productName, String moa,
+      String code, String productName, String moa,
       String sourceCode, String originCode) {
   }
 
   public record ProgramUpdate(
-      String name, String productName, String moa, String sourceCode, String originCode,
-      Boolean confirmRename, LocalDateTime expectedUpdatedAt,
-      Long expectedProjectCount, Long expectedStudyCount) {
+      String productName, String moa, String sourceCode, String originCode) {
   }
 
   public record ProjectCommand(
-      String code, String name, long programId, String indication, String therapeuticAreaCode) {
+      String code, long programId, String indication, String therapeuticAreaCode) {
   }
 
   public record ProjectUpdate(
-      String name, String indication, String therapeuticAreaCode,
-      Boolean confirmRename, LocalDateTime expectedUpdatedAt, Long expectedStudyCount) {
+      String indication, String therapeuticAreaCode) {
   }
 }

@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 public record Study(
     long id,
     String code,
-    String name,
     String indication,
     String phase,
     StudyStatus status,
@@ -24,7 +23,6 @@ public record Study(
 
   public static Study create(
       String code,
-      String name,
       String programCode,
       String projectCode,
       String therapeuticAreaCode,
@@ -40,7 +38,6 @@ public record Study(
     return new Study(
         0,
         code.trim(),
-        name.trim(),
         "",
         phase.trim(),
         status,

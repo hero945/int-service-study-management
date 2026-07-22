@@ -61,7 +61,6 @@ export const demoStudies: Study[] = [
   {
     id: 1,
     code: 'HDM2020-001',
-    name: 'HDM2020 项目首次人体研究',
     indication: '晚期实体瘤',
     phase: 'PreIND',
     status: 'ACTIVE',
@@ -82,7 +81,6 @@ export const demoStudies: Study[] = [
   {
     id: 2,
     code: 'HDM2015-102',
-    name: 'HDM2015 适应症探索研究',
     indication: '系统性红斑狼疮',
     phase: 'IND',
     status: 'ACTIVE',
@@ -103,7 +101,6 @@ export const demoStudies: Study[] = [
   {
     id: 3,
     code: 'HDM1005-302',
-    name: 'HDM1005 随机对照研究',
     indication: '2 型糖尿病',
     phase: 'Phase 1',
     status: 'ACTIVE',
@@ -191,7 +188,6 @@ export function createMockApiClient(): ApiClient {
   const programs: PipelineProgram[] = demoStudies.map((study, index) => ({
     id: index + 1,
     code: study.program ?? '',
-    name: `${study.program ?? ''} Program`,
     productName: study.product ?? '',
     moa: study.moa ?? null,
     sourceCode: study.source === '合作' ? 'COOPERATION' : 'SELF_DEVELOPED',
@@ -205,7 +201,6 @@ export function createMockApiClient(): ApiClient {
   const projects: PipelineProject[] = demoStudies.map((study, index) => ({
     id: index + 1,
     code: study.project ?? '',
-    name: `${study.project ?? ''} Project`,
     programId: index + 1,
     programCode: study.program ?? '',
     indication: study.indication,
@@ -284,18 +279,14 @@ export function createMockApiClient(): ApiClient {
         return {
         studyId: study.id,
         studyCode: study.code,
-        studyName: study.name,
         phaseStatusCode: study.phase.toUpperCase().replaceAll(' ', '_'),
-        phaseStatusLabel: study.phase,
         projectId: project.id,
         projectCode: project.code,
-        projectName: project.name,
         indication: project.indication,
         therapeuticAreaCode: project.therapeuticAreaCode,
         therapeuticAreaName: project.therapeuticAreaName,
         programId: program.id,
         programCode: program.code,
-        programName: program.name,
         productName: program.productName,
         moa: program.moa,
         sourceCode: program.sourceCode,
@@ -310,13 +301,13 @@ export function createMockApiClient(): ApiClient {
     },
     async listPrograms(keyword = '') {
       const query = keyword.trim().toLowerCase()
-      return programs.filter((item) => !query || [item.code, item.name, item.productName]
+      return programs.filter((item) => !query || [item.code, item.productName]
         .some((value) => value.toLowerCase().includes(query)))
     },
     async createProgram(input) {
       if (programs.some((item) => item.code === input.code)) throw new Error('Program 编码已存在')
       const program: PipelineProgram = {
-        id: nextProgramId++, code: input.code, name: input.code, productName: input.productName,
+        id: nextProgramId++, code: input.code, productName: input.productName,
         moa: input.moa ?? null, sourceCode: input.sourceCode,
         sourceLabel: input.sourceCode === 'SELF_DEVELOPED' ? '自研' : input.sourceCode === 'IN_LICENSE' ? '引进' : '合作',
         originCode: input.originCode, originLabel: input.originCode === 'DOMESTIC' ? '国产' : '进口',
@@ -331,11 +322,6 @@ export function createMockApiClient(): ApiClient {
       Object.assign(program, input, { updatedAt: now() })
       return program
     },
-    async previewProgramRename(id) {
-      const program = programs.find((item) => item.id === id)
-      if (!program) throw new Error('Program 不存在')
-      return { projectCount: program.projectCount, studyCount: program.studyCount, expectedUpdatedAt: program.updatedAt }
-    },
     async deleteProgram(id) {
       const index = programs.findIndex((item) => item.id === id)
       if (index < 0) throw new Error('Program 不存在')
@@ -345,14 +331,14 @@ export function createMockApiClient(): ApiClient {
     async listProjects(programId, keyword = '') {
       const query = keyword.trim().toLowerCase()
       return projects.filter((item) => (!programId || item.programId === programId) &&
-        (!query || item.code.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)))
+        (!query || item.code.toLowerCase().includes(query)))
     },
     async createProject(input) {
       if (projects.some((item) => item.code === input.code)) throw new Error('Project 编码已存在')
       const program = programs.find((item) => item.id === input.programId)
       if (!program) throw new Error('Program 不存在')
       const project: PipelineProject = {
-        id: nextProjectId++, code: input.code, name: input.code, programId: input.programId,
+        id: nextProjectId++, code: input.code, programId: input.programId,
         programCode: program.code, indication: input.indication, therapeuticAreaId: 99,
         therapeuticAreaCode: input.therapeuticAreaCode,
         therapeuticAreaName: therapeuticAreas.find((item) => item.code === input.therapeuticAreaCode)?.name ?? input.therapeuticAreaCode,
@@ -368,11 +354,6 @@ export function createMockApiClient(): ApiClient {
       Object.assign(project, input, { updatedAt: now() })
       return project
     },
-    async previewProjectRename(id) {
-      const project = projects.find((item) => item.id === id)
-      if (!project) throw new Error('Project 不存在')
-      return { projectCount: 0, studyCount: project.studyCount, expectedUpdatedAt: project.updatedAt }
-    },
     async deleteProject(id) {
       const index = projects.findIndex((item) => item.id === id)
       if (index < 0) throw new Error('Project 不存在')
@@ -382,7 +363,7 @@ export function createMockApiClient(): ApiClient {
     async createStudyConfig(input) {
       const project = projects.find((item) => item.id === input.projectId)
       if (!project) throw new Error('Project 不存在')
-      demoStudies.push({ id: nextStudyId++, code: input.code, name: input.name,
+      demoStudies.push({ id: nextStudyId++, code: input.code,
         indication: project.indication, phase: input.phase, status: 'ACTIVE', statusLabel: '进行中',
         statusTone: 'info', ownerName: '', startDate: null, updatedAt: now(),
         program: project.programCode, project: project.code,
@@ -394,7 +375,6 @@ export function createMockApiClient(): ApiClient {
       const study = demoStudies.find((item) => item.id === id)
       const project = projects.find((item) => item.id === input.projectId)
       if (!study || !project) throw new Error('Study 或 Project 不存在')
-      study.name = input.name
       study.phase = input.phaseStatusCode
       study.project = project.code
       study.program = project.programCode

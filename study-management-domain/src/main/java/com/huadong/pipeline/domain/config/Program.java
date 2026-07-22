@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 public record Program(
     long id,
     String code,
-    String name,
     String productName,
     String moa,
     String sourceCode,

@@ -25,10 +25,10 @@ public class MybatisPlusPipelineConfigRepository implements PipelineConfigReposi
   @Override
   public List<PipelineConfigRow> findAll() {
     return mapper.findRows().stream().map(row -> new PipelineConfigRow(
-        row.studyId(), row.studyCode(), row.studyName(), row.phaseStatusCode(),
-        row.projectId(), row.projectCode(), row.projectName(), row.indication(),
+        row.studyId(), row.studyCode(), row.phaseStatusCode(),
+        row.projectId(), row.projectCode(), row.indication(),
         row.therapeuticAreaCode(), row.therapeuticAreaName(), row.programId(), row.programCode(),
-        row.programName(), row.productName(), row.moa(), row.sourceCode(), row.originCode(),
+        row.productName(), row.moa(), row.sourceCode(), row.originCode(),
         row.updatedAt())).toList();
   }
 
@@ -52,24 +52,21 @@ public class MybatisPlusPipelineConfigRepository implements PipelineConfigReposi
   }
 
   @Override
-  public void updateStudy(long studyId, String name, long projectId, String phaseStatusCode,
+  public void updateStudy(long studyId, long projectId, String phaseStatusCode,
       String username) {
     var hierarchy = mapper.findHierarchyByProjectId(projectId);
     if (hierarchy == null) throw new IllegalArgumentException("Project not found");
     var entity = new StudyEntity();
     entity.setId(studyId);
-    entity.setStudyName(name);
     entity.setPhaseStatusCode(phaseStatusCode);
     entity.setProgramId(hierarchy.getProgramId());
     entity.setProgramCodeSnapshot(hierarchy.getProgramCode());
-    entity.setProgramNameSnapshot(hierarchy.getProgramName());
     entity.setProductNameSnapshot(hierarchy.getProductName());
     entity.setMoaSnapshot(hierarchy.getMoa());
     entity.setSourceCodeSnapshot(hierarchy.getSourceCode());
     entity.setOriginCodeSnapshot(hierarchy.getOriginCode());
     entity.setProjectId(hierarchy.getProjectId());
     entity.setProjectCodeSnapshot(hierarchy.getProjectCode());
-    entity.setProjectNameSnapshot(hierarchy.getProjectName());
     entity.setTherapeuticAreaId(hierarchy.getTherapeuticAreaId());
     entity.setTherapeuticAreaCodeSnapshot(hierarchy.getTherapeuticAreaCode());
     entity.setTherapeuticAreaNameSnapshot(hierarchy.getTherapeuticAreaName());

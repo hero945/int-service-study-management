@@ -32,7 +32,6 @@ public class StudyApiService implements StudyApi {
         .map(study -> new StudyResponse(
             study.id(),
             study.code(),
-            study.name(),
             study.indication(),
             study.phase(),
             study.status().name(),
@@ -49,7 +48,6 @@ public class StudyApiService implements StudyApi {
     manager.create(
         new StudyManager.CreateStudyCommand(
             request.code(),
-            request.name(),
             request.projectId(),
             request.programCode(),
             request.projectCode(),

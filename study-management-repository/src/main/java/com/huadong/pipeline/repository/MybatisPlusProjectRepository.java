@@ -24,7 +24,7 @@ public class MybatisPlusProjectRepository implements ProjectRepository {
   @Override
   public List<Project> findAll(Long programId, String keyword) {
     return configMapper.findProjects(programId, keyword == null ? "" : keyword.trim()).stream()
-        .map(row -> new Project(row.id(), row.code(), row.name(), row.programId(), row.programCode(),
+        .map(row -> new Project(row.id(), row.code(), row.programId(), row.programCode(),
             row.indication(), row.therapeuticAreaId(), row.therapeuticAreaCode(),
             row.therapeuticAreaName(), row.studyCount(), row.updatedAt()))
         .toList();
@@ -34,7 +34,7 @@ public class MybatisPlusProjectRepository implements ProjectRepository {
   public Optional<Project> findById(long id) {
     var row = configMapper.findProject(id);
     return Optional.ofNullable(row).map(value -> new Project(
-        value.id(), value.code(), value.name(), value.programId(), value.programCode(),
+        value.id(), value.code(), value.programId(), value.programCode(),
         value.indication(), value.therapeuticAreaId(), value.therapeuticAreaCode(),
         value.therapeuticAreaName(), value.studyCount(), value.updatedAt()));
   }
@@ -45,13 +45,12 @@ public class MybatisPlusProjectRepository implements ProjectRepository {
   }
 
   @Override
-  public Project create(String code, String name, long programId, String indication,
+  public Project create(String code, long programId, String indication,
       String therapeuticAreaCode, String username) {
     Long areaId = configMapper.findTherapeuticAreaId(therapeuticAreaCode);
     if (areaId == null) throw new IllegalArgumentException("Therapeutic area not found");
     var entity = new ProjectEntity();
     entity.setProjectCode(code);
-    entity.setProjectName(name);
     entity.setProgramId(programId);
     entity.setIndicationDescription(indication);
     entity.setTherapeuticAreaId(areaId);
@@ -63,20 +62,17 @@ public class MybatisPlusProjectRepository implements ProjectRepository {
   }
 
   @Override
-  public boolean update(long id, String name, String indication, String therapeuticAreaCode,
-      LocalDateTime expectedUpdatedAt, String username) {
+  public void update(long id, String indication, String therapeuticAreaCode, String username) {
     Long areaId = configMapper.findTherapeuticAreaId(therapeuticAreaCode);
     if (areaId == null) throw new IllegalArgumentException("Therapeutic area not found");
     var entity = new ProjectEntity();
-    entity.setProjectName(name);
     entity.setIndicationDescription(indication);
     entity.setTherapeuticAreaId(areaId);
     entity.setSysUpdateBy(username);
     entity.setSysUpdateTime(LocalDateTime.now());
     var update = Wrappers.<ProjectEntity>lambdaUpdate()
         .eq(ProjectEntity::getId, id).eq(ProjectEntity::getSysDeleted, 0);
-    if (expectedUpdatedAt != null) update.eq(ProjectEntity::getSysUpdateTime, expectedUpdatedAt);
-    return mapper.update(entity, update) == 1;
+    mapper.update(entity, update);
   }
 
   @Override

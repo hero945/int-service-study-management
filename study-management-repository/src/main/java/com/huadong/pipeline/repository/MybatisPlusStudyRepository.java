@@ -84,7 +84,6 @@ public class MybatisPlusStudyRepository implements StudyRepository {
 
     var entity = new StudyEntity();
     entity.setStudyCode(study.code());
-    entity.setStudyName(study.name());
     entity.setPhaseStatusCode(study.phase());
     entity.setPlannedStartDate(study.startDate());
     entity.setPlannedEndDate(study.plannedEndDate());
@@ -93,14 +92,12 @@ public class MybatisPlusStudyRepository implements StudyRepository {
     entity.setStudyDescription(study.description());
     entity.setProgramId(hierarchy.getProgramId());
     entity.setProgramCodeSnapshot(hierarchy.getProgramCode());
-    entity.setProgramNameSnapshot(hierarchy.getProgramName());
     entity.setProductNameSnapshot(hierarchy.getProductName());
     entity.setMoaSnapshot(hierarchy.getMoa());
     entity.setSourceCodeSnapshot(hierarchy.getSourceCode());
     entity.setOriginCodeSnapshot(hierarchy.getOriginCode());
     entity.setProjectId(hierarchy.getProjectId());
     entity.setProjectCodeSnapshot(hierarchy.getProjectCode());
-    entity.setProjectNameSnapshot(hierarchy.getProjectName());
     entity.setTherapeuticAreaId(hierarchy.getTherapeuticAreaId());
     entity.setTherapeuticAreaCodeSnapshot(hierarchy.getTherapeuticAreaCode());
     entity.setTherapeuticAreaNameSnapshot(hierarchy.getTherapeuticAreaName());
@@ -121,7 +118,6 @@ public class MybatisPlusStudyRepository implements StudyRepository {
     return new Study(
         entity.getId(),
         entity.getStudyCode(),
-        entity.getStudyName(),
         entity.getIndicationDescriptionSnapshot(),
         entity.getPhaseStatusCode(),
         status,

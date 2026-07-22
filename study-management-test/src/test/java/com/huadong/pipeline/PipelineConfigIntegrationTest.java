@@ -7,7 +7,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -63,7 +62,7 @@ class PipelineConfigIntegrationTest {
                  "sourceCode":"SELF_DEVELOPED","originCode":"DOMESTIC"}
                 """))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.name").value("PRG-005"))
+        .andExpect(jsonPath("$.name").doesNotExist())
         .andReturn().getResponse().getContentAsString();
     long programId = objectMapper.readTree(programBody).path("id").asLong();
 
@@ -75,19 +74,19 @@ class PipelineConfigIntegrationTest {
                  "therapeuticAreaCode":"ONCOLOGY"}
                 """.formatted(programId)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.name").value("PRJ-005"));
+        .andExpect(jsonPath("$.name").doesNotExist());
   }
 
   @Test
   void createsEntitiesAndReturnsStudyGrainedConfiguration() throws Exception {
-    long programId = createProgram("PRG-001", "肿瘤项目集");
-    long projectId = createProject(programId, "PRJ-001", "肺癌项目");
+    long programId = createProgram("PRG-001");
+    long projectId = createProject(programId, "PRJ-001");
 
     mvc.perform(post("/api/v1/clinical-pipeline/studies")
             .with(authority("config.create")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"code":"STD-001","name":"一线临床研究","projectId":%d,
+                {"code":"STD-001","projectId":%d,
                  "phase":"PHASE_1"}
                 """.formatted(projectId)))
         .andExpect(status().isCreated());
@@ -99,76 +98,22 @@ class PipelineConfigIntegrationTest {
         .andExpect(jsonPath("$[0].programCode").value("PRG-001"))
         .andExpect(jsonPath("$[0].projectCode").value("PRJ-001"))
         .andExpect(jsonPath("$[0].studyCode").value("STD-001"))
+        .andExpect(jsonPath("$[0].studyName").doesNotExist())
+        .andExpect(jsonPath("$[0].programName").doesNotExist())
+        .andExpect(jsonPath("$[0].projectName").doesNotExist())
+        .andExpect(jsonPath("$[0].phaseStatusLabel").doesNotExist())
         .andExpect(jsonPath("$[0].projectStatus").doesNotExist());
   }
 
   @Test
-  void previewsRenameImpactAndRequiresFreshConfirmation() throws Exception {
-    long programId = createProgram("PRG-002", "旧名称");
-    createProject(programId, "PRJ-002", "关联项目");
-
-    String previewBody = mvc.perform(post("/api/v1/clinical-pipeline/programs/{id}/rename-impact", programId)
-            .with(authority("config.update")).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"newName\":\"新名称\"}"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.projectCount").value(1))
-        .andExpect(jsonPath("$.studyCount").value(0))
-        .andReturn().getResponse().getContentAsString();
-    String expectedUpdatedAt = objectMapper.readTree(previewBody).path("expectedUpdatedAt").asText();
-
-    mvc.perform(patch("/api/v1/clinical-pipeline/programs/{id}", programId)
-            .with(authority("config.update")).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"name\":\"新名称\"}"))
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.code").value("RENAME_CONFIRMATION_REQUIRED"));
-
-    mvc.perform(patch("/api/v1/clinical-pipeline/programs/{id}", programId)
-            .with(authority("config.update")).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {"name":"新名称","confirmRename":true,"expectedUpdatedAt":"%s",
-                 "expectedProjectCount":1,"expectedStudyCount":0}
-                """.formatted(expectedUpdatedAt)))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.name").value("新名称"));
-  }
-
-  @Test
-  void rejectsRenameWhenReferencesChangedAfterPreview() throws Exception {
-    long programId = createProgram("PRG-004", "待改名项目集");
-    String previewBody = mvc.perform(post(
-            "/api/v1/clinical-pipeline/programs/{id}/rename-impact", programId)
-            .with(authority("config.update")).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"newName\":\"新项目集名称\"}"))
-        .andExpect(status().isOk())
-        .andReturn().getResponse().getContentAsString();
-    String expectedUpdatedAt = objectMapper.readTree(previewBody).path("expectedUpdatedAt").asText();
-
-    createProject(programId, "PRJ-004", "预览后新增项目");
-
-    mvc.perform(patch("/api/v1/clinical-pipeline/programs/{id}", programId)
-            .with(authority("config.update")).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                {"name":"新项目集名称","confirmRename":true,"expectedUpdatedAt":"%s",
-                 "expectedProjectCount":0,"expectedStudyCount":0}
-                """.formatted(expectedUpdatedAt)))
-        .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.code").value("RENAME_IMPACT_CHANGED"));
-  }
-
-  @Test
   void rejectsDeletingReferencedProjectWithConflictDetails() throws Exception {
-    long programId = createProgram("PRG-003", "引用项目集");
-    long projectId = createProject(programId, "PRJ-003", "被引用项目");
+    long programId = createProgram("PRG-003");
+    long projectId = createProject(programId, "PRJ-003");
     mvc.perform(post("/api/v1/clinical-pipeline/studies")
             .with(authority("config.create")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"code":"STD-003","name":"引用研究","projectId":%d,
+                {"code":"STD-003","projectId":%d,
                  "phase":"PHASE_2"}
                 """.formatted(projectId)))
         .andExpect(status().isCreated());
@@ -187,28 +132,28 @@ class PipelineConfigIntegrationTest {
         .andExpect(status().isForbidden());
   }
 
-  private long createProgram(String code, String name) throws Exception {
+  private long createProgram(String code) throws Exception {
     String response = mvc.perform(post("/api/v1/clinical-pipeline/programs")
             .with(authority("config.create")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"code":"%s","name":"%s","productName":"HD-001",
+                {"code":"%s","productName":"HD-001",
                  "moa":"PD-1","sourceCode":"SELF_DEVELOPED","originCode":"DOMESTIC"}
-                """.formatted(code, name)))
+                """.formatted(code)))
         .andExpect(status().isCreated())
         .andReturn().getResponse().getContentAsString();
     JsonNode json = objectMapper.readTree(response);
     return json.path("id").asLong();
   }
 
-  private long createProject(long programId, String code, String name) throws Exception {
+  private long createProject(long programId, String code) throws Exception {
     String response = mvc.perform(post("/api/v1/clinical-pipeline/projects")
             .with(authority("config.create")).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"code":"%s","name":"%s","programId":%d,
+                {"code":"%s","programId":%d,
                  "indication":"非小细胞肺癌","therapeuticAreaCode":"ONCOLOGY"}
-                """.formatted(code, name, programId)))
+                """.formatted(code, programId)))
         .andExpect(status().isCreated())
         .andReturn().getResponse().getContentAsString();
     return objectMapper.readTree(response).path("id").asLong();

@@ -33,7 +33,6 @@ export interface PipelineOverview {
 export interface Study {
   id: number
   code: string
-  name: string
   indication: string
   phase: string
   status: string
@@ -85,18 +84,14 @@ export interface TeamAssignment {
 export interface PipelineConfigRow {
   studyId: number
   studyCode: string
-  studyName: string
   phaseStatusCode: string
-  phaseStatusLabel: string
   projectId: number
   projectCode: string
-  projectName: string
   indication: string
   therapeuticAreaCode: string
   therapeuticAreaName: string
   programId: number
   programCode: string
-  programName: string
   productName: string
   moa: string | null
   sourceCode: string
@@ -109,7 +104,6 @@ export interface PipelineConfigRow {
 export interface PipelineProgram {
   id: number
   code: string
-  name: string
   productName: string
   moa: string | null
   sourceCode: string
@@ -124,7 +118,6 @@ export interface PipelineProgram {
 export interface PipelineProject {
   id: number
   code: string
-  name: string
   programId: number
   programCode: string
   indication: string
@@ -150,13 +143,7 @@ export interface ProgramInput {
   originCode: string
 }
 
-export interface ProgramUpdateInput extends Partial<Omit<ProgramInput, 'code'>> {
-  name?: string
-  confirmRename?: boolean
-  expectedUpdatedAt?: string
-  expectedProjectCount?: number
-  expectedStudyCount?: number
-}
+export type ProgramUpdateInput = Partial<Omit<ProgramInput, 'code'>>
 
 export interface ProjectInput {
   code: string
@@ -165,28 +152,15 @@ export interface ProjectInput {
   therapeuticAreaCode: string
 }
 
-export interface ProjectUpdateInput extends Partial<Omit<ProjectInput, 'code' | 'programId'>> {
-  name?: string
-  confirmRename?: boolean
-  expectedUpdatedAt?: string
-  expectedStudyCount?: number
-}
-
-export interface RenameImpact {
-  projectCount: number
-  studyCount: number
-  expectedUpdatedAt: string
-}
+export type ProjectUpdateInput = Partial<Omit<ProjectInput, 'code' | 'programId'>>
 
 export interface StudyConfigInput {
-  name: string
   projectId: number
   phaseStatusCode: string
 }
 
 export interface CreateStudyConfigInput {
   code: string
-  name: string
   projectId: number
   phase: string
 }

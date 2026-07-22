@@ -4,11 +4,11 @@
 
 为临床研发管线管理系统完整 PRD 提供一套从空库创建的 MySQL 8.x 数据模型。数据库覆盖账号权限、基础配置、Program、Project、Study、团队、里程碑、月报、风险和审计。
 
-本设计已作为正式 Flyway V1 基线，不包含页面整库导入、预生成导出文件或独立人员档案。
+本设计已作为正式 Flyway V1 基线，不包含页面整库导入、预生成导出文件或独立人员档案。V1 保持不可变，后续结构调整通过增量迁移演进；V9 删除 Program、Project、Study 名称及名称快照字段。
 
 当前状态：本脚本已在本机MySQL 8.0.46的空 `study_management` 库创建25张表并完成
-结构核验，且已成为 Java 运行时使用的 Flyway V1 基线；MyBatis-Plus Repository 和
-Spring Session 表名适配均已完成。
+结构核验，且已成为 Java 运行时使用的 Flyway V1 基线；当前运行结构应继续执行 V2 至 V9
+增量迁移，MyBatis-Plus Repository 和 Spring Session 表名适配均已完成。
 
 ## 2. 已确认的建模规则
 
@@ -56,12 +56,12 @@ Project 1 -- N Study
 - Product 不单独建表，产品、MOA、来源和国内外属性保存在 Program。
 - 来源和国内外属性使用Java固定枚举编码，不建立配置表。
 - 适应症不建立配置表；Project直接保存必填的适应症文本描述。
-- Program、Project、Study 均有全局唯一、创建后不可修改的业务编码。
+- Program、Project、Study 均有全局唯一、创建后不可修改的业务编码；业务编码也是唯一展示标识，不再保存名称字段。
 - `study_code` 对应页面中的 Study No.
-- Phase Status 使用 Java 固定编码和映射，不建立配置表。
+- Phase Status 使用 Java 固定编码，不建立配置表；英文展示标签由前端映射，后端不返回标签字段。
 - Project 状态不落库、不建立配置表，由 Java 根据 Project 下属 Study 的阶段、里程碑和风险数据实时汇总计算。
-- Study 保存 Program、Project、TA、适应症、产品等筛选字段的快照。
-- 上级主数据修改后不自动更新已有 Study 快照。
+- Study 保存 Program Code、Project Code、TA、适应症、产品等筛选字段的快照，不保存 Program/Project 名称快照。
+- 上级主数据修改后不自动更新已有 Study 业务字段快照。
 
 ## 5. 里程碑
 
@@ -144,5 +144,5 @@ Project 1 -- N Study
 - 密码、Session token 和密码重置原始令牌不以明文保存。
 - 月报支持同一功能线同月多条独立进展。
 - 风险支持多次评估和多条措施。
-- Study快照字段不随上级主数据更新。
+- Study业务字段快照不随上级主数据更新，且不含 Program/Project 名称快照。
 - SQL 不包含真实账号、密码、令牌或生产连接信息。

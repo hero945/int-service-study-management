@@ -18,7 +18,6 @@ import type {
   ProgramUpdateInput,
   ProjectInput,
   ProjectUpdateInput,
-  RenameImpact,
   RoleInput,
   RolePage,
   RoleStatus,
@@ -45,12 +44,10 @@ export interface ApiClient {
   listPrograms(keyword?: string): Promise<PipelineProgram[]>
   createProgram(input: ProgramInput): Promise<PipelineProgram>
   updateProgram(id: number, input: ProgramUpdateInput): Promise<PipelineProgram>
-  previewProgramRename(id: number, newName: string): Promise<RenameImpact>
   deleteProgram(id: number): Promise<void>
   listProjects(programId?: number, keyword?: string): Promise<PipelineProject[]>
   createProject(input: ProjectInput): Promise<PipelineProject>
   updateProject(id: number, input: ProjectUpdateInput): Promise<PipelineProject>
-  previewProjectRename(id: number, newName: string): Promise<RenameImpact>
   deleteProject(id: number): Promise<void>
   createStudyConfig(input: CreateStudyConfigInput): Promise<void>
   updateStudyConfig(id: number, input: StudyConfigInput): Promise<PipelineConfigRow>
@@ -164,12 +161,6 @@ export function createHttpApiClient(): ApiClient {
         method: 'PATCH', body: JSON.stringify(input),
       })
     },
-    async previewProgramRename(id, newName) {
-      await refreshCsrf()
-      return request<RenameImpact>(`/api/v1/clinical-pipeline/programs/${id}/rename-impact`, {
-        method: 'POST', body: JSON.stringify({ newName }),
-      })
-    },
     async deleteProgram(id) {
       await refreshCsrf()
       await request<void>(`/api/v1/clinical-pipeline/programs/${id}`, { method: 'DELETE' })
@@ -191,12 +182,6 @@ export function createHttpApiClient(): ApiClient {
       await refreshCsrf()
       return request<PipelineProject>(`/api/v1/clinical-pipeline/projects/${id}`, {
         method: 'PATCH', body: JSON.stringify(input),
-      })
-    },
-    async previewProjectRename(id, newName) {
-      await refreshCsrf()
-      return request<RenameImpact>(`/api/v1/clinical-pipeline/projects/${id}/rename-impact`, {
-        method: 'POST', body: JSON.stringify({ newName }),
       })
     },
     async deleteProject(id) {
