@@ -38,6 +38,7 @@ public class StudyEntity {
   private short sysDeleted;
 
   public Long getId() { return id; }
+  public void setId(Long value) { id = value; }
   public String getStudyCode() { return studyCode; }
   public void setStudyCode(String value) { studyCode = value; }
   public String getStudyName() { return studyName; }
@@ -87,5 +88,7 @@ public class StudyEntity {
   public String getSysUpdateBy() { return sysUpdateBy; }
   public void setSysUpdateBy(String value) { sysUpdateBy = value; }
   public LocalDateTime getSysUpdateTime() { return sysUpdateTime; }
+  public void setSysUpdateTime(LocalDateTime value) { sysUpdateTime = value; }
   public short getSysDeleted() { return sysDeleted; }
+  public void setSysDeleted(short value) { sysDeleted = value; }
 }

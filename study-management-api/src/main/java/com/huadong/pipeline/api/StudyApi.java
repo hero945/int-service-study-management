@@ -1,8 +1,8 @@
 package com.huadong.pipeline.api;
 
-import com.huadong.pipeline.common.StudyStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,9 +18,10 @@ public interface StudyApi {
   record CreateStudyRequest(
       @NotBlank @Size(max = 64) String code,
       @NotBlank @Size(max = 200) String name,
-      @NotBlank @Size(max = 64) String programCode,
-      @NotBlank @Size(max = 64) String projectCode,
-      @NotBlank @Size(max = 64) String therapeuticAreaCode,
+      @Positive Long projectId,
+      @Size(max = 64) String programCode,
+      @Size(max = 64) String projectCode,
+      @Size(max = 64) String therapeuticAreaCode,
       @NotBlank @Size(max = 32) String phase,
       LocalDate plannedStartDate,
       LocalDate plannedEndDate,

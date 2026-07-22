@@ -60,12 +60,12 @@ Accepted（取代ADR-004中的表前缀和早期物理模型约定）
 - 页面筛选可以直接使用Study快照索引，但父级改名不会自动同步历史快照。
 - 删除数据库约束后，Java事务校验和数据一致性测试成为强制要求。
 - `ASSIGNED_STUDY`范围随团队分配变化，但历史月报应填快照和完成率不回写。
-- 旧 `V1__baseline.sql` 与目标模型不兼容，Java运行前必须将目标结构整理为正式
-  Flyway基线；不能在已有25表但无Flyway历史的库上直接启动旧应用。
+- 目标结构现已整理为正式 Flyway V1 基线，Java Repository 与 Spring Session 已完成
+  适配；已有25表但无Flyway历史的手工数据库仍不能直接视为已迁移环境。
 
 ## 验证
 
 - `docs/database/V1__hd_plt_full_schema.sql` 可在空MySQL 8.0.46数据库创建25张表。
 - 25张表均为InnoDB和`utf8mb4_0900_ai_ci`。
 - 不存在租户字段、项目状态存储字段、外键和CHECK约束。
-- 最终Flyway基线完成后，空库启动、重复部署和应用集成测试必须通过。
+- Flyway 空库启动和应用集成测试已通过；重复部署及生产迁移账号最小权限仍属于上线门禁。

@@ -50,6 +50,7 @@ public class StudyApiService implements StudyApi {
         new StudyManager.CreateStudyCommand(
             request.code(),
             request.name(),
+            request.projectId(),
             request.programCode(),
             request.projectCode(),
             request.therapeuticAreaCode(),

@@ -5,18 +5,28 @@ import type {
   CurrentUser,
   LoginCredentials,
   MonthlyReport,
-  PipelineConfig,
+  CreateStudyConfigInput,
+  PipelineConfigRow,
+  PipelineProgram,
+  PipelineProject,
   PipelineOverview,
   PlatformUser,
   PlatformPermission,
   PlatformRole,
   Risk,
+  ProgramInput,
+  ProgramUpdateInput,
+  ProjectInput,
+  ProjectUpdateInput,
+  RenameImpact,
   RoleInput,
   RolePage,
   RoleStatus,
   RoleUpdateResult,
   Study,
+  StudyConfigInput,
   TeamAssignment,
+  TherapeuticArea,
   UpdateUserInput,
 } from './types'
 import { createMockApiClient } from './mock'
@@ -30,7 +40,21 @@ export interface ApiClient {
   listRisks(): Promise<Risk[]>
   listMonthlyReports(month?: string): Promise<MonthlyReport[]>
   listTeamAssignments(): Promise<TeamAssignment[]>
-  listPipelineConfig(): Promise<PipelineConfig[]>
+  listPipelineConfig(): Promise<PipelineConfigRow[]>
+  listTherapeuticAreas(): Promise<TherapeuticArea[]>
+  listPrograms(keyword?: string): Promise<PipelineProgram[]>
+  createProgram(input: ProgramInput): Promise<PipelineProgram>
+  updateProgram(id: number, input: ProgramUpdateInput): Promise<PipelineProgram>
+  previewProgramRename(id: number, newName: string): Promise<RenameImpact>
+  deleteProgram(id: number): Promise<void>
+  listProjects(programId?: number, keyword?: string): Promise<PipelineProject[]>
+  createProject(input: ProjectInput): Promise<PipelineProject>
+  updateProject(id: number, input: ProjectUpdateInput): Promise<PipelineProject>
+  previewProjectRename(id: number, newName: string): Promise<RenameImpact>
+  deleteProject(id: number): Promise<void>
+  createStudyConfig(input: CreateStudyConfigInput): Promise<void>
+  updateStudyConfig(id: number, input: StudyConfigInput): Promise<PipelineConfigRow>
+  deleteStudyConfig(id: number): Promise<void>
   listUsers(keyword?: string, roleCode?: string): Promise<PlatformUser[]>
   createUser(input: CreateUserInput): Promise<void>
   updateUser(id: number, input: UpdateUserInput): Promise<void>
@@ -48,12 +72,21 @@ export class ApiError extends Error {
     message: string,
     readonly status: number,
     readonly code?: string,
+    readonly details?: Record<string, string>,
   ) {
     super(message)
   }
 }
 
-function createHttpApiClient(): ApiClient {
+type UnauthorizedHandler = () => void
+
+let unauthorizedHandler: UnauthorizedHandler | undefined
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | undefined) {
+  unauthorizedHandler = handler
+}
+
+export function createHttpApiClient(): ApiClient {
   let csrf: CsrfToken | undefined
 
   const request = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
@@ -70,10 +103,12 @@ function createHttpApiClient(): ApiClient {
       ? JSON.parse(text)
       : undefined
     if (!response.ok) {
+      if (response.status === 401) unauthorizedHandler?.()
       throw new ApiError(
         data?.message ?? `请求失败（${response.status}）`,
         response.status,
         data?.code,
+        data?.details,
       )
     }
     return data as T
@@ -112,7 +147,78 @@ function createHttpApiClient(): ApiClient {
     listTeamAssignments: () =>
       request<TeamAssignment[]>('/api/v1/team-assignments'),
     listPipelineConfig: () =>
-      request<PipelineConfig[]>('/api/v1/pipeline-config'),
+      request<PipelineConfigRow[]>('/api/v1/clinical-pipeline/pipeline-config'),
+    listTherapeuticAreas: () =>
+      request<TherapeuticArea[]>('/api/v1/clinical-pipeline/therapeutic-areas'),
+    listPrograms: (keyword = '') =>
+      request<PipelineProgram[]>(`/api/v1/clinical-pipeline/programs${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ''}`),
+    async createProgram(input) {
+      await refreshCsrf()
+      return request<PipelineProgram>('/api/v1/clinical-pipeline/programs', {
+        method: 'POST', body: JSON.stringify(input),
+      })
+    },
+    async updateProgram(id, input) {
+      await refreshCsrf()
+      return request<PipelineProgram>(`/api/v1/clinical-pipeline/programs/${id}`, {
+        method: 'PATCH', body: JSON.stringify(input),
+      })
+    },
+    async previewProgramRename(id, newName) {
+      await refreshCsrf()
+      return request<RenameImpact>(`/api/v1/clinical-pipeline/programs/${id}/rename-impact`, {
+        method: 'POST', body: JSON.stringify({ newName }),
+      })
+    },
+    async deleteProgram(id) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/clinical-pipeline/programs/${id}`, { method: 'DELETE' })
+    },
+    listProjects: (programId, keyword = '') => {
+      const parameters = new URLSearchParams()
+      if (programId) parameters.set('programId', String(programId))
+      if (keyword) parameters.set('keyword', keyword)
+      const query = parameters.toString()
+      return request<PipelineProject[]>(`/api/v1/clinical-pipeline/projects${query ? `?${query}` : ''}`)
+    },
+    async createProject(input) {
+      await refreshCsrf()
+      return request<PipelineProject>('/api/v1/clinical-pipeline/projects', {
+        method: 'POST', body: JSON.stringify(input),
+      })
+    },
+    async updateProject(id, input) {
+      await refreshCsrf()
+      return request<PipelineProject>(`/api/v1/clinical-pipeline/projects/${id}`, {
+        method: 'PATCH', body: JSON.stringify(input),
+      })
+    },
+    async previewProjectRename(id, newName) {
+      await refreshCsrf()
+      return request<RenameImpact>(`/api/v1/clinical-pipeline/projects/${id}/rename-impact`, {
+        method: 'POST', body: JSON.stringify({ newName }),
+      })
+    },
+    async deleteProject(id) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/clinical-pipeline/projects/${id}`, { method: 'DELETE' })
+    },
+    async createStudyConfig(input) {
+      await refreshCsrf()
+      await request<void>('/api/v1/clinical-pipeline/studies', {
+        method: 'POST', body: JSON.stringify(input),
+      })
+    },
+    async updateStudyConfig(id, input) {
+      await refreshCsrf()
+      return request<PipelineConfigRow>(`/api/v1/clinical-pipeline/studies/${id}`, {
+        method: 'PATCH', body: JSON.stringify(input),
+      })
+    },
+    async deleteStudyConfig(id) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/clinical-pipeline/studies/${id}`, { method: 'DELETE' })
+    },
     listUsers: (keyword = '', roleCode = '') => {
       const params = new URLSearchParams()
       if (keyword) params.set('keyword', keyword)

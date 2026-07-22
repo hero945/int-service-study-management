@@ -60,7 +60,11 @@ export const router = createRouter({
           path: 'config',
           name: 'config',
           component: PipelineConfigView,
-          meta: { title: '管线配置', subtitle: '维护管线展示与阶段映射' },
+          meta: {
+            title: '管线配置',
+            subtitle: '维护 Program、Project 与 Study 实体关系',
+            requiredPermission: 'config.page.view',
+          },
         },
         {
           path: 'reports',

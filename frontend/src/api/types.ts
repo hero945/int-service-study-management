@@ -82,19 +82,113 @@ export interface TeamAssignment {
   members: string[]
 }
 
-export interface PipelineConfig {
-  key: string
-  source: string
-  origin: string
-  product: string
-  moa: string
-  program: string
-  indication: string
-  project: string
-  therapeuticArea: string
+export interface PipelineConfigRow {
+  studyId: number
   studyCode: string
-  projectStatus: string
-  phaseStatus: string
+  studyName: string
+  phaseStatusCode: string
+  phaseStatusLabel: string
+  projectId: number
+  projectCode: string
+  projectName: string
+  indication: string
+  therapeuticAreaCode: string
+  therapeuticAreaName: string
+  programId: number
+  programCode: string
+  programName: string
+  productName: string
+  moa: string | null
+  sourceCode: string
+  sourceLabel: string
+  originCode: string
+  originLabel: string
+  updatedAt: string
+}
+
+export interface PipelineProgram {
+  id: number
+  code: string
+  name: string
+  productName: string
+  moa: string | null
+  sourceCode: string
+  sourceLabel: string
+  originCode: string
+  originLabel: string
+  projectCount: number
+  studyCount: number
+  updatedAt: string
+}
+
+export interface PipelineProject {
+  id: number
+  code: string
+  name: string
+  programId: number
+  programCode: string
+  indication: string
+  therapeuticAreaId: number
+  therapeuticAreaCode: string
+  therapeuticAreaName: string
+  studyCount: number
+  updatedAt: string
+}
+
+export interface TherapeuticArea {
+  id: number
+  code: string
+  name: string
+  englishName: string | null
+}
+
+export interface ProgramInput {
+  code: string
+  productName: string
+  moa?: string
+  sourceCode: string
+  originCode: string
+}
+
+export interface ProgramUpdateInput extends Partial<Omit<ProgramInput, 'code'>> {
+  name?: string
+  confirmRename?: boolean
+  expectedUpdatedAt?: string
+  expectedProjectCount?: number
+  expectedStudyCount?: number
+}
+
+export interface ProjectInput {
+  code: string
+  programId: number
+  indication: string
+  therapeuticAreaCode: string
+}
+
+export interface ProjectUpdateInput extends Partial<Omit<ProjectInput, 'code' | 'programId'>> {
+  name?: string
+  confirmRename?: boolean
+  expectedUpdatedAt?: string
+  expectedStudyCount?: number
+}
+
+export interface RenameImpact {
+  projectCount: number
+  studyCount: number
+  expectedUpdatedAt: string
+}
+
+export interface StudyConfigInput {
+  name: string
+  projectId: number
+  phaseStatusCode: string
+}
+
+export interface CreateStudyConfigInput {
+  code: string
+  name: string
+  projectId: number
+  phase: string
 }
 
 export interface PlatformUser {

@@ -7,6 +7,7 @@ import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
+import com.huadong.pipeline.domain.config.ProjectRepository;
 import com.huadong.pipeline.domain.user.DataScope;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
@@ -20,10 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class StudyManager {
   private final StudyRepository studies;
   private final UserAccountRepository users;
+  private final ProjectRepository projects;
 
-  public StudyManager(StudyRepository studies, UserAccountRepository users) {
+  public StudyManager(
+      StudyRepository studies, UserAccountRepository users, ProjectRepository projects) {
     this.studies = studies;
     this.users = users;
+    this.projects = projects;
   }
 
   public List<StudyView> list(String username) {
@@ -62,12 +66,24 @@ public class StudyManager {
   @Transactional
   public void create(CreateStudyCommand command, String username) {
     validateDates(command);
+    String programCode = command.programCode();
+    String projectCode = command.projectCode();
+    String therapeuticAreaCode = command.therapeuticAreaCode();
+    if (command.projectId() != null) {
+      var project = projects.findById(command.projectId())
+          .orElseThrow(() -> new BusinessException("PROJECT_NOT_FOUND", "Project 不存在"));
+      programCode = project.programCode();
+      projectCode = project.code();
+      therapeuticAreaCode = project.therapeuticAreaCode();
+    } else if (isBlank(programCode) || isBlank(projectCode) || isBlank(therapeuticAreaCode)) {
+      throw new BusinessException("INVALID_STUDY_HIERARCHY", "必须选择 Project 实体");
+    }
     Study study = Study.create(
         command.code(),
         command.name(),
-        command.programCode(),
-        command.projectCode(),
-        command.therapeuticAreaCode(),
+        programCode,
+        projectCode,
+        therapeuticAreaCode,
         command.phase(),
         command.plannedStartDate(),
         command.plannedEndDate(),
@@ -84,6 +100,10 @@ public class StudyManager {
     }
   }
 
+  private static boolean isBlank(String value) {
+    return value == null || value.isBlank();
+  }
+
   private static void validateDates(CreateStudyCommand command) {
     if (command.plannedStartDate() != null && command.plannedEndDate() != null
         && command.plannedEndDate().isBefore(command.plannedStartDate())) {
@@ -98,6 +118,7 @@ public class StudyManager {
   public record CreateStudyCommand(
       String code,
       String name,
+      Long projectId,
       String programCode,
       String projectCode,
       String therapeuticAreaCode,

@@ -25,7 +25,9 @@ const navItems = computed(() => [
   { label: '研究月度汇报', icon: '✎', to: '/monthly' },
   { label: '风险管理', icon: '⚠', to: '/risks', badge: '1' },
   { label: '团队矩阵', icon: '◫', to: '/team' },
-  { label: '管线配置', icon: '⚙', to: '/config' },
+  ...(user.value?.permissions.includes('config.page.view')
+    ? [{ label: '管线配置', icon: '⚙', to: '/config' }]
+    : []),
   { label: '月报导出', icon: '⭳', to: '/reports' },
   ...(user.value?.permissions.includes('account.page.view')
     ? [{ label: '账号管理', icon: '⚷', to: '/accounts' }]

@@ -16,14 +16,19 @@ public class ApiExceptionHandler {
   @ExceptionHandler(BusinessException.class)
   ResponseEntity<ApiError> business(BusinessException ex) {
     HttpStatus status = switch (ex.code()) {
-      case "ROLE_NOT_FOUND" -> HttpStatus.NOT_FOUND;
+      case "ROLE_NOT_FOUND", "PROGRAM_NOT_FOUND", "PROJECT_NOT_FOUND", "STUDY_NOT_FOUND" ->
+          HttpStatus.NOT_FOUND;
       case "ROLE_CODE_EXISTS", "SYSTEM_ROLE_PROTECTED", "ROLE_IN_USE",
-          "LAST_ROLE_ADMIN_PROTECTED" -> HttpStatus.CONFLICT;
-      case "INVALID_PERMISSION" -> HttpStatus.UNPROCESSABLE_ENTITY;
+          "LAST_ROLE_ADMIN_PROTECTED", "PROGRAM_CODE_EXISTS", "PRODUCT_NAME_EXISTS",
+          "PROJECT_CODE_EXISTS", "STUDY_CODE_EXISTS", "PROGRAM_IN_USE", "PROJECT_IN_USE",
+          "STUDY_IN_USE", "RENAME_CONFIRMATION_REQUIRED", "RENAME_IMPACT_CHANGED" ->
+          HttpStatus.CONFLICT;
+      case "INVALID_PERMISSION", "INVALID_THERAPEUTIC_AREA", "INVALID_CONFIG_ENUM" ->
+          HttpStatus.UNPROCESSABLE_ENTITY;
       default -> HttpStatus.BAD_REQUEST;
     };
     return ResponseEntity.status(status)
-        .body(new ApiError(ex.code(), ex.getMessage(), Map.of(), Instant.now()));
+        .body(new ApiError(ex.code(), ex.getMessage(), ex.details(), Instant.now()));
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)

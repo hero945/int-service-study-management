@@ -4,11 +4,11 @@
 
 为临床研发管线管理系统完整 PRD 提供一套从空库创建的 MySQL 8.x 数据模型。数据库覆盖账号权限、基础配置、Program、Project、Study、团队、里程碑、月报、风险和审计。
 
-本设计不兼容当前试验性的 `V1__baseline.sql`，不包含页面整库导入、预生成导出文件或独立人员档案。
+本设计已作为正式 Flyway V1 基线，不包含页面整库导入、预生成导出文件或独立人员档案。
 
 当前状态：本脚本已在本机MySQL 8.0.46的空 `study_management` 库创建25张表并完成
-结构核验；尚未替换Java运行时使用的Flyway基线，也尚未完成Repository和Spring
-Session表名适配。
+结构核验，且已成为 Java 运行时使用的 Flyway V1 基线；MyBatis-Plus Repository 和
+Spring Session 表名适配均已完成。
 
 ## 2. 已确认的建模规则
 

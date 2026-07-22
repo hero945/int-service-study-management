@@ -1,7 +1,10 @@
 package com.huadong.pipeline.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -66,11 +69,17 @@ public class SecurityConfig {
             .invalidateHttpSession(true)
             .deleteCookies("SESSION"))
         .exceptionHandling(errors -> errors
-            .authenticationEntryPoint((request, response, exception) -> writeJson(
-                response,
-                mapper,
-                401,
-                Map.of("code", "UNAUTHENTICATED", "message", "请先登录")))
+            .authenticationEntryPoint((request, response, exception) -> {
+              if (isBrowserPageRequest(request)) {
+                response.sendRedirect(loginRedirect(request));
+                return;
+              }
+              writeJson(
+                  response,
+                  mapper,
+                  401,
+                  Map.of("code", "UNAUTHENTICATED", "message", "请先登录"));
+            })
             .accessDeniedHandler((request, response, exception) -> writeJson(
                 response,
                 mapper,
@@ -82,8 +91,25 @@ public class SecurityConfig {
                     + "img-src 'self' data:; object-src 'none'; "
                     + "frame-ancestors 'none'; base-uri 'self'"))
             .frameOptions(frame -> frame.deny()))
+        .requestCache(cache -> cache.disable())
         .csrf(csrf -> csrf.ignoringRequestMatchers("/actuator/**"));
     return http.build();
+  }
+
+  private static boolean isBrowserPageRequest(HttpServletRequest request) {
+    String accept = request.getHeader("Accept");
+    return "GET".equalsIgnoreCase(request.getMethod())
+        && !request.getRequestURI().startsWith("/api/")
+        && accept != null
+        && accept.contains(MediaType.TEXT_HTML_VALUE);
+  }
+
+  private static String loginRedirect(HttpServletRequest request) {
+    String target = request.getRequestURI();
+    if (request.getQueryString() != null && !request.getQueryString().isBlank()) {
+      target += "?" + request.getQueryString();
+    }
+    return "/login?redirect=" + URLEncoder.encode(target, StandardCharsets.UTF_8);
   }
 
   private static void writeJson(

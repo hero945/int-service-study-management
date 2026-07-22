@@ -25,6 +25,10 @@ async function login(credentials: LoginCredentials) {
 
 async function logout() {
   await apiClient.logout()
+  invalidate()
+}
+
+function invalidate() {
   currentUser.value = undefined
   initialized.value = true
 }
@@ -35,4 +39,5 @@ export const session = {
   restore,
   login,
   logout,
+  invalidate,
 }

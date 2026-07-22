@@ -2,10 +2,9 @@
 
 ## 实现定位
 
-本文件记录早期MVP纵切片的运行接口和数据库基线。当前前端已经迁移为Vue +
-TypeScript + Vite；本文API和 `V1__baseline.sql`、`V2__role_permission_authorization.sql`
-说明仍用于识别旧MVP运行边界，
-不代表完整PRD的25表目标结构已经接入Java。
+本文记录当前可运行纵切片的接口和数据库基线。前端使用 Vue、TypeScript 和 Vite；
+Java 运行时、MyBatis-Plus Repository、Spring Session 与 Flyway 已统一接入 25 张
+`hd_plt_*` 目标表。月报、风险、团队、里程碑和导出目前仍以页面骨架或演示数据为主。
 
 ## API 清单
 
@@ -18,11 +17,22 @@ TypeScript + Vite；本文API和 `V1__baseline.sql`、`V2__role_permission_autho
 | `GET /api/v1/clinical-pipeline/overview` | `pipeline.page.view` | 总量和各状态统计，文案/色调由后端返回 |
 | `GET /api/v1/clinical-pipeline/studies` | `study.read` | 研究项目列表 |
 | `POST /api/v1/clinical-pipeline/studies` | `config.create` + CSRF | 创建研究项目 |
-| `GET /api/v1/platform/settings/public` | 已登录 | 前端可展示的业务配置 |
+| `GET /api/v1/platform/settings/public` | 匿名 | 登录页等场景可展示的公开业务配置 |
 | `GET /api/v1/platform/settings` | `platform.setting.read` | 全部业务配置 |
 | `PUT /api/v1/platform/settings?key=...` | `platform.setting.update` + CSRF | 在线更新白名单内已有配置 |
 | `GET /api/v1/platform/users` | `account.page.view` | 账号列表和角色列表，不返回密码哈希 |
 | `POST /api/v1/platform/users` | `account.create` + CSRF | 创建账号并分配一个或多个 `roleCodes` |
+| `PATCH /api/v1/platform/users/{id}` | `account.update` + CSRF | 修改账号显示名、状态或密码 |
+| `PUT /api/v1/platform/users/{id}/roles` | `account.assignRole` + CSRF | 替换账号角色并使受影响 Session 失效 |
+| `DELETE /api/v1/platform/users/{id}` | `account.delete` + CSRF | 删除允许删除的账号 |
+| `GET /api/v1/platform/roles`、`GET /api/v1/platform/roles/{roleId}` | `role.page.view` | 角色列表及详情 |
+| `GET /api/v1/platform/permissions` | `role.page.view` | 权限字典 |
+| `POST/PUT/DELETE /api/v1/platform/roles...` | `role.create/update/delete` + CSRF | 新增、编辑或删除角色；权限变化会使关联用户 Session 失效 |
+| `GET /api/v1/clinical-pipeline/pipeline-config` | `config.page.view` | Study 扁平配置明细 |
+| `GET /api/v1/clinical-pipeline/therapeutic-areas` | `config.page.view` | TA（治疗领域）下拉选项 |
+| `GET/POST/PATCH/DELETE /api/v1/clinical-pipeline/programs...` | `config.page.view/create/update/delete` | Program 查询、新增、更新、影响预览和删除 |
+| `GET/POST/PATCH/DELETE /api/v1/clinical-pipeline/projects...` | `config.page.view/create/update/delete` | Project 查询、新增、更新、影响预览和删除 |
+| `PATCH/DELETE /api/v1/clinical-pipeline/studies/{id}` | `config.update/delete` | 更新或删除 Study 配置 |
 
 登录接口使用 `application/x-www-form-urlencoded`，其余写接口使用 JSON。失败响应的基础形式为：
 
@@ -68,12 +78,19 @@ schema账号。H2仅用于自动化测试，真实运行默认连接MySQL。
 
 ## 已知 MVP 限制
 
-- 已支持一个用户多个角色及角色权限并集；尚未提供角色模板、角色分配的管理接口。
+- 已支持一个用户多个角色、角色权限并集、账号角色分配和角色权限管理；暂未提供角色复制或合并工具。
 - 已返回并执行 `ALL/ASSIGNED_STUDY` 数据范围；`ASSIGNED_STUDY` 会在Study列表和
   状态聚合前按 `hd_plt_team_assignment` 过滤。当前预置角色仍均为 `ALL`。
 - Study状态不再单独存库：由计划/实际开始和结束日期推导；“暂停”需后续定义独立业务规则。
 - 尚未实现改密、忘记密码、MFA、登录限流和失败锁定。
 - 动态配置只保留最后修改人/时间，尚无不可覆盖的历史审计表。
-- 研究项目暂不支持编辑、停用、分页和并发版本控制。
+- 管线配置已支持 Program/Project/Study 新增、更新和受约束删除；尚未实现分页、并发版本控制、改名审计和合并工具。
 - 原型数据不迁移，月报、风险、里程碑等模块后续按技术设计逐片实现。
+
+## Session 过期行为
+
+- 浏览器直接访问受保护的 HTML 页面时，未登录请求由后端重定向到 `/login?redirect=原地址`。
+- API 继续返回结构化 `401` JSON；Vue API 客户端收到后清理内存中的当前用户，并跳转登录页。
+- `403` 表示已经登录但权限不足，不会被误判为 Session 过期。
+- 系统不轮询 Session；用户长时间无请求时，会在下一次导航或 API 请求时发现过期。
 

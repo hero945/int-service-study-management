@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,16 @@ class PlatformIntegrationTest {
         mvc.perform(get("/api/v1/clinical-pipeline/studies"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void redirectsAnonymousBrowserPageRequestsToLoginAndPreservesTheTarget() throws Exception {
+        for (String page : java.util.List.of("/pipeline", "/config", "/accounts", "/roles")) {
+            mvc.perform(get(page).accept(MediaType.TEXT_HTML))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/login?redirect="
+                            + java.net.URLEncoder.encode(page, java.nio.charset.StandardCharsets.UTF_8)));
+        }
     }
 
     @Test

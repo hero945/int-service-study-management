@@ -3,9 +3,12 @@ import type {
   AssignRolesInput,
   CreateUserInput,
   CurrentUser,
+  PipelineProgram,
+  PipelineProject,
   PlatformPermission,
   PlatformRole,
   Study,
+  TherapeuticArea,
   UpdateUserInput,
 } from './types'
 
@@ -18,7 +21,10 @@ const users: Array<CurrentUser & { password: string }> = [
     permissions: [
       'pipeline.page.view',
       'study.read',
+      'config.page.view',
       'config.create',
+      'config.update',
+      'config.delete',
       'account.page.view',
       'account.create',
       'platform.setting.read',
@@ -36,7 +42,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '张伟',
     title: '项目负责人 · PL',
     roles: ['USER'],
-    permissions: ['pipeline.page.view', 'study.read', 'config.create'],
+    permissions: ['pipeline.page.view', 'study.read'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -122,7 +128,10 @@ export function createMockApiClient(): ApiClient {
   const permissions: PlatformPermission[] = [
     ['pipeline', 'pipeline.page.view', '查看管线总览', 'PAGE', 'view'],
     ['study', 'study.read', '查看 Study', 'ACTION', 'read'],
+    ['config', 'config.page.view', '查看管线配置', 'PAGE', 'view'],
     ['config', 'config.create', '维护管线配置', 'ACTION', 'create'],
+    ['config', 'config.update', '修改管线配置', 'ACTION', 'update'],
+    ['config', 'config.delete', '删除管线配置', 'ACTION', 'delete'],
     ['account', 'account.page.view', '查看账号管理', 'PAGE', 'view'],
     ['account', 'account.create', '新增账号', 'ACTION', 'create'],
     ['role', 'role.page.view', '查看角色权限管理', 'PAGE', 'view'],
@@ -160,7 +169,7 @@ export function createMockApiClient(): ApiClient {
       status: 'ACTIVE',
       systemRole: true,
       assignedUserCount: 1,
-      permissionCodes: ['pipeline.page.view', 'study.read', 'config.create'],
+      permissionCodes: ['pipeline.page.view', 'study.read'],
       updatedAt: '2026-07-21T09:00:00',
     },
     {
@@ -174,6 +183,45 @@ export function createMockApiClient(): ApiClient {
       permissionCodes: ['pipeline.page.view', 'study.read'],
       updatedAt: '2026-07-21T09:00:00',
     },
+  ]
+  const now = () => new Date().toISOString()
+  let nextProgramId = 4
+  let nextProjectId = 4
+  let nextStudyId = 4
+  const programs: PipelineProgram[] = demoStudies.map((study, index) => ({
+    id: index + 1,
+    code: study.program ?? '',
+    name: `${study.program ?? ''} Program`,
+    productName: study.product ?? '',
+    moa: study.moa ?? null,
+    sourceCode: study.source === '合作' ? 'COOPERATION' : 'SELF_DEVELOPED',
+    sourceLabel: study.source ?? '',
+    originCode: 'DOMESTIC',
+    originLabel: study.origin ?? '',
+    projectCount: 1,
+    studyCount: 1,
+    updatedAt: study.updatedAt,
+  }))
+  const projects: PipelineProject[] = demoStudies.map((study, index) => ({
+    id: index + 1,
+    code: study.project ?? '',
+    name: `${study.project ?? ''} Project`,
+    programId: index + 1,
+    programCode: study.program ?? '',
+    indication: study.indication,
+    therapeuticAreaId: index + 1,
+    therapeuticAreaCode: study.therapeuticAreaEn?.toUpperCase().replaceAll(' ', '_') ?? 'OTHER',
+    therapeuticAreaName: study.therapeuticArea ?? '',
+    studyCount: 1,
+    updatedAt: study.updatedAt,
+  }))
+  const therapeuticAreas: TherapeuticArea[] = [
+    { id: 1, code: 'ONCOLOGY', name: '肿瘤', englishName: 'Oncology' },
+    { id: 2, code: 'AUTOIMMUNE', name: '自身免疫', englishName: 'Autoimmune Disease' },
+    { id: 3, code: 'METABOLIC_CARDIOVASCULAR', name: '代谢与心血管', englishName: 'Metabolic and Cardiovascular' },
+    { id: 4, code: 'RESPIRATORY', name: '呼吸系统', englishName: 'Respiratory' },
+    { id: 5, code: 'INFECTIOUS_DISEASE', name: '感染性疾病', englishName: 'Infectious Disease' },
+    { id: 6, code: 'NEUROSCIENCE', name: '神经科学', englishName: 'Neuroscience' },
   ]
 
   return {
@@ -230,20 +278,132 @@ export function createMockApiClient(): ApiClient {
       return []
     },
     async listPipelineConfig() {
-      return demoStudies.map((study) => ({
-        key: `${study.program}|${study.code}`,
-        source: study.source ?? '',
-        origin: study.origin ?? '',
-        product: study.product ?? '',
-        moa: study.moa ?? '',
-        program: study.program ?? '',
-        indication: study.indication,
-        project: study.project ?? '',
-        therapeuticArea: study.therapeuticArea ?? '',
+      return demoStudies.map((study) => {
+        const project = projects.find((item) => item.code === study.project)!
+        const program = programs.find((item) => item.id === project.programId)!
+        return {
+        studyId: study.id,
         studyCode: study.code,
-        projectStatus: study.statusLabel,
-        phaseStatus: study.phase,
-      }))
+        studyName: study.name,
+        phaseStatusCode: study.phase.toUpperCase().replaceAll(' ', '_'),
+        phaseStatusLabel: study.phase,
+        projectId: project.id,
+        projectCode: project.code,
+        projectName: project.name,
+        indication: project.indication,
+        therapeuticAreaCode: project.therapeuticAreaCode,
+        therapeuticAreaName: project.therapeuticAreaName,
+        programId: program.id,
+        programCode: program.code,
+        programName: program.name,
+        productName: program.productName,
+        moa: program.moa,
+        sourceCode: program.sourceCode,
+        sourceLabel: program.sourceLabel,
+        originCode: program.originCode,
+        originLabel: program.originLabel,
+        updatedAt: study.updatedAt,
+      }})
+    },
+    async listTherapeuticAreas() {
+      return therapeuticAreas
+    },
+    async listPrograms(keyword = '') {
+      const query = keyword.trim().toLowerCase()
+      return programs.filter((item) => !query || [item.code, item.name, item.productName]
+        .some((value) => value.toLowerCase().includes(query)))
+    },
+    async createProgram(input) {
+      if (programs.some((item) => item.code === input.code)) throw new Error('Program 编码已存在')
+      const program: PipelineProgram = {
+        id: nextProgramId++, code: input.code, name: input.code, productName: input.productName,
+        moa: input.moa ?? null, sourceCode: input.sourceCode,
+        sourceLabel: input.sourceCode === 'SELF_DEVELOPED' ? '自研' : input.sourceCode === 'IN_LICENSE' ? '引进' : '合作',
+        originCode: input.originCode, originLabel: input.originCode === 'DOMESTIC' ? '国产' : '进口',
+        projectCount: 0, studyCount: 0, updatedAt: now(),
+      }
+      programs.push(program)
+      return program
+    },
+    async updateProgram(id, input) {
+      const program = programs.find((item) => item.id === id)
+      if (!program) throw new Error('Program 不存在')
+      Object.assign(program, input, { updatedAt: now() })
+      return program
+    },
+    async previewProgramRename(id) {
+      const program = programs.find((item) => item.id === id)
+      if (!program) throw new Error('Program 不存在')
+      return { projectCount: program.projectCount, studyCount: program.studyCount, expectedUpdatedAt: program.updatedAt }
+    },
+    async deleteProgram(id) {
+      const index = programs.findIndex((item) => item.id === id)
+      if (index < 0) throw new Error('Program 不存在')
+      if (programs[index].projectCount) throw new Error('Program 仍有关联 Project，不能删除')
+      programs.splice(index, 1)
+    },
+    async listProjects(programId, keyword = '') {
+      const query = keyword.trim().toLowerCase()
+      return projects.filter((item) => (!programId || item.programId === programId) &&
+        (!query || item.code.toLowerCase().includes(query) || item.name.toLowerCase().includes(query)))
+    },
+    async createProject(input) {
+      if (projects.some((item) => item.code === input.code)) throw new Error('Project 编码已存在')
+      const program = programs.find((item) => item.id === input.programId)
+      if (!program) throw new Error('Program 不存在')
+      const project: PipelineProject = {
+        id: nextProjectId++, code: input.code, name: input.code, programId: input.programId,
+        programCode: program.code, indication: input.indication, therapeuticAreaId: 99,
+        therapeuticAreaCode: input.therapeuticAreaCode,
+        therapeuticAreaName: therapeuticAreas.find((item) => item.code === input.therapeuticAreaCode)?.name ?? input.therapeuticAreaCode,
+        studyCount: 0, updatedAt: now(),
+      }
+      projects.push(project)
+      program.projectCount++
+      return project
+    },
+    async updateProject(id, input) {
+      const project = projects.find((item) => item.id === id)
+      if (!project) throw new Error('Project 不存在')
+      Object.assign(project, input, { updatedAt: now() })
+      return project
+    },
+    async previewProjectRename(id) {
+      const project = projects.find((item) => item.id === id)
+      if (!project) throw new Error('Project 不存在')
+      return { projectCount: 0, studyCount: project.studyCount, expectedUpdatedAt: project.updatedAt }
+    },
+    async deleteProject(id) {
+      const index = projects.findIndex((item) => item.id === id)
+      if (index < 0) throw new Error('Project 不存在')
+      if (projects[index].studyCount) throw new Error('Project 仍有关联 Study，不能删除')
+      projects.splice(index, 1)
+    },
+    async createStudyConfig(input) {
+      const project = projects.find((item) => item.id === input.projectId)
+      if (!project) throw new Error('Project 不存在')
+      demoStudies.push({ id: nextStudyId++, code: input.code, name: input.name,
+        indication: project.indication, phase: input.phase, status: 'ACTIVE', statusLabel: '进行中',
+        statusTone: 'info', ownerName: '', startDate: null, updatedAt: now(),
+        program: project.programCode, project: project.code,
+        therapeuticArea: project.therapeuticAreaName,
+        product: programs.find((item) => item.id === project.programId)?.productName })
+      project.studyCount++
+    },
+    async updateStudyConfig(id, input) {
+      const study = demoStudies.find((item) => item.id === id)
+      const project = projects.find((item) => item.id === input.projectId)
+      if (!study || !project) throw new Error('Study 或 Project 不存在')
+      study.name = input.name
+      study.phase = input.phaseStatusCode
+      study.project = project.code
+      study.program = project.programCode
+      return (await this.listPipelineConfig()).find((item) => item.studyId === id)!
+    },
+    async deleteStudyConfig(id) {
+      const index = demoStudies.findIndex((item) => item.id === id)
+      if (index < 0) throw new Error('Study 不存在')
+      demoStudies.splice(index, 1)
     },
     async listUsers(keyword = '', roleCode = '') {
       let filtered = users.map((user, index) => ({

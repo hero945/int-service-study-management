@@ -60,6 +60,20 @@ test('role permission management is a protected page after account management an
   assert.doesNotMatch(roleView, /\bfetch\s*\(/);
 });
 
+test('pipeline entity forms use the reduced fields and database-backed therapeutic area options', () => {
+  const apiClient = read('frontend/src/api/client.ts');
+  const configView = read('frontend/src/views/PipelineConfigView.vue');
+
+  assert.match(apiClient, /listTherapeuticAreas/);
+  assert.match(apiClient, /\/api\/v1\/clinical-pipeline\/therapeutic-areas/);
+  assert.match(configView, /v-for="area in therapeuticAreas"/);
+  assert.match(configView, />Program \*</);
+  assert.match(configView, />Project 编号 \*</);
+  assert.doesNotMatch(configView, />Program 名称 \*</);
+  assert.doesNotMatch(configView, />Project 名称 \*</);
+  assert.doesNotMatch(configView, />TA 编码 \*</);
+});
+
 test('production packaging consumes the compiled frontend output', () => {
   const servicePom = read('study-management-service/pom.xml');
   const dockerfile = read('Dockerfile');
@@ -96,4 +110,20 @@ test('Spring Boot serves Vite assets and forwards browser routes to the Vue entr
   assert.match(spaController, /"\/login"/);
   assert.match(spaController, /"\/pipeline"/);
   assert.match(spaController, /forward:\/index\.html/);
+});
+
+test('expired sessions redirect browser pages while API authentication errors stay centralized', () => {
+  const apiClient = read('frontend/src/api/client.ts');
+  const main = read('frontend/src/main.ts');
+  const security = read(
+    'study-management-service/src/main/java/com/huadong/pipeline/security/SecurityConfig.java',
+  );
+
+  assert.match(apiClient, /response\.status === 401/);
+  assert.match(apiClient, /unauthorizedHandler/);
+  assert.match(main, /setUnauthorizedHandler\(createSessionExpiredHandler/);
+  assert.match(main, /router\.currentRoute\.value\.fullPath/);
+  assert.match(security, /isBrowserPageRequest/);
+  assert.match(security, /response\.sendRedirect\(loginRedirect\(request\)\)/);
+  assert.match(security, /"code", "UNAUTHENTICATED"/);
 });

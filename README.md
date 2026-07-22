@@ -10,10 +10,11 @@ Spring Boot 应用。
 - 自建账号、Argon2 密码散列、数据库 Session、CSRF 防护
 - 通过环境变量安全引导首个管理员
 - Vue 登录页、平台壳和登录后的浏览器路由
-- 管线总览、Study 列表、月报、风险、团队矩阵、管线配置、导出和账号管理页面
-- 研究项目列表和管线总览读取真实后端接口
-- 管理员创建账号、在线修改业务配置
-- 旧MVP Flyway基线、健康探针、Prometheus指标
+- 管线总览、Study 列表、月报、风险、团队矩阵、管线配置、导出、账号管理和角色权限管理页面
+- 管线总览、Study 列表及 Program/Project/Study 管线配置读取真实后端接口
+- 管理员维护账号、用户角色、角色权限和在线业务配置
+- 25 表 `hd_plt_*` Flyway 基线、健康探针、Prometheus 指标
+- Session 过期时，页面访问和 Vue API 请求统一返回登录页；API 本身仍保持 `401` JSON 契约
 - Vite 生产构建、Spring Boot JAR 打包、Docker Compose 和 GitHub Actions
 
 ## 数据库结构状态
@@ -25,9 +26,9 @@ Spring Boot 应用。
 - 设计规格：[完整PRD数据库设计规格](./docs/database/完整PRD数据库设计规格.md)
 - Flyway/MySQL建表脚本：[V1__hd_plt_full_schema.sql](./docs/database/V1__hd_plt_full_schema.sql)
 
-当前Java代码和 `V1__baseline.sql` 仍对应早期MVP表结构，尚未适配这25张目标表。
-不要在已经手工创建25张表且没有Flyway历史的数据库上直接启动旧应用。正式接入前，
-需要把目标结构整理为新的Flyway基线，并同步Repository、Session表名和初始化数据。
+当前 Java 运行时、Repository、Spring Session 和 Flyway 已统一使用 `hd_plt_*` 模型。
+正式环境应由 Flyway 从空库建立结构；不要把仅手工执行过建表 SQL、但缺少
+`flyway_schema_history` 的数据库直接当作已迁移环境使用。
 
 ## 最快启动方式
 
@@ -110,7 +111,7 @@ study-management-api          对外 Java 接口和请求/响应契约
 study-management-common       共享异常、枚举等稳定基础类型
 study-management-domain       领域对象、业务端口和 Repository 接口
 study-management-manager      业务用例编排和事务边界
-study-management-repository   JDBC 与外部系统适配器，实现 Domain 端口
+study-management-repository   MyBatis-Plus 与外部系统适配器，实现 Domain 端口
 study-management-service      API 实现、HTTP、安全配置和唯一启动入口
 study-management-test         跨模块集成测试
 ```
@@ -131,7 +132,7 @@ Vue 应用的运行依赖；新服务也不迁移原型中的 `localStorage` 数
 - 风险：`GET /api/v1/risk-management/risks`
 - 月报：`GET /api/v1/monthly-reports`
 - 团队矩阵：`GET /api/v1/team-assignments`
-- 管线配置：`GET /api/v1/pipeline-config`
+- 管线配置：`GET /api/v1/clinical-pipeline/pipeline-config`、`/programs`、`/projects`、`/therapeutic-areas`，以及对应 CRUD/重命名影响预览接口
 
-在这些接口落地之前，真实后端模式下相应页面会显示加载失败状态。前端路由守卫
+除已落地的管线配置接口外，其余预留接口在真实后端模式下会显示加载失败状态。前端路由守卫
 只改善导航体验，最终页面权限、操作权限和数据范围必须由服务端执行。

@@ -10,7 +10,14 @@
 
 本文依据现有可运行原型反向梳理，用于产品、业务、设计和研发对齐。标记为“现状”的内容表示当前代码行为；标记为“建议”的内容表示正式产品化时应采用的口径，不应与现状缺陷混为一谈。
 
-### 0.1 医药术语
+### 0.1 当前实现快照（2026-07-22）
+
+- 已接入真实后端：登录与 Session、账号管理、角色权限管理、管线总览、Study 列表，以及 Program/Project/Study 管线配置 CRUD 和 TA 下拉字典。
+- 管线配置中的 TA 是 Therapeutic Area，即治疗领域；例如肿瘤、自身免疫。
+- 月报、风险、团队矩阵、里程碑和导出仍属于后续业务切片，当前页面不代表其后端闭环已经完成。
+- Session 过期后，页面导航和 Vue 内的下一次 API 请求都会转到登录页；API 调用仍返回标准 `401` JSON，`403` 继续表示权限不足。
+
+### 0.2 医药术语
 
 | 术语 | 解释 |
 |---|---|
@@ -65,7 +72,8 @@ flowchart LR
 | 团队矩阵 | 左侧导航“团队矩阵” | Study×项目角色的业务分工维护 | [05 团队矩阵](screenshots/05-team-matrix.png) |
 | 管线配置 | 左侧导航“管线配置” | Program/Project/Study基础配置 | [06 管线配置](screenshots/06-pipeline-config.png) |
 | 月报导出 | 左侧导航“月报导出” | 月报预览、HTML/PDF/CSV/Excel输出 | [07 月报导出](screenshots/07-monthly-export.png) |
-| 账号管理 | 管理员导航“账号管理” | 账号、角色和角色权限管理 | [08 账号与权限管理](screenshots/08-account-permissions.png) |
+| 账号管理 | 管理员导航“账号管理” | 账号新增、编辑、删除和角色分配 | [08 账号与权限管理](screenshots/08-account-permissions.png) |
+| 角色权限管理 | 管理员导航“角色权限管理”，位于账号管理之后 | 角色新增、编辑、删除和权限配置 | [08 账号与权限管理](screenshots/08-account-permissions.png) |
 | 里程碑 | Study列表“里程碑” | V1/V2计划日期、实际日期和偏差原因维护 | [09 里程碑](screenshots/09-milestones.png) |
 
 ## 三、全局产品规则
@@ -119,9 +127,11 @@ flowchart LR
 
 #### 3.1.7 管线配置
 
-- 现状不提供有效的文本搜索和下拉筛选，默认展示全部配置记录。
-- Source、Origin、Product、MOA、Program、Indication、Project、TA、Study No.、实时计算的项目状态和Phase Status均可点击表头排序。
-- 首次点击按升序排列，再次点击同一表头切换为降序；字符串比较不区分英文大小写。
+- 页面提供两个视图：“Study 明细”按一个 Study 一行平铺 Program/Project/Study 关系；“Program / Project 管理”提供父子实体维护入口。
+- Program 或 Project 编号输入后先查询实体：编号已存在时加载原数据并进入更新模式，不存在时进入新建模式；编号创建后不可修改。新建时数据库名称字段自动取相同编号，页面不单独要求名称。
+- Study 表单只绑定已保存的 Project ID；允许在表单内快捷新建 Project，但必须先创建真实 Project 实体，成功后再回填选择结果。
+- Program、Project 重命名前必须展示关联 Project/Study 数量并再次确认；预览后数据发生变化时拒绝提交并要求重新预览。
+- 有下游引用时删除返回冲突，不做级联删除。配置页不展示或维护 Project 状态；Project 状态由管线总览根据下属 Study 实时计算。
 
 #### 3.1.8 月报导出
 
@@ -386,26 +396,27 @@ flowchart LR
 
 ### 页面功能与交互
 
-- 列表查看和排序Program/Project/Study基础数据。
-- 新增、编辑、删除分别校验 `config.create`、`config.update`、`config.delete`；默认仅授予系统管理员角色。
+- 使用 Study 扁平明细与 Program/Project 管理两个视图维护实体及其层级关系。
+- 页面访问、新增、编辑、删除分别校验 `config.page.view`、`config.create`、`config.update`、`config.delete`；默认仅授予系统管理员角色。
+- 重命名采用“影响面预览 + 带版本时间确认”；不建设单独的改名审计和实体合并工具，既有拖拽排序规则不变。
+- Program 有 Project/Study、Project 有 Study、Study 有团队/里程碑/月报/风险引用时，删除返回 HTTP 409 并给出引用数量。
 - 保存后作为管线总览、Study列表和报告的基础数据来源。
 
 ### 字段
 
 | 字段 | 类型 | 必填 | 逻辑 | 枚举 |
 |---|---|---:|---|---|
-| Source 来源 | Enum | 否 | 默认自研 | 自研、引进、合作 |
-| Origin 国内外 | Enum | 否 | 默认国产 | 进口、国产 |
-| Product 产品 | String | 否 | 产品/化合物名称 | - |
+| Source 来源 | Enum | 是 | Program 主数据 | 自研、引进、合作 |
+| Origin 国内外 | Enum | 是 | Program 主数据 | 进口、国产 |
+| Product 产品 | String | 是 | 产品/化合物名称；当前数据库全局唯一 | - |
 | MOA 机制 | String | 否 | 作用机制 | - |
-| Program 项目集 | String | 是 | 保存必填 | - |
-| Project 项目 | String | 否 | 同一Program可多个Project | - |
-| Indication 适应症 | String | 否 | - | - |
-| TA | Enum | 否 | 治疗领域 | 见6.1 |
-| Study 研究 | String | 是 | 保存必填 | - |
+| Program 项目集 | String | 是 | 表单仅填写一个 Program 编号；数据库名称自动取相同值 | - |
+| Project 项目 | String | 是 | 表单仅填写 Project 编号；数据库名称自动取相同值，同一Program可多个Project | - |
+| Indication 适应症 | String | 是 | Project 主数据 | - |
+| TA | Enum | 是 | 从数据库启用的 TA（治疗领域）下拉选择；初始提供肿瘤、自身免疫、代谢与心血管、呼吸、感染、神经科学 | 见6.1 |
+| Study 研究 | String | 是 | Study No.、名称和所属Project均必填 | - |
 | 业务编码 | String | 是 | Program、Project、Study分别使用全局唯一且创建后不可修改的业务编码；数据库内部使用BIGINT主键关联 | - |
-| 项目状态 | Derived Enum | - | 不在管线配置中填写；根据Project下属Study状态实时计算并决定状态色 | 进行中、已完成、准备中、延期 |
-| Phase Status | Enum | 否 | 决定Study映射到管线哪个阶段列 | PreIND、IND、Phase 1、Phase 2、PRE-3、Phase 3-1、Phase 3-2 |
+| Phase Status | Enum | 是 | 决定Study映射到管线哪个阶段列 | PreIND、IND、Phase 1、Phase 2、PRE-3、Phase 3-1、Phase 3-2 |
 
 ## 4.7 月报导出
 
@@ -450,7 +461,7 @@ flowchart LR
 
 - 需要 `account.page.view` 权限；新增、编辑和停用账号分别独立授权。默认仅系统管理员角色拥有。
 - 查看、新增、编辑、删除账号；当前账号显示“当前”。
-- 支持角色管理：创建角色、配置角色权限、停用角色、查看角色下用户。
+- 角色管理位于账号管理之后的独立“角色权限管理”页面；支持创建角色、配置权限、编辑和受约束删除。
 - 支持用户授权：管理员为用户分配一个或多个角色；不支持用户单独追加或禁用权限。
 - 权限配置采用树形结构：模块 → 页面查看/页面操作/数据CRUD。
 - 已有账号的登录邮箱锁定；显示姓名、角色、账号状态和密码可编辑。
@@ -483,7 +494,7 @@ flowchart LR
 1. 管理员进入账号详情，选择“权限配置”。
 2. 选择一个或多个角色，页面即时展示角色带来的权限。
 3. 保存前展示角色权限并集和角色数据范围模式。
-4. 保存后权限立即生效；若修改当前登录用户自身角色，刷新当前会话菜单和按钮。
+4. 保存后，系统使受影响用户的现有 Session 失效；用户在下一次页面导航或 API 请求时返回登录页，重新登录后加载最新权限。
 
 ### 权限配置字段
 
