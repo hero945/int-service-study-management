@@ -11,6 +11,8 @@ import PipelineConfigView from './views/PipelineConfigView.vue'
 import MonthlyExportView from './views/MonthlyExportView.vue'
 import AccountManagementView from './views/AccountManagementView.vue'
 import RolePermissionManagementView from './views/RolePermissionManagementView.vue'
+import MilestoneView from './views/MilestoneView.vue'
+import MonthlyReportFillView from './views/MonthlyReportFillView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -52,6 +54,26 @@ export const router = createRouter({
             title: '风险管理',
             subtitle: '识别、评估和跟踪项目风险',
             requiredPermission: 'risk.page.view',
+          },
+        },
+        {
+          path: 'milestones/:studyId',
+          name: 'milestones',
+          component: MilestoneView,
+          meta: {
+            title: '里程碑',
+            subtitle: 'Study 里程碑跟踪',
+            requiredPermission: 'pipeline.page.view',
+          },
+        },
+        {
+          path: 'studies/:studyId/monthly-report',
+          name: 'monthly-report-fill',
+          component: MonthlyReportFillView,
+          meta: {
+            title: '月报填写',
+            subtitle: '按功能线填写研究月度进展',
+            requiredPermission: 'monthly.read',
           },
         },
         {

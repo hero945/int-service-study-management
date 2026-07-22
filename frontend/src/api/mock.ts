@@ -8,6 +8,14 @@ import type {
   PlatformPermission,
   PlatformRole,
   RiskDetail,
+  MilestonePage,
+  MilestoneNode,
+  MilestoneUpdateInput,
+  FunctionLineReport,
+  MonthlyReportEntry,
+  MonthlyReportPage,
+  FunctionLineHistory,
+  StageProjection,
   Study,
   TeamMatrixAssignment,
   TeamMatrixRole,
@@ -44,6 +52,9 @@ const users: Array<CurrentUser & { password: string }> = [
       'risk.create',
       'risk.update',
       'risk.delete',
+      'monthly.read',
+      'monthly.create',
+      'monthly.update',
     ],
     dataScope: 'ALL',
     password: '1234',
@@ -53,7 +64,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '张伟',
     title: '项目负责人 · PL',
     roles: ['USER'],
-    permissions: ['pipeline.page.view', 'study.read', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
+    permissions: ['pipeline.page.view', 'study.read', 'milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -62,7 +73,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '刘洋',
     title: '质量观察员',
     roles: ['VIEWER'],
-    permissions: ['pipeline.page.view', 'study.read', 'risk.page.view', 'risk.read'],
+    permissions: ['pipeline.page.view', 'study.read', 'monthly.read', 'risk.page.view', 'risk.read'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -199,6 +210,192 @@ const teamRoles: TeamMatrixRole[] = [
   roleCode, roleName, functionCode, functionName,
 }))
 
+// ── Mock 里程碑数据 ──
+
+function delay(ms: number) { return new Promise(r => setTimeout(r, ms)) }
+
+const mockMilestones = new Map<number, MilestonePage>()
+
+function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  const d = (days: number) => {
+    const dt = new Date(now)
+    dt.setDate(dt.getDate() + days)
+    return dt.toISOString().slice(0, 10)
+  }
+  return {
+    studyCode,
+    groups: [
+      { stageCode: 'PreIND', stageName: 'PreIND', nodes: [
+        { milestoneCode: 'PreIND-0', milestoneName: 'PreIND 递交', planV1Date: d(-180), planV2Date: d(-175), actualStartDate: d(-178), actualEndDate: d(-176), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-1', milestoneName: 'PreIND 反馈-临床医学', planV1Date: d(-150), planV2Date: d(-145), actualStartDate: d(-148), actualEndDate: d(-140), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-2', milestoneName: 'PreIND 反馈-数统', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-142), actualEndDate: d(-138), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-3', milestoneName: 'PreIND 反馈-临床药理', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-140), actualEndDate: d(-135), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-4', milestoneName: 'PreIND 反馈-非临床', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-138), actualEndDate: d(-130), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-5', milestoneName: 'PreIND 反馈-药学', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-135), actualEndDate: d(-125), status: 'COMPLETED', deviationNote: null },
+      ] as MilestoneNode[]},
+      { stageCode: 'IND', stageName: 'IND', nodes: [
+        { milestoneCode: 'IND-0', milestoneName: 'IND 递交', planV1Date: d(-100), planV2Date: d(-95), actualStartDate: d(-98), actualEndDate: d(-96), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'IND-1', milestoneName: 'IND 形审发补', planV1Date: d(-80), planV2Date: d(-78), actualStartDate: d(-82), actualEndDate: d(-75), status: 'COMPLETED', deviationNote: 'CDE要求补充稳定性数据' },
+        { milestoneCode: 'IND-2', milestoneName: 'IND 形审补正', planV1Date: d(-60), planV2Date: d(-58), actualStartDate: d(-62), actualEndDate: d(-55), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'IND-3', milestoneName: 'IND 受理', planV1Date: d(-50), planV2Date: d(-48), actualStartDate: d(-52), actualEndDate: d(-46), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'IND-4', milestoneName: 'IND 获批', planV1Date: d(-30), planV2Date: d(-28), actualStartDate: d(-30), actualEndDate: null, status: 'IN_PROGRESS', deviationNote: null },
+      ] as MilestoneNode[]},
+      { stageCode: 'Pre3', stageName: 'Pre3', nodes: [
+        { milestoneCode: 'Pre3-0', milestoneName: 'Pre3 递交', planV1Date: d(60), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-1', milestoneName: 'Pre3 反馈-临床医学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-2', milestoneName: 'Pre3 反馈-数统', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-3', milestoneName: 'Pre3 反馈-临床药理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-4', milestoneName: 'Pre3 反馈-非临床', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-5', milestoneName: 'Pre3 反馈-药学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+      ] as MilestoneNode[]},
+      { stageCode: 'Protocol', stageName: 'Protocol', nodes: [
+        { milestoneCode: 'Protocol-0', milestoneName: '方案摘要定稿', planV1Date: d(30), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Protocol-1', milestoneName: '方案讨论会', planV1Date: d(90), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Protocol-2', milestoneName: '方案定稿', planV1Date: d(150), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+      ] as MilestoneNode[]},
+      { stageCode: 'SSU', stageName: 'SSU', nodes: [] },
+      { stageCode: 'Enrollment', stageName: 'Enrollment', nodes: [
+        { milestoneCode: 'Enrollment-0', milestoneName: 'FPI', planV1Date: d(360), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Enrollment-1', milestoneName: 'LPI', planV1Date: d(720), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Enrollment-2', milestoneName: 'LPO', planV1Date: d(730), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+      ] as MilestoneNode[]},
+      { stageCode: 'IA', stageName: 'IA', nodes: [
+        { milestoneCode: 'IA-0', milestoneName: 'IA 数据冻结', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'IA-1', milestoneName: 'IA 数据分析', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+      ] as MilestoneNode[]},
+      { stageCode: 'Data_Report', stageName: 'Data & Report', nodes: [
+        { milestoneCode: 'Data_Report-0', milestoneName: 'DBL', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-1', milestoneName: 'TLR初稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-2', milestoneName: 'TLR定稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-3', milestoneName: 'TFL初稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-4', milestoneName: 'TFL定稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-5', milestoneName: 'CSR初稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-6', milestoneName: 'CSR定稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-7', milestoneName: '中心关闭', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+      ] as MilestoneNode[]},
+      { stageCode: 'PreNDA_BLA', stageName: 'PreNDA/BLA', nodes: [] },
+      { stageCode: 'NDA_BLA', stageName: 'NDA/BLA', nodes: [] },
+    ],
+  }
+}
+
+// Populate with full SSU, PreNDA/BLA, NDA/BLA nodes for demo
+;(() => {
+  const demo = buildDemoMilestones(3, 'HDM1005-302')
+  // SSU nodes
+  demo.groups[4].nodes = [
+    { milestoneCode: 'SSU-0', milestoneName: '组长单位立项递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-1', milestoneName: '组长单位立项获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-2', milestoneName: '组长单位伦理递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-3', milestoneName: '组长单位伦理获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-4', milestoneName: '组长单位合同签署', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-5', milestoneName: '首家中心启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-6', milestoneName: '组长单位启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-7', milestoneName: '所有中心启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-8', milestoneName: '人遗递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-9', milestoneName: '人遗批准', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-10', milestoneName: 'CDE 平台登记', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-11', milestoneName: 'ClinicalTrial 登记', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+  ]
+  // PreNDA/BLA nodes
+  demo.groups[8].nodes = [
+    { milestoneCode: 'PreNDA_BLA-0', milestoneName: 'PreNDA 递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-1', milestoneName: 'PreNDA 反馈-临床医学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-2', milestoneName: 'PreNDA 反馈-数统', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-3', milestoneName: 'PreNDA 反馈-临床药理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-4', milestoneName: 'PreNDA 反馈-非临床', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-5', milestoneName: 'PreNDA 反馈-药学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+  ]
+  // NDA/BLA nodes
+  demo.groups[9].nodes = [
+    { milestoneCode: 'NDA_BLA-0', milestoneName: 'NDA/BLA 递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-1', milestoneName: 'NDA/BLA 形审发补', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-2', milestoneName: 'NDA/BLA 形审补正', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-3', milestoneName: 'NDA/BLA 受理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-4', milestoneName: '临床核查', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-5', milestoneName: '药学核查', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-6', milestoneName: 'NDA/BLA 发补', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-7', milestoneName: 'NDA/BLA 补正', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-8', milestoneName: 'NDA/BLA 获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+  ]
+  mockMilestones.set(3, demo)
+  // Also for study ID 1 and 2
+  mockMilestones.set(1, buildDemoMilestones(1, 'HDM1005-101'))
+  mockMilestones.set(2, buildDemoMilestones(2, 'HDM1005-201'))
+})()
+
+// ── Mock 月报填写数据 ──
+// 功能线 code/name 取自 V8__team_matrix.sql 种子；可编辑性模拟"当前用户被分配到该功能线"：
+// study 1 临床医学+生物统计可编辑，study 2 注册可编辑，study 3 全部只读。
+
+let nextMonthlyEntryId = 100
+const mockMonthlyPages = new Map<string, MonthlyReportPage>()
+
+function buildDemoMonthlyPage(studyId: number, month: string): MonthlyReportPage | undefined {
+  const study = demoStudies.find((item) => item.id === studyId)
+  if (!study) return undefined
+  const me = 'zhangwei@eastchinapharm.com'
+  const date = (day: string) => `${month}-${day}`
+  const at = (day: string, time: string) => `${date(day)}T${time}Z`
+  const line = (
+    reportId: number, functionLineId: number, functionCode: string, functionName: string,
+    editable: boolean,
+    entries: Array<[number, string, string, string, string]>,
+  ): FunctionLineReport => ({
+    reportId, functionLineId, functionCode, functionName, editable,
+    entries: entries.map(([entryId, day, content, updatedBy, time]) => ({
+      entryId, entryDate: date(day), content, updatedBy, updatedAt: at(day, time), editable,
+    })),
+  })
+  const linesByStudy: Record<number, FunctionLineReport[]> = {
+    1: [
+      line(101, 3, 'CM', '临床医学', true, [
+        [1, '06', '完成 PreIND 反馈临床问题回复并归档。', me, '09:30:00'],
+        [2, '18', '与 CDE 沟通临床开发计划，确认关键终点设置。', me, '10:00:00'],
+      ]),
+      line(102, 11, 'ST', '生物统计', true, [
+        [3, '10', '完成样本量估算初稿，待内部统计评审。', me, '14:00:00'],
+      ]),
+      line(103, 2, 'RA', '注册', false, [
+        [4, '15', 'PreIND 申请资料已递交，等待受理。', 'wangfang@eastchinapharm.com', '11:00:00'],
+      ]),
+    ],
+    2: [
+      line(201, 2, 'RA', '注册', true, [
+        [5, '08', 'IND 形审补正资料准备中。', me, '09:00:00'],
+        [6, '21', '与监管确认核查时间表。', me, '16:00:00'],
+      ]),
+      line(202, 3, 'CM', '临床医学', false, [
+        [7, '12', '更新研究者手册临床章节。', 'lijing@eastchinapharm.com', '10:30:00'],
+      ]),
+    ],
+    3: [
+      line(301, 7, 'CO', '临床运营', false, [
+        [8, '09', 'FPI 后首例受试者随访完成。', 'lijing@eastchinapharm.com', '13:00:00'],
+      ]),
+      line(302, 13, 'DM', '数据管理', false, []),
+    ],
+  }
+  const functionLines = linesByStudy[studyId]
+  if (!functionLines) return undefined
+  return { studyId, studyCode: study.code, month, functionLines }
+}
+
+function getMockMonthlyPage(studyId: number, month: string): MonthlyReportPage {
+  const key = `${studyId}|${month}`
+  let page = mockMonthlyPages.get(key)
+  if (!page) {
+    page = buildDemoMonthlyPage(studyId, month)
+    if (!page) throw new Error('Study 不存在')
+    mockMonthlyPages.set(key, page)
+  }
+  return page
+}
+
 export function createMockApiClient(): ApiClient {
   let currentUser: CurrentUser | undefined
   const teamVersions = new Map(demoStudies.map((study) => [study.id, 0]))
@@ -209,6 +406,7 @@ export function createMockApiClient(): ApiClient {
   const permissions: PlatformPermission[] = [
     ['pipeline', 'pipeline.page.view', '查看管线总览', 'PAGE', 'view'],
     ['study', 'study.read', '查看 Study', 'ACTION', 'read'],
+    ['milestone', 'milestone.update', '修改里程碑', 'DATA', 'update'],
     ['config', 'config.page.view', '查看管线配置', 'PAGE', 'view'],
     ['config', 'config.create', '维护管线配置', 'ACTION', 'create'],
     ['config', 'config.update', '修改管线配置', 'ACTION', 'update'],
@@ -468,6 +666,103 @@ export function createMockApiClient(): ApiClient {
     },
     async listMonthlyReports() {
       return []
+    },
+    async getMonthlyReports(studyId, month) {
+      await delay(150)
+      return structuredClone(getMockMonthlyPage(studyId, month))
+    },
+    async createMonthlyEntry(reportId, input) {
+      await delay(150)
+      for (const page of mockMonthlyPages.values()) {
+        const line = page.functionLines.find((item) => item.reportId === reportId)
+        if (line) {
+          if (!line.editable) throw new Error('无权在该功能线下填写月报')
+          line.entries.push({
+            entryId: nextMonthlyEntryId++,
+            entryDate: input.entryDate ?? new Date().toISOString().slice(0, 10),
+            content: input.content ?? '',
+            updatedBy: currentUser?.username ?? 'demo@eastchinapharm.com',
+            updatedAt: new Date().toISOString(),
+            editable: true,
+          })
+          return structuredClone(page)
+        }
+      }
+      throw new Error('月报应填项不存在: ' + reportId)
+    },
+    async updateMonthlyEntry(entryId, input) {
+      await delay(150)
+      for (const page of mockMonthlyPages.values()) {
+        for (const line of page.functionLines) {
+          const entry = line.entries.find((item) => item.entryId === entryId)
+          if (entry) {
+            if (input.entryDate !== undefined) entry.entryDate = input.entryDate
+            if (input.content !== undefined) entry.content = input.content
+            entry.updatedBy = currentUser?.username ?? entry.updatedBy
+            entry.updatedAt = new Date().toISOString()
+            return structuredClone(page)
+          }
+        }
+      }
+      throw new Error('月报进展明细不存在: ' + entryId)
+    },
+    async deleteMonthlyEntry(entryId) {
+      await delay(120)
+      for (const page of mockMonthlyPages.values()) {
+        for (const line of page.functionLines) {
+          const index = line.entries.findIndex((item) => item.entryId === entryId)
+          if (index >= 0) {
+            if (!line.editable) throw new Error('无权删除该功能线下的进展')
+            line.entries.splice(index, 1)
+            return structuredClone(page)
+          }
+        }
+      }
+      throw new Error('月报进展明细不存在: ' + entryId)
+    },
+    async getMonthlyReportHistory(studyId, functionLineId, month) {
+      await delay(150)
+      const page = getMockMonthlyPage(studyId, month)
+      const line = page.functionLines.find((item) => item.functionLineId === functionLineId)
+      if (!line) throw new Error('功能线不存在')
+      // 推前 2 个月；minusMonths 逻辑正确处理跨年（如 2026-01 → 2025-12 / 2025-11）
+      const [year, mon] = month.split('-').map(Number)
+      const prev = (yy: number, mm: number): [number, number] =>
+        mm === 1 ? [yy - 1, 12] : [yy, mm - 1]
+      const [y1, m1] = prev(year, mon)
+      const [y2, m2] = prev(y1, m1)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const month1 = `${y1}-${pad(m1)}`
+      const month2 = `${y2}-${pad(m2)}`
+      const author = line.entries[0]?.updatedBy ?? 'history@eastchinapharm.com'
+      const demoEntries = (mo: string, salt: number): MonthlyReportEntry[] => [
+        {
+          entryId: 9000 + functionLineId * 10 + salt,
+          entryDate: `${mo}-15`,
+          content: `（历史示例）${line.functionName} 在 ${mo} 的进展记录一。`,
+          updatedBy: author,
+          updatedAt: `${mo}-15T10:00:00Z`,
+          editable: false,
+        },
+        {
+          entryId: 9100 + functionLineId * 10 + salt,
+          entryDate: `${mo}-22`,
+          content: `（历史示例）${line.functionName} 在 ${mo} 的进展记录二。`,
+          updatedBy: author,
+          updatedAt: `${mo}-22T10:00:00Z`,
+          editable: false,
+        },
+      ]
+      const result: FunctionLineHistory = {
+        functionLineId,
+        functionCode: line.functionCode,
+        functionName: line.functionName,
+        months: [
+          { month: month1, entries: demoEntries(month1, m1) },
+          { month: month2, entries: demoEntries(month2, m2) },
+        ],
+      }
+      return result
     },
     async listTeamMatrix(query = {}) {
       const studyQuery = query.studyQuery?.trim().toLowerCase() ?? ''
@@ -764,6 +1059,63 @@ export function createMockApiClient(): ApiClient {
       if (roles[index].systemRole) throw new Error('系统角色不可删除')
       if (roles[index].assignedUserCount) throw new Error('角色仍关联用户，不能删除')
       roles.splice(index, 1)
+    },
+    async getMilestones(studyId) {
+      await delay(200)
+      const data = mockMilestones.get(studyId)
+      if (!data) throw new Error('Study 不存在或暂无里程碑数据')
+      return structuredClone(data)
+    },
+    async updateMilestone(studyId, milestoneCode, input) {
+      await delay(200)
+      const page = mockMilestones.get(studyId)
+      if (!page) throw new Error('Study 不存在')
+      for (const group of page.groups) {
+        const node = group.nodes.find(n => n.milestoneCode === milestoneCode)
+        if (node) {
+          if (input.planV1Date !== undefined) node.planV1Date = input.planV1Date
+          if (input.planV2Date !== undefined) node.planV2Date = input.planV2Date
+          if (input.actualStartDate !== undefined) node.actualStartDate = input.actualStartDate
+          if (input.actualEndDate !== undefined) node.actualEndDate = input.actualEndDate
+          if (input.deviationNote !== undefined) node.deviationNote = input.deviationNote
+          // Re-derive status
+          if (node.actualEndDate) node.status = 'COMPLETED'
+          else if (node.actualStartDate) node.status = 'IN_PROGRESS'
+          else node.status = 'NOT_STARTED'
+          return structuredClone(page)
+        }
+      }
+      throw new Error('里程碑节点不存在: ' + milestoneCode)
+    },
+    async getStageProjection(studyId) {
+      await delay(100)
+      const page = mockMilestones.get(studyId)
+      if (!page) throw new Error('Study 不存在')
+      for (const group of page.groups) {
+        for (const node of group.nodes) {
+          if (node.status === 'IN_PROGRESS') {
+            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
+              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
+              statusText: '进行中' }
+          }
+        }
+      }
+      // Check if all completed
+      const allCompleted = page.groups.every(g => g.nodes.every(n => n.status === 'COMPLETED'))
+      if (allCompleted) {
+        return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '已完成' }
+      }
+      // Find first not-started
+      for (const group of page.groups) {
+        for (const node of group.nodes) {
+          if (node.status === 'NOT_STARTED') {
+            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
+              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
+              statusText: '未开始' }
+          }
+        }
+      }
+      return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '' }
     },
   }
 }

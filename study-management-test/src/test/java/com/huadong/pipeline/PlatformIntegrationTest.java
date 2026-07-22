@@ -7,6 +7,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -56,6 +57,19 @@ class PlatformIntegrationTest {
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/login?redirect="
                             + java.net.URLEncoder.encode(page, java.nio.charset.StandardCharsets.UTF_8)));
+        }
+    }
+
+    @Test
+    void forwardsSpaPageRoutesToIndexHtmlForAuthenticatedUsers() throws Exception {
+        // Guard: every client-side route must be registered in SpaController,
+        // otherwise a browser refresh on that page returns a 404 Whitelabel page.
+        for (String page : java.util.List.of(
+                "/pipeline", "/studies", "/monthly", "/reports", "/milestones/1",
+                "/studies/1/monthly-report")) {
+            mvc.perform(get(page).with(user("tester")))
+                    .andExpect(status().isOk())
+                    .andExpect(forwardedUrl("/index.html"));
         }
     }
 

@@ -15,7 +15,9 @@ public class SpaController {
       "/config",
       "/reports",
       "/accounts",
-      "/roles"
+      "/roles",
+      "/milestones/{studyId}",
+      "/studies/{studyId}/monthly-report"
   })
   String forwardToVue() {
     return "forward:/index.html";

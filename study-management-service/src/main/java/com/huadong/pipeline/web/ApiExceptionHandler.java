@@ -17,7 +17,8 @@ public class ApiExceptionHandler {
   ResponseEntity<ApiError> business(BusinessException ex) {
     HttpStatus status = switch (ex.code()) {
       case "ROLE_NOT_FOUND", "PROGRAM_NOT_FOUND", "PROJECT_NOT_FOUND", "STUDY_NOT_FOUND",
-          "RISK_NOT_FOUND", "RISK_ACTION_NOT_FOUND" ->
+          "RISK_NOT_FOUND", "RISK_ACTION_NOT_FOUND",
+          "MONTHLY_REPORT_NOT_FOUND", "MONTHLY_ENTRY_NOT_FOUND" ->
           HttpStatus.NOT_FOUND;
       case "ROLE_CODE_EXISTS", "SYSTEM_ROLE_PROTECTED", "ROLE_IN_USE",
           "LAST_ROLE_ADMIN_PROTECTED", "PROGRAM_CODE_EXISTS", "PRODUCT_NAME_EXISTS",
@@ -25,9 +26,9 @@ public class ApiExceptionHandler {
           "STUDY_IN_USE", "RENAME_CONFIRMATION_REQUIRED", "RENAME_IMPACT_CHANGED",
           "TEAM_VERSION_CONFLICT", "RISK_VERSION_CONFLICT" ->
           HttpStatus.CONFLICT;
-      case "STUDY_OUT_OF_SCOPE" -> HttpStatus.FORBIDDEN;
+      case "STUDY_OUT_OF_SCOPE", "MONTHLY_FORBIDDEN" -> HttpStatus.FORBIDDEN;
       case "INVALID_PERMISSION", "INVALID_THERAPEUTIC_AREA", "INVALID_CONFIG_ENUM",
-          "INVALID_TEAM_ROLE", "INVALID_TEAM_MEMBER", "INVALID_RISK" ->
+          "INVALID_TEAM_ROLE", "INVALID_TEAM_MEMBER", "INVALID_RISK", "MONTHLY_INVALID" ->
           HttpStatus.UNPROCESSABLE_ENTITY;
       default -> HttpStatus.BAD_REQUEST;
     };

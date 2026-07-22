@@ -167,6 +167,46 @@ export interface UpdateRiskInput extends Omit<CreateRiskInput, 'actions' | 'asse
   assessment?: RiskAssessmentInput
 }
 
+// ── 里程碑 ──
+
+export interface MilestoneNode {
+  milestoneCode: string
+  milestoneName: string
+  planV1Date: string | null
+  planV2Date: string | null
+  actualStartDate: string | null
+  actualEndDate: string | null
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
+  deviationNote: string | null
+}
+
+export interface StageGroup {
+  stageCode: string
+  stageName: string
+  nodes: MilestoneNode[]
+}
+
+export interface MilestonePage {
+  studyCode: string
+  groups: StageGroup[]
+}
+
+export interface MilestoneUpdateInput {
+  planV1Date?: string | null
+  planV2Date?: string | null
+  actualStartDate?: string | null
+  actualEndDate?: string | null
+  deviationNote?: string | null
+}
+
+export interface StageProjection {
+  currentStageCode: string
+  currentStageName: string
+  currentMilestoneCode: string
+  currentMilestoneName: string
+  statusText: string
+}
+
 export interface MonthlyReport {
   studyCode: string
   month: string
@@ -175,6 +215,55 @@ export interface MonthlyReport {
   content: string
   updatedBy: string
   updatedAt: string
+}
+
+// ── 月报填写（按功能线） ──
+
+export interface MonthlyReportEntry {
+  entryId: number
+  entryDate: string
+  content: string
+  updatedBy: string
+  updatedAt: string
+  editable: boolean
+}
+
+export interface FunctionLineReport {
+  reportId: number
+  functionLineId: number
+  functionCode: string
+  functionName: string
+  editable: boolean
+  entries: MonthlyReportEntry[]
+}
+
+export interface MonthlyReportPage {
+  studyId: number
+  studyCode: string
+  month: string
+  functionLines: FunctionLineReport[]
+}
+
+export interface MonthlyHistoryMonth {
+  month: string
+  entries: MonthlyReportEntry[]
+}
+
+export interface FunctionLineHistory {
+  functionLineId: number
+  functionCode: string
+  functionName: string
+  months: MonthlyHistoryMonth[]
+}
+
+export interface MonthlyEntryCreateInput {
+  entryDate?: string
+  content?: string
+}
+
+export interface MonthlyEntryUpdateInput {
+  entryDate?: string
+  content?: string
 }
 
 export interface TeamMatrixStudy {

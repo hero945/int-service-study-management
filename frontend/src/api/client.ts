@@ -20,6 +20,13 @@ import type {
   RiskPage,
   RiskQuery,
   UpdateRiskInput,
+  MilestonePage,
+  MilestoneUpdateInput,
+  MonthlyEntryCreateInput,
+  MonthlyEntryUpdateInput,
+  MonthlyReportPage,
+  FunctionLineHistory,
+  StageProjection,
   ProgramInput,
   ProgramUpdateInput,
   ProjectInput,
@@ -54,7 +61,15 @@ export interface ApiClient {
   addRiskAction(riskCode: string, expectedRiskVersion: number, action: RiskActionInput): Promise<RiskDetail>
   updateRiskAction(riskCode: string, actionId: number, expectedVersion: number, action: RiskActionInput): Promise<RiskDetail>
   deleteRiskAction(riskCode: string, actionId: number, expectedVersion: number): Promise<RiskDetail>
+  getMilestones(studyId: number): Promise<MilestonePage>
+  updateMilestone(studyId: number, milestoneCode: string, input: MilestoneUpdateInput): Promise<MilestonePage>
+  getStageProjection(studyId: number): Promise<StageProjection>
   listMonthlyReports(month?: string): Promise<MonthlyReport[]>
+  getMonthlyReports(studyId: number, month: string): Promise<MonthlyReportPage>
+  createMonthlyEntry(reportId: number, input: MonthlyEntryCreateInput): Promise<MonthlyReportPage>
+  updateMonthlyEntry(entryId: number, input: MonthlyEntryUpdateInput): Promise<MonthlyReportPage>
+  deleteMonthlyEntry(entryId: number): Promise<MonthlyReportPage>
+  getMonthlyReportHistory(studyId: number, functionLineId: number, month: string): Promise<FunctionLineHistory>
   listTeamMatrix(query?: TeamMatrixQuery): Promise<TeamMatrixPage>
   replaceTeamAssignments(input: TeamMatrixBatchInput): Promise<TeamMatrixBatchResult>
   listPipelineConfig(): Promise<PipelineConfigRow[]>
@@ -202,10 +217,43 @@ export function createHttpApiClient(): ApiClient {
       await refreshCsrf()
       return request<RiskDetail>(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}/actions/${actionId}?expectedVersion=${expectedVersion}`, { method: 'DELETE' })
     },
+    getMilestones: (studyId) =>
+      request<MilestonePage>(`/api/v1/studies/${studyId}/milestones`),
+    async updateMilestone(studyId, milestoneCode, input) {
+      await refreshCsrf()
+      return request<MilestonePage>(`/api/v1/studies/${studyId}/milestones/${encodeURIComponent(milestoneCode)}`, {
+        method: 'PUT', body: JSON.stringify(input),
+      })
+    },
+    getStageProjection: (studyId) =>
+      request<StageProjection>(`/api/v1/studies/${studyId}/stage-projection`),
     listMonthlyReports: (month) =>
       request<MonthlyReport[]>(
         `/api/v1/monthly-reports${month ? `?month=${encodeURIComponent(month)}` : ''}`,
       ),
+    getMonthlyReports: (studyId, month) =>
+      request<MonthlyReportPage>(
+        `/api/v1/studies/${studyId}/monthly-reports?month=${encodeURIComponent(month)}`,
+      ),
+    async createMonthlyEntry(reportId, input) {
+      await refreshCsrf()
+      return request<MonthlyReportPage>(`/api/v1/monthly-reports/${reportId}/entries`, {
+        method: 'POST', body: JSON.stringify(input),
+      })
+    },
+    async updateMonthlyEntry(entryId, input) {
+      await refreshCsrf()
+      return request<MonthlyReportPage>(`/api/v1/monthly-report-entries/${entryId}`, {
+        method: 'PATCH', body: JSON.stringify(input),
+      })
+    },
+    async deleteMonthlyEntry(entryId) {
+      await refreshCsrf()
+      return request<MonthlyReportPage>(`/api/v1/monthly-report-entries/${entryId}`, { method: 'DELETE' })
+    },
+    getMonthlyReportHistory: (studyId, functionLineId, month) =>
+      request<FunctionLineHistory>(
+        `/api/v1/studies/${studyId}/monthly-reports/history?functionLineId=${functionLineId}&month=${encodeURIComponent(month)}`),
     listTeamMatrix: (query = {}) => {
       const parameters = new URLSearchParams()
       parameters.set('page', String(query.page ?? 1))
