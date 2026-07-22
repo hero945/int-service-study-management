@@ -54,7 +54,11 @@ export const router = createRouter({
           path: 'team',
           name: 'team',
           component: TeamMatrixView,
-          meta: { title: '团队矩阵', subtitle: '项目角色与部门成员分工' },
+          meta: {
+            title: '团队矩阵',
+            subtitle: 'Study × 项目角色分工',
+            requiredPermission: 'team.page.view',
+          },
         },
         {
           path: 'config',

@@ -8,6 +8,8 @@ import type {
   PlatformPermission,
   PlatformRole,
   Study,
+  TeamMatrixAssignment,
+  TeamMatrixRole,
   TherapeuticArea,
   UpdateUserInput,
 } from './types'
@@ -33,6 +35,9 @@ const users: Array<CurrentUser & { password: string }> = [
       'role.create',
       'role.update',
       'role.delete',
+      'team.page.view',
+      'team.edit_mode',
+      'team.update',
     ],
     dataScope: 'ALL',
     password: '1234',
@@ -120,8 +125,62 @@ export const demoStudies: Study[] = [
   },
 ]
 
+const teamRoles: TeamMatrixRole[] = [
+  ['PL', 'PL 项目负责人', 'PM', '项目管理'],
+  ['APL', 'APL 副项目负责人', 'PM', '项目管理'],
+  ['PM', 'PM 项目经理', 'PM', '项目管理'],
+  ['APM', 'APM 副项目经理', 'PM', '项目管理'],
+  ['RA_SPONSOR', 'RA Sponsor', 'RA', '注册'],
+  ['RA_MANAGER', 'RA Manager', 'RA', '注册'],
+  ['RA_SPECIALIST', 'RA Specialist', 'RA', '注册'],
+  ['RA_CMC', 'RA CMC', 'RA', '注册'],
+  ['CM_SPONSOR', 'CM Sponsor', 'CM', '临床医学'],
+  ['CM', 'CM', 'CM', '临床医学'],
+  ['CP_SPONSOR', 'CP Sponsor', 'CP', '临床药理'],
+  ['CP', 'CP', 'CP', '临床药理'],
+  ['PV_SPONSOR', 'PV Sponsor', 'PV', '药物警戒'],
+  ['PVP', 'PVP', 'PV', '药物警戒'],
+  ['PVO', 'PVO', 'PV', '药物警戒'],
+  ['TM_SPONSOR', 'TM Sponsor', 'TM', '试验管理'],
+  ['TM', 'TM', 'TM', '试验管理'],
+  ['CO_SPONSOR', 'CO Sponsor', 'CO', '临床运营'],
+  ['CTM', 'CTM', 'CO', '临床运营'],
+  ['ACTM', 'ACTM', 'CO', '临床运营'],
+  ['LAB', 'Lab', 'LAB', '中心实验室'],
+  ['LAB_BACKUP', 'Lab backup', 'LAB', '中心实验室'],
+  ['SUPPLY', 'Supply', 'SUPPLY', '供应保障'],
+  ['SUPPLY_BACKUP', 'Supply backup', 'SUPPLY', '供应保障'],
+  ['CTA_PROCESS', 'CTA process', 'CTA', '临床试验协调'],
+  ['CTA_TMF', 'CTA TMF', 'CTA', '临床试验协调'],
+  ['ST_SPONSOR', 'ST Sponsor', 'ST', '生物统计'],
+  ['ST', 'ST', 'ST', '生物统计'],
+  ['PG_SPONSOR', 'PG Sponsor', 'PG', '统计编程'],
+  ['PG', 'PG', 'PG', '统计编程'],
+  ['DM_SPONSOR', 'DM Sponsor', 'DM', '数据管理'],
+  ['DM', 'DM', 'DM', '数据管理'],
+  ['MW', 'MW', 'MW', '医学写作'],
+  ['NC_CONTACT', 'NC-contact', 'NC', '非临床'],
+  ['NC_PK', 'NC-PK', 'NC', '非临床'],
+  ['NC_PD', 'NC-PD', 'NC', '非临床'],
+  ['NC_TOX', 'NC-TOX', 'NC', '非临床'],
+  ['CMC_PL', 'CMC-PL', 'CMC', '药学CMC'],
+  ['CMC_PM', 'CMC-PM', 'CMC', '药学CMC'],
+  ['CMC_DS', 'CMC-DS', 'CMC', '药学CMC'],
+  ['CMC_DP', 'CMC-DP', 'CMC', '药学CMC'],
+  ['CMC_OA', 'CMC-OA', 'CMC', '药学CMC'],
+  ['CMC_RA', 'CMC-RA', 'CMC', '药学CMC'],
+  ['IP', 'IP', 'IP', '药品管理'],
+].map(([roleCode, roleName, functionCode, functionName]) => ({
+  roleCode, roleName, functionCode, functionName,
+}))
+
 export function createMockApiClient(): ApiClient {
   let currentUser: CurrentUser | undefined
+  const teamVersions = new Map(demoStudies.map((study) => [study.id, 0]))
+  const teamAssignments = new Map<string, number[]>([
+    [`${demoStudies[0].id}|PL`, [2]],
+    [`${demoStudies[1].id}|PM`, [2]],
+  ])
   const permissions: PlatformPermission[] = [
     ['pipeline', 'pipeline.page.view', '查看管线总览', 'PAGE', 'view'],
     ['study', 'study.read', '查看 Study', 'ACTION', 'read'],
@@ -135,6 +194,9 @@ export function createMockApiClient(): ApiClient {
     ['role', 'role.create', '新增角色', 'ACTION', 'create'],
     ['role', 'role.update', '编辑角色权限', 'ACTION', 'update'],
     ['role', 'role.delete', '删除角色', 'ACTION', 'delete'],
+    ['team', 'team.page.view', '查看团队矩阵', 'PAGE', 'view'],
+    ['team', 'team.edit_mode', '进入团队编辑模式', 'PAGE_OPERATION', 'edit_mode'],
+    ['team', 'team.update', '更新团队分配', 'ACTION', 'update'],
   ].map(([moduleCode, permissionCode, permissionName, permissionType, actionCode], index) => ({
     id: index + 1,
     moduleCode,
@@ -269,8 +331,76 @@ export function createMockApiClient(): ApiClient {
     async listMonthlyReports() {
       return []
     },
-    async listTeamAssignments() {
-      return []
+    async listTeamMatrix(query = {}) {
+      const studyQuery = query.studyQuery?.trim().toLowerCase() ?? ''
+      const roleQuery = query.roleQuery?.trim().toLowerCase() ?? ''
+      const page = query.page ?? 1
+      const pageSize = query.pageSize ?? 20
+      const filteredStudies = demoStudies.filter(study =>
+        !studyQuery ||
+        study.code.toLowerCase().includes(studyQuery) ||
+        study.indication.toLowerCase().includes(studyQuery))
+      const roles = teamRoles.filter(role =>
+        !roleQuery ||
+        role.roleCode.toLowerCase().includes(roleQuery) ||
+        role.roleName.toLowerCase().includes(roleQuery) ||
+        (role.functionName ?? '').toLowerCase().includes(roleQuery))
+      const studies = filteredStudies.slice((page - 1) * pageSize, page * pageSize)
+        .map(study => ({
+          studyId: study.id,
+          studyCode: study.code,
+          indication: study.indication,
+          statusCode: study.status,
+          statusLabel: study.statusLabel,
+          version: teamVersions.get(study.id) ?? 0,
+        }))
+      const assignments: TeamMatrixAssignment[] = []
+      for (const study of studies) {
+        for (const role of roles) {
+          const ids = teamAssignments.get(`${study.studyId}|${role.roleCode}`) ?? []
+          const members = ids.map(id => users[id - 1]).filter(Boolean).map((member, index) => ({
+            userId: ids[index],
+            email: member.username,
+            displayName: member.displayName,
+            enabled: true,
+          }))
+          if (members.length) assignments.push({
+            studyId: study.studyId,
+            roleCode: role.roleCode,
+            members,
+          })
+        }
+      }
+      return {
+        studies,
+        roles,
+        assignments,
+        totalRoles: roles.length,
+        pagination: {
+          page,
+          pageSize,
+          totalItems: filteredStudies.length,
+          totalPages: Math.max(1, Math.ceil(filteredStudies.length / pageSize)),
+        },
+      }
+    },
+    async replaceTeamAssignments(input) {
+      for (const study of input.studies) {
+        const currentVersion = teamVersions.get(study.studyId) ?? 0
+        if (currentVersion !== study.expectedVersion) {
+          throw new Error('团队矩阵已被其他用户修改，请刷新后重试')
+        }
+        for (const role of study.roles) {
+          teamAssignments.set(`${study.studyId}|${role.roleCode}`, [...role.userIds])
+        }
+        teamVersions.set(study.studyId, currentVersion + 1)
+      }
+      return {
+        studies: input.studies.map(study => ({
+          studyId: study.studyId,
+          version: teamVersions.get(study.studyId) ?? study.expectedVersion,
+        })),
+      }
     },
     async listPipelineConfig() {
       return demoStudies.map((study) => {

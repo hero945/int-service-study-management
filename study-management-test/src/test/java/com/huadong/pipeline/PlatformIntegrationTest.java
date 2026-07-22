@@ -50,7 +50,8 @@ class PlatformIntegrationTest {
 
     @Test
     void redirectsAnonymousBrowserPageRequestsToLoginAndPreservesTheTarget() throws Exception {
-        for (String page : java.util.List.of("/pipeline", "/config", "/accounts", "/roles")) {
+        for (String page : java.util.List.of(
+                "/pipeline", "/config", "/team", "/accounts", "/roles")) {
             mvc.perform(get(page).accept(MediaType.TEXT_HTML))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/login?redirect="

@@ -24,7 +24,10 @@ import type {
   RoleUpdateResult,
   Study,
   StudyConfigInput,
-  TeamAssignment,
+  TeamMatrixBatchInput,
+  TeamMatrixBatchResult,
+  TeamMatrixPage,
+  TeamMatrixQuery,
   TherapeuticArea,
   UpdateUserInput,
 } from './types'
@@ -38,7 +41,8 @@ export interface ApiClient {
   listStudies(): Promise<Study[]>
   listRisks(): Promise<Risk[]>
   listMonthlyReports(month?: string): Promise<MonthlyReport[]>
-  listTeamAssignments(): Promise<TeamAssignment[]>
+  listTeamMatrix(query?: TeamMatrixQuery): Promise<TeamMatrixPage>
+  replaceTeamAssignments(input: TeamMatrixBatchInput): Promise<TeamMatrixBatchResult>
   listPipelineConfig(): Promise<PipelineConfigRow[]>
   listTherapeuticAreas(): Promise<TherapeuticArea[]>
   listPrograms(keyword?: string): Promise<PipelineProgram[]>
@@ -141,8 +145,21 @@ export function createHttpApiClient(): ApiClient {
       request<MonthlyReport[]>(
         `/api/v1/monthly-reports${month ? `?month=${encodeURIComponent(month)}` : ''}`,
       ),
-    listTeamAssignments: () =>
-      request<TeamAssignment[]>('/api/v1/team-assignments'),
+    listTeamMatrix: (query = {}) => {
+      const parameters = new URLSearchParams()
+      parameters.set('page', String(query.page ?? 1))
+      parameters.set('pageSize', String(query.pageSize ?? 20))
+      if (query.studyQuery) parameters.set('studyQuery', query.studyQuery)
+      if (query.roleQuery) parameters.set('roleQuery', query.roleQuery)
+      return request<TeamMatrixPage>(`/api/v1/team-matrix?${parameters}`)
+    },
+    async replaceTeamAssignments(input) {
+      await refreshCsrf()
+      return request<TeamMatrixBatchResult>('/api/v1/team-matrix/assignments', {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      })
+    },
     listPipelineConfig: () =>
       request<PipelineConfigRow[]>('/api/v1/clinical-pipeline/pipeline-config'),
     listTherapeuticAreas: () =>

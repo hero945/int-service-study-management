@@ -1,28 +1,322 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { apiClient } from '../api/client'
-import type { TeamAssignment } from '../api/types'
+import { computed, onMounted, ref } from 'vue'
+import { ApiError, apiClient } from '../api/client'
+import type {
+  PlatformUser,
+  TeamMatrixMember,
+  TeamMatrixPage,
+} from '../api/types'
 import PageState from '../components/PageState.vue'
+import { session } from '../session'
 
-const assignments = ref<TeamAssignment[]>([])
+const matrix = ref<TeamMatrixPage>()
+const users = ref<PlatformUser[]>([])
 const loading = ref(true)
+const saving = ref(false)
 const error = ref('')
-onMounted(async () => {
+const notice = ref('')
+const studyQuery = ref('')
+const roleQuery = ref('')
+const page = ref(1)
+const editMode = ref(false)
+const picker = ref<{ studyId: number; roleCode: string }>()
+const drafts = ref(new Map<string, TeamMatrixMember[]>())
+
+const permissions = computed(() => session.currentUser.value?.permissions ?? [])
+const canEdit = computed(() =>
+  permissions.value.includes('team.edit_mode') &&
+  permissions.value.includes('team.update'))
+const enabledUsers = computed(() => users.value.filter(user => user.enabled))
+const hasChanges = computed(() => drafts.value.size > 0)
+
+function cellKey(studyId: number, roleCode: string) {
+  return `${studyId}|${roleCode}`
+}
+
+function originalMembers(studyId: number, roleCode: string) {
+  return matrix.value?.assignments.find(assignment =>
+    assignment.studyId === studyId && assignment.roleCode === roleCode)?.members ?? []
+}
+
+function membersFor(studyId: number, roleCode: string) {
+  return drafts.value.get(cellKey(studyId, roleCode)) ?? originalMembers(studyId, roleCode)
+}
+
+function setDraft(studyId: number, roleCode: string, members: TeamMatrixMember[]) {
+  const next = new Map(drafts.value)
+  const originalIds = originalMembers(studyId, roleCode).map(member => member.userId).sort()
+  const nextIds = members.map(member => member.userId).sort()
+  if (JSON.stringify(originalIds) === JSON.stringify(nextIds)) {
+    next.delete(cellKey(studyId, roleCode))
+  } else {
+    next.set(cellKey(studyId, roleCode), members)
+  }
+  drafts.value = next
+}
+
+async function loadMatrix() {
+  loading.value = true
+  error.value = ''
   try {
-    assignments.value = await apiClient.listTeamAssignments()
+    matrix.value = await apiClient.listTeamMatrix({
+      studyQuery: studyQuery.value,
+      roleQuery: roleQuery.value,
+      page: page.value,
+      pageSize: 20,
+    })
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '团队矩阵加载失败'
   } finally {
     loading.value = false
   }
-})
+}
+
+async function applyFilters() {
+  page.value = 1
+  cancelEdit()
+  await loadMatrix()
+}
+
+async function changePage(nextPage: number) {
+  page.value = nextPage
+  cancelEdit()
+  await loadMatrix()
+}
+
+async function startEdit() {
+  if (!canEdit.value) return
+  error.value = ''
+  if (!users.value.length) {
+    try {
+      users.value = await apiClient.listUsers()
+    } catch (reason) {
+      error.value = reason instanceof Error ? reason.message : '平台账号加载失败'
+      return
+    }
+  }
+  editMode.value = true
+}
+
+function cancelEdit() {
+  drafts.value = new Map()
+  picker.value = undefined
+  editMode.value = false
+}
+
+function openPicker(studyId: number, roleCode: string) {
+  picker.value = { studyId, roleCode }
+}
+
+function addMember(studyId: number, roleCode: string, user: PlatformUser) {
+  const current = membersFor(studyId, roleCode)
+  if (current.some(member => member.userId === user.id)) return
+  setDraft(studyId, roleCode, [...current, {
+    userId: user.id,
+    email: user.username,
+    displayName: user.displayName,
+    enabled: user.enabled,
+  }])
+  picker.value = undefined
+}
+
+function removeMember(studyId: number, roleCode: string, userId: number) {
+  setDraft(
+    studyId,
+    roleCode,
+    membersFor(studyId, roleCode).filter(member => member.userId !== userId),
+  )
+}
+
+function availableUsers(studyId: number, roleCode: string) {
+  const assigned = new Set(membersFor(studyId, roleCode).map(member => member.userId))
+  return enabledUsers.value.filter(user => !assigned.has(user.id))
+}
+
+async function save() {
+  if (!matrix.value || !hasChanges.value) {
+    cancelEdit()
+    return
+  }
+  const currentEmail = session.currentUser.value?.username
+  const removesSelf = [...drafts.value.entries()].some(([key, members]) => {
+    const [studyId, roleCode] = key.split('|')
+    const before = originalMembers(Number(studyId), roleCode)
+    return before.some(member => member.email === currentEmail) &&
+      !members.some(member => member.email === currentEmail)
+  })
+  if (removesSelf && !window.confirm(
+    '保存后你将立即失去对应 Study 的访问权限，确定继续吗？',
+  )) return
+
+  const grouped = new Map<number, Array<{ roleCode: string; userIds: number[] }>>()
+  for (const [key, members] of drafts.value) {
+    const [studyIdText, roleCode] = key.split('|')
+    const studyId = Number(studyIdText)
+    const roles = grouped.get(studyId) ?? []
+    roles.push({ roleCode, userIds: members.map(member => member.userId) })
+    grouped.set(studyId, roles)
+  }
+  const studies = [...grouped.entries()].map(([studyId, roles]) => ({
+    studyId,
+    expectedVersion:
+      matrix.value?.studies.find(study => study.studyId === studyId)?.version ?? 0,
+    roles,
+  }))
+
+  saving.value = true
+  error.value = ''
+  try {
+    await apiClient.replaceTeamAssignments({ studies })
+    notice.value = '团队矩阵已保存，成员数据范围已即时更新。'
+    cancelEdit()
+    await loadMatrix()
+  } catch (reason) {
+    error.value = reason instanceof ApiError && reason.code === 'TEAM_VERSION_CONFLICT'
+      ? '团队矩阵已被其他用户修改，请刷新后重新编辑。'
+      : reason instanceof Error ? reason.message : '团队矩阵保存失败'
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(loadMatrix)
 </script>
 
 <template>
-  <section class="page-content">
-    <div class="page-toolbar"><span>仅管理员及项目 PL/PM 可维护团队矩阵</span><button class="secondary-button" type="button">编辑矩阵</button></div>
-    <PageState :loading :error :empty="!assignments.length" empty-title="暂无团队分配" empty-description="已预留 /api/v1/team-assignments 接口。">
-      <div class="data-card"><table class="data-table"><thead><tr><th>Project</th><th>Study</th><th>部门</th><th>角色</th><th>成员</th></tr></thead><tbody><tr v-for="assignment in assignments" :key="`${assignment.studyCode}-${assignment.roleCode}`"><td>{{ assignment.project }}</td><td>{{ assignment.studyCode }}</td><td>{{ assignment.department }}</td><td>{{ assignment.roleName }}</td><td>{{ assignment.members.join('、') }}</td></tr></tbody></table></div>
+  <section class="page-content team-page">
+    <form class="team-toolbar" role="search" @submit.prevent="applyFilters">
+      <label>
+        <span class="sr-only">搜索 Study 或适应症</span>
+        <input v-model="studyQuery" type="search" placeholder="搜索 Study / 适应症">
+      </label>
+      <label>
+        <span class="sr-only">搜索角色或功能线</span>
+        <input v-model="roleQuery" type="search" placeholder="搜索角色 / 功能线">
+      </label>
+      <button class="secondary-button" type="submit">搜索</button>
+      <div class="team-toolbar__summary">
+        <span>{{ matrix?.pagination.totalItems ?? 0 }} 个 Study · {{ matrix?.totalRoles ?? 0 }} 个角色</span>
+        <template v-if="editMode">
+          <button data-testid="cancel-team" class="secondary-button" type="button" :disabled="saving" @click="cancelEdit">取消</button>
+          <button data-testid="save-team" class="primary-button" type="button" :disabled="saving || !hasChanges" @click="save">
+            {{ saving ? '保存中…' : '保存矩阵' }}
+          </button>
+        </template>
+        <button
+          v-else-if="canEdit"
+          data-testid="edit-team"
+          class="primary-button"
+          type="button"
+          @click="startEdit"
+        >
+          编辑矩阵
+        </button>
+      </div>
+    </form>
+
+    <p v-if="notice" class="team-notice" role="status">
+      {{ notice }}
+      <button type="button" aria-label="关闭提示" @click="notice = ''">×</button>
+    </p>
+    <p v-if="editMode" class="team-edit-hint">
+      修改会暂存在当前页面；点击“保存矩阵”后一次性提交。团队分配同时决定 ASSIGNED_STUDY 用户的数据范围。
+    </p>
+
+    <PageState
+      :loading
+      :error
+      :empty="!matrix?.studies.length"
+      empty-title="暂无可见 Study"
+      empty-description="请调整搜索条件，或由管理员检查 Study 和团队分配。"
+    >
+      <div class="team-matrix-card">
+        <div class="team-matrix-scroll" tabindex="0" aria-label="团队成员矩阵，可横向滚动">
+          <table class="team-matrix-table">
+            <thead>
+              <tr>
+                <th scope="col">角色 / Study</th>
+                <th v-for="study in matrix?.studies" :key="study.studyId" scope="col">
+                  <strong>{{ study.studyCode }}</strong>
+                  <span>{{ study.indication || '—' }}</span>
+                  <small>{{ study.statusLabel }}</small>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="role in matrix?.roles" :key="role.roleCode">
+                <th scope="row">
+                  <strong>{{ role.roleName }}</strong>
+                  <span>{{ role.functionName || '未分组' }}</span>
+                </th>
+                <td v-for="study in matrix?.studies" :key="study.studyId">
+                  <div class="team-members">
+                    <span
+                      v-for="member in membersFor(study.studyId, role.roleCode)"
+                      :key="member.userId"
+                      class="team-member"
+                      :class="{ 'team-member--disabled': !member.enabled }"
+                    >
+                      <span class="team-avatar" aria-hidden="true">{{ member.displayName.slice(-2) }}</span>
+                      <span>
+                        {{ member.displayName }}
+                        <small v-if="!member.enabled">已停用</small>
+                      </span>
+                      <button
+                        v-if="editMode"
+                        type="button"
+                        :aria-label="`移除 ${member.displayName}`"
+                        @click="removeMember(study.studyId, role.roleCode, member.userId)"
+                      >×</button>
+                    </span>
+                    <span v-if="!membersFor(study.studyId, role.roleCode).length && !editMode" class="team-empty">—</span>
+                    <button
+                      v-if="editMode && (picker?.studyId !== study.studyId || picker?.roleCode !== role.roleCode)"
+                      :data-testid="`add-member-${study.studyId}-${role.roleCode}`"
+                      class="team-add"
+                      type="button"
+                      :aria-label="`为 ${study.studyCode} 的 ${role.roleName} 添加成员`"
+                      @click="openPicker(study.studyId, role.roleCode)"
+                    >＋ 添加</button>
+                    <div
+                      v-if="editMode && picker?.studyId === study.studyId && picker?.roleCode === role.roleCode"
+                      class="team-picker"
+                    >
+                      <button
+                        v-for="user in availableUsers(study.studyId, role.roleCode)"
+                        :key="user.id"
+                        :data-testid="`member-option-${user.id}`"
+                        type="button"
+                        @click="addMember(study.studyId, role.roleCode, user)"
+                      >
+                        <strong>{{ user.displayName }}</strong>
+                        <small>{{ user.username }}</small>
+                      </button>
+                      <span v-if="!availableUsers(study.studyId, role.roleCode).length">没有可添加的启用账号</span>
+                      <button type="button" @click="picker = undefined">关闭</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <nav class="team-pagination" aria-label="团队矩阵分页">
+        <button
+          class="secondary-button"
+          type="button"
+          :disabled="(matrix?.pagination.page ?? 1) <= 1"
+          @click="changePage((matrix?.pagination.page ?? 1) - 1)"
+        >上一页</button>
+        <span>第 {{ matrix?.pagination.page }} / {{ matrix?.pagination.totalPages }} 页</span>
+        <button
+          class="secondary-button"
+          type="button"
+          :disabled="(matrix?.pagination.page ?? 1) >= (matrix?.pagination.totalPages ?? 1)"
+          @click="changePage((matrix?.pagination.page ?? 1) + 1)"
+        >下一页</button>
+      </nav>
     </PageState>
   </section>
 </template>
