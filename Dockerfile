@@ -25,7 +25,7 @@ COPY study-management-repository ./study-management-repository
 COPY study-management-service ./study-management-service
 COPY study-management-test ./study-management-test
 COPY --from=frontend-build /workspace/frontend/dist ./frontend/dist
-RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp verify
+RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp -Dfrontend.build.skip=true verify
 
 FROM eclipse-temurin:21-jre
 RUN useradd --system --uid 10001 --create-home appuser

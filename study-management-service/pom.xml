@@ -69,6 +69,10 @@
       <version>1.84</version>
     </dependency>
   </dependencies>
+  <properties>
+    <npm.executable>npm</npm.executable>
+    <frontend.build.skip>false</frontend.build.skip>
+  </properties>
   <build>
     <resources>
       <resource>
@@ -88,6 +92,29 @@
     </resources>
     <plugins>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>build-vue-frontend</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <skip>${frontend.build.skip}</skip>
+              <workingDirectory>${project.parent.basedir}/frontend</workingDirectory>
+              <executable>${npm.executable}</executable>
+              <arguments>
+                <argument>run</argument>
+                <argument>build</argument>
+              </arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
@@ -99,4 +126,17 @@
       </plugin>
     </plugins>
   </build>
+  <profiles>
+    <profile>
+      <id>windows-npm</id>
+      <activation>
+        <os>
+          <family>Windows</family>
+        </os>
+      </activation>
+      <properties>
+        <npm.executable>npm.cmd</npm.executable>
+      </properties>
+    </profile>
+  </profiles>
 </project>

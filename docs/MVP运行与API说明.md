@@ -3,8 +3,8 @@
 ## 实现定位
 
 本文记录当前可运行纵切片的接口和数据库基线。前端使用 Vue、TypeScript 和 Vite；
-Java 运行时、MyBatis-Plus Repository、Spring Session 与 Flyway 已统一接入 25 张
-`hd_plt_*` 目标表。月报、风险、团队、里程碑和导出目前仍以页面骨架或演示数据为主。
+Java 运行时、Repository、Spring Session 与 Flyway 已统一接入 `hd_plt_*` 目标表。
+风险管理已经形成数据库、API 与 Vue 页面贯通的纵切片；月报、里程碑和导出仍以页面骨架或演示数据为主。
 
 ## API 清单
 
@@ -33,6 +33,13 @@ Java 运行时、MyBatis-Plus Repository、Spring Session 与 Flyway 已统一�
 | `GET/POST/PATCH/DELETE /api/v1/clinical-pipeline/programs...` | `config.page.view/create/update/delete` | Program 查询、新增、更新、影响预览和删除 |
 | `GET/POST/PATCH/DELETE /api/v1/clinical-pipeline/projects...` | `config.page.view/create/update/delete` | Project 查询、新增、更新、影响预览和删除 |
 | `PATCH/DELETE /api/v1/clinical-pipeline/studies/{id}` | `config.update/delete` | 更新或删除 Study 配置 |
+| `GET /api/v1/risk-management/risks` | `risk.read` | 按关键字、功能线、状态和等级分页查询风险及聚合统计 |
+| `GET /api/v1/risk-management/risks/{riskCode}` | `risk.read` | 风险详情、历次评估和多条控制措施 |
+| `GET /api/v1/risk-management/form-options` | `risk.read` | 返回当前数据范围内的 Study、功能线和团队成员选项 |
+| `POST /api/v1/risk-management/risks` | `risk.create` + CSRF | 新建风险、首次评估和零至多条控制措施 |
+| `PATCH /api/v1/risk-management/risks/{riskCode}` | `risk.update` + CSRF | 更新风险、关闭或重开；状态变化必须填写原因 |
+| `DELETE /api/v1/risk-management/risks/{riskCode}` | `risk.delete` + CSRF | 按版本号软删除风险 |
+| `POST/PATCH/DELETE /api/v1/risk-management/risks/{riskCode}/actions...` | `risk.update` + CSRF | 新增、更新或软删除控制措施 |
 
 登录接口使用 `application/x-www-form-urlencoded`，其余写接口使用 JSON。失败响应的基础形式为：
 
@@ -59,6 +66,8 @@ Java运行时、Flyway和Repository已经统一使用 `hd_plt_*` 目标模型：
   权限码，不直接判断角色名称。
 - Study写入 `hd_plt_study` 前必须验证Program、Project和治疗领域的层级关系，并把
   Program/Project/治疗领域/适应症信息保存为创建时快照。
+- V10 增加风险规则版本、评估历史、控制措施、并发版本号和风险权限。风险评分为
+  `影响程度 × 发生可能性 × 可探测性`，V1 阈值为 1–12 低、13–36 中、37–125 高。
 
 生产数据库迁移账号与日常运行账号建议分离；MVP Compose 为简化首次运行暂使用同一个
 schema账号。H2仅用于自动化测试，真实运行默认连接MySQL。
@@ -85,7 +94,7 @@ schema账号。H2仅用于自动化测试，真实运行默认连接MySQL。
 - 尚未实现改密、忘记密码、MFA、登录限流和失败锁定。
 - 动态配置只保留最后修改人/时间，尚无不可覆盖的历史审计表。
 - 管线配置已支持 Program/Project/Study 新增、更新和受约束删除；三类实体以业务编号作为展示标识，不再维护名称字段；尚未实现分页、并发版本控制和合并工具。
-- 原型数据不迁移，月报、风险、里程碑等模块后续按技术设计逐片实现。
+- 原型数据不迁移；风险模块已落库，月报、里程碑等模块后续按技术设计逐片实现。
 
 ## Session 过期行为
 

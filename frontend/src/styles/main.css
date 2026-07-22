@@ -298,6 +298,60 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .toolbar-filters { display: flex; gap: 8px; }
 .inline-search { position: relative; width: 320px; }
 .data-table { min-width: 900px; width: 100%; border-collapse: collapse; }
+.risk-toolbar { gap: 16px; }
+.risk-toolbar .toolbar-filters { min-width: 0; flex: 1; flex-wrap: wrap; }
+.risk-stats { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 10px; margin: 16px 22px 0; }
+.risk-stats button { display: flex; min-height: 74px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 5px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--muted); text-align: left; cursor: pointer; }
+.risk-stats button:hover, .risk-stats button.active { border-color: #9db9e8; background: #f7faff; }
+.risk-stats strong { color: #2a303b; font: 600 23px "IBM Plex Mono", "Cascadia Mono", monospace; }
+.risk-stats .risk-stat--red { color: var(--red-text); }
+.risk-stats .risk-stat--orange { color: var(--orange-text); }
+.risk-table-card { margin-top: 12px; }
+.risk-table { min-width: 1320px; }
+.risk-table tbody tr { cursor: pointer; }
+.risk-table td small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
+.risk-description { min-width: 240px; max-width: 360px; line-height: 1.5; }
+.risk-link { padding: 0; border: 0; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; }
+.risk-score { display: inline-flex; min-width: 32px; justify-content: center; padding: 4px 7px; border-radius: 5px; background: var(--blue-bg); color: var(--blue-text); font-weight: 600; }
+.risk-drawer-backdrop { z-index: 80; }
+.risk-drawer { position: absolute; top: 0; right: 0; display: flex; width: min(720px, 100vw); height: 100%; flex-direction: column; overflow: hidden; background: #fff; box-shadow: -18px 0 48px rgba(20, 27, 40, .22); }
+.risk-drawer > header, .risk-drawer > footer { display: flex; align-items: center; gap: 10px; padding: 17px 22px; border-bottom: 1px solid var(--line); }
+.risk-drawer > header { justify-content: space-between; }
+.risk-drawer > header h2 { margin: 0; font-size: 17px; }
+.risk-drawer > header p { margin: 4px 0 0; color: var(--muted); font: 11px "IBM Plex Mono", monospace; }
+.risk-drawer > header button { border: 0; background: transparent; color: var(--muted); font-size: 25px; cursor: pointer; }
+.risk-drawer > footer { margin-top: auto; justify-content: flex-end; border-top: 1px solid var(--line); border-bottom: 0; }
+.risk-drawer > footer span { flex: 1; }
+.risk-drawer-body { overflow: auto; padding: 18px 22px 28px; }
+.risk-drawer fieldset { margin: 0 0 18px; padding: 15px; border: 1px solid var(--line); border-radius: 9px; }
+.risk-drawer legend { padding: 0 7px; color: #303744; font-size: 12px; font-weight: 700; }
+.risk-drawer legend span { color: var(--muted); font-weight: 400; }
+.risk-drawer label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; }
+.risk-drawer input, .risk-drawer select, .risk-drawer textarea { width: 100%; border: 1px solid #dfe3e8; border-radius: 6px; background: #fff; color: #303744; font: inherit; font-size: 12px; }
+.risk-drawer input, .risk-drawer select { height: 34px; padding: 0 9px; }
+.risk-drawer textarea { min-height: 72px; padding: 9px; resize: vertical; line-height: 1.5; }
+.risk-drawer input[readonly] { background: #f5f7f9; color: var(--muted); }
+.risk-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.risk-full-field { margin-top: 12px; }
+.risk-score-grid { display: grid; grid-template-columns: repeat(3, 1fr) 1.2fr; gap: 10px; }
+.risk-score-result { display: flex; min-height: 62px; flex-direction: column; justify-content: center; padding: 8px 12px; border-radius: 7px; background: #f3f7fd; }
+.risk-score-result span, .risk-score-result small { color: var(--muted); font-size: 10px; }
+.risk-score-result strong { margin: 3px 0; color: var(--blue-text); font: 700 21px "IBM Plex Mono", monospace; }
+.risk-assessment-toggle { display: flex !important; grid-template-columns: auto 1fr; align-items: center; margin-bottom: 12px; }
+.risk-assessment-toggle input { width: auto; height: auto; }
+.risk-action-list { display: grid; gap: 8px; margin-bottom: 10px; }
+.risk-action-list article { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #edf0f3; border-radius: 7px; background: #fbfcfd; }
+.risk-action-list strong { font-size: 12px; }
+.risk-action-list p { margin: 5px 0 0; color: var(--muted); font-size: 10.5px; }
+.text-button { padding: 3px 5px; border: 0; background: transparent; color: var(--accent); font-size: 11px; cursor: pointer; }
+.text-button.danger { color: var(--red-text); }
+.risk-action-editor { display: grid; gap: 11px; margin-top: 11px; padding: 12px; border: 1px solid #cddcf4; border-radius: 8px; background: #f8faff; }
+.risk-action-editor > div:last-child { display: flex; justify-content: flex-end; gap: 8px; }
+.risk-timeline { margin: 0; padding-left: 21px; }
+.risk-timeline li { padding: 0 0 14px 5px; }
+.risk-timeline strong, .risk-timeline span { display: block; font-size: 11.5px; }
+.risk-timeline span, .risk-timeline p { margin-top: 4px; color: var(--muted); font-size: 10.5px; }
+.danger-button { border: 1px solid #efc8c5; border-radius: 7px; background: #fff; color: var(--red-text); padding: 8px 12px; cursor: pointer; }
 .config-tabs { display: flex; gap: 6px; padding: 16px 22px 0; border-bottom: 1px solid var(--line); background: #fff; }
 .config-tabs button { padding: 10px 14px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; }
 .config-tabs button.active { border-bottom-color: var(--accent); color: var(--accent); }
@@ -645,6 +699,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   .result-summary { margin-left: 0; }
   .pipeline-table-wrap, .data-card, .state-panel { margin-left: 14px; margin-right: 14px; }
   .inline-search { width: 100%; }
+  .risk-toolbar { align-items: stretch; flex-direction: column; }
+  .risk-toolbar .primary-button { align-self: flex-end; }
+  .risk-stats { grid-template-columns: repeat(2, minmax(120px, 1fr)); margin-left: 14px; margin-right: 14px; }
+  .risk-form-grid, .risk-score-grid { grid-template-columns: 1fr; }
   .role-toolbar__actions { width: 100%; justify-content: space-between; }
   .role-form-grid { grid-template-columns: 1fr; }
   .config-dialog .form-wide { grid-column: auto; }

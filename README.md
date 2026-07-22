@@ -81,13 +81,28 @@ npm.cmd --prefix frontend run dev
 
 ## 本地构建与验证
 
-直接使用 Maven 打包前，必须先生成最新前端产物：
+首次检出项目时先安装前端依赖：
 
 ```powershell
 npm.cmd --prefix frontend ci
-npm.cmd --prefix frontend run build
+```
+
+此后 Maven 的 `generate-resources` 及后续生命周期会自动执行前端构建。例如：
+
+```powershell
 mvn test
 ```
+
+通过 Maven 启动服务时，需要显式包含生命周期阶段；只写
+`spring-boot:run` 会跳过绑定在 `generate-resources` 的前端构建：
+
+```powershell
+mvn -f study-management-service/pom.xml generate-resources spring-boot:run
+```
+
+IntelliJ Maven 启动配置的 `Run` 目标同样填写
+`generate-resources spring-boot:run`。仅在明确不需要刷新前端时，可传入
+`-Dfrontend.build.skip=true`。
 
 `frontend/dist/` 会被复制进 Spring Boot JAR。Docker 构建已经包含前端 Node
 构建阶段，不需要在宿主机预先生成 `dist/`。

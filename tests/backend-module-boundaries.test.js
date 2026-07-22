@@ -95,10 +95,27 @@ assert(
   servicePom.includes('<directory>../frontend/dist</directory>'),
   'service must package the compiled frontend output',
 );
+assert(
+  servicePom.includes('<artifactId>exec-maven-plugin</artifactId>') &&
+    servicePom.includes('<phase>generate-resources</phase>') &&
+    servicePom.includes('<argument>build</argument>'),
+  'service generate-resources must rebuild the Vue frontend before copying it',
+);
+assert(
+  servicePom.includes('<executable>${npm.executable}</executable>') &&
+    servicePom.includes('<family>Windows</family>') &&
+    servicePom.includes('<npm.executable>npm.cmd</npm.executable>'),
+  'service frontend build must use npm.cmd on Windows and remain cross-platform',
+);
 
 assert(
   fs.existsSync(path.join(root, 'frontend', 'package.json')),
   'missing independent frontend project',
+);
+const dockerfile = read('Dockerfile');
+assert(
+  dockerfile.includes('mvn -B -ntp -Dfrontend.build.skip=true verify'),
+  'Docker Maven stage must reuse the frontend-build output instead of requiring npm',
 );
 for (const asset of [
   path.join('frontend', 'index.html'),

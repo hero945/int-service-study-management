@@ -48,7 +48,11 @@ export const router = createRouter({
           path: 'risks',
           name: 'risks',
           component: RiskManagementView,
-          meta: { title: '风险管理', subtitle: '识别、评估和跟踪项目风险' },
+          meta: {
+            title: '风险管理',
+            subtitle: '识别、评估和跟踪项目风险',
+            requiredPermission: 'risk.page.view',
+          },
         },
         {
           path: 'team',

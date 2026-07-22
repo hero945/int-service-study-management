@@ -51,15 +51,120 @@ export interface Study {
   origin?: string
 }
 
-export interface Risk {
-  id: string
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
+export type RiskStatus = 'OPEN' | 'CLOSED'
+export type RiskActionStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+
+export interface RiskSummary {
+  riskCode: string
+  studyId: number
   studyCode: string
-  program: string
+  programCode: string
+  projectCode: string
+  functionCode: string
   functionName: string
   description: string
-  owner: string
-  severity: '低' | '中' | '高'
-  status: 'Open' | 'Monitoring' | 'Closed'
+  ownerUserId: number
+  ownerName: string
+  score: number
+  level: RiskLevel
+  status: RiskStatus
+  actionCount: number
+  version: number
+  updatedAt: string
+}
+
+export interface RiskAssessment {
+  id: number
+  number: number
+  impact: number
+  likelihood: number
+  detectability: number
+  score: number
+  level: RiskLevel
+  reason: string
+  assessedBy: string
+  assessedAt: string
+}
+
+export interface RiskAction {
+  id: number
+  description: string
+  ownerUserId: number
+  ownerName: string
+  plannedDate: string | null
+  completedDate: string | null
+  status: RiskActionStatus
+  completionNote: string
+  version: number
+}
+
+export interface RiskDetail {
+  risk: RiskSummary
+  registeredDate: string
+  closeReason: string
+  assessments: RiskAssessment[]
+  actions: RiskAction[]
+}
+
+export interface RiskPage {
+  data: RiskSummary[]
+  stats: { total: number; open: number; high: number; medium: number }
+  pagination: { page: number; pageSize: number; totalItems: number; totalPages: number }
+}
+
+export interface RiskQuery {
+  query?: string
+  functionCode?: string
+  status?: RiskStatus | ''
+  level?: RiskLevel | ''
+  sortBy?: 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate'
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
+export interface RiskStudyOption {
+  id: number
+  studyCode: string
+  programCode: string
+  projectCode: string
+}
+export interface RiskFunctionOption { id: number; code: string; name: string }
+export interface RiskMemberOption { id: number; email: string; displayName: string }
+export interface RiskFormOptions {
+  studies: RiskStudyOption[]
+  functions: RiskFunctionOption[]
+  owners: RiskMemberOption[]
+}
+export interface RiskAssessmentInput {
+  impact: number
+  likelihood: number
+  detectability: number
+  reason?: string
+}
+export interface RiskActionInput {
+  description: string
+  ownerUserId: number
+  plannedDate?: string
+  completedDate?: string
+  status?: RiskActionStatus
+  completionNote?: string
+}
+export interface CreateRiskInput {
+  studyId: number
+  functionLineId: number
+  ownerUserId: number
+  description: string
+  registeredDate?: string
+  assessment: RiskAssessmentInput
+  actions: RiskActionInput[]
+}
+export interface UpdateRiskInput extends Omit<CreateRiskInput, 'actions' | 'assessment'> {
+  expectedVersion: number
+  status: RiskStatus
+  statusReason?: string
+  assessment?: RiskAssessmentInput
 }
 
 export interface MonthlyReport {

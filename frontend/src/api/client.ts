@@ -13,7 +13,13 @@ import type {
   PlatformUser,
   PlatformPermission,
   PlatformRole,
-  Risk,
+  CreateRiskInput,
+  RiskActionInput,
+  RiskDetail,
+  RiskFormOptions,
+  RiskPage,
+  RiskQuery,
+  UpdateRiskInput,
   ProgramInput,
   ProgramUpdateInput,
   ProjectInput,
@@ -39,7 +45,15 @@ export interface ApiClient {
   logout(): Promise<void>
   getPipelineOverview(): Promise<PipelineOverview>
   listStudies(): Promise<Study[]>
-  listRisks(): Promise<Risk[]>
+  listRisks(query?: RiskQuery): Promise<RiskPage>
+  getRisk(riskCode: string): Promise<RiskDetail>
+  getRiskFormOptions(studyId?: number): Promise<RiskFormOptions>
+  createRisk(input: CreateRiskInput): Promise<RiskDetail>
+  updateRisk(riskCode: string, input: UpdateRiskInput): Promise<RiskDetail>
+  deleteRisk(riskCode: string, expectedVersion: number): Promise<void>
+  addRiskAction(riskCode: string, expectedRiskVersion: number, action: RiskActionInput): Promise<RiskDetail>
+  updateRiskAction(riskCode: string, actionId: number, expectedVersion: number, action: RiskActionInput): Promise<RiskDetail>
+  deleteRiskAction(riskCode: string, actionId: number, expectedVersion: number): Promise<RiskDetail>
   listMonthlyReports(month?: string): Promise<MonthlyReport[]>
   listTeamMatrix(query?: TeamMatrixQuery): Promise<TeamMatrixPage>
   replaceTeamAssignments(input: TeamMatrixBatchInput): Promise<TeamMatrixBatchResult>
@@ -140,7 +154,54 @@ export function createHttpApiClient(): ApiClient {
     getPipelineOverview: () =>
       request<PipelineOverview>('/api/v1/clinical-pipeline/overview'),
     listStudies: () => request<Study[]>('/api/v1/clinical-pipeline/studies'),
-    listRisks: () => request<Risk[]>('/api/v1/risk-management/risks'),
+    listRisks: (query = {}) => {
+      const parameters = new URLSearchParams()
+      parameters.set('page', String(query.page ?? 1))
+      parameters.set('pageSize', String(query.pageSize ?? 20))
+      parameters.set('sortBy', query.sortBy ?? 'updatedAt')
+      parameters.set('sortOrder', query.sortOrder ?? 'desc')
+      if (query.query) parameters.set('query', query.query)
+      if (query.functionCode) parameters.set('functionCode', query.functionCode)
+      if (query.status) parameters.set('status', query.status)
+      if (query.level) parameters.set('level', query.level)
+      return request<RiskPage>(`/api/v1/risk-management/risks?${parameters}`)
+    },
+    getRisk: (riskCode) => request<RiskDetail>(
+      `/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}`),
+    getRiskFormOptions: (studyId) => request<RiskFormOptions>(
+      `/api/v1/risk-management/form-options${studyId ? `?studyId=${studyId}` : ''}`),
+    async createRisk(input) {
+      await refreshCsrf()
+      return request<RiskDetail>('/api/v1/risk-management/risks', {
+        method: 'POST', body: JSON.stringify(input),
+      })
+    },
+    async updateRisk(riskCode, input) {
+      await refreshCsrf()
+      return request<RiskDetail>(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}`, {
+        method: 'PATCH', body: JSON.stringify(input),
+      })
+    },
+    async deleteRisk(riskCode, expectedVersion) {
+      await refreshCsrf()
+      return request(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}?expectedVersion=${expectedVersion}`, { method: 'DELETE' })
+    },
+    async addRiskAction(riskCode, expectedRiskVersion, action) {
+      await refreshCsrf()
+      return request<RiskDetail>(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}/actions`, {
+        method: 'POST', body: JSON.stringify({ expectedRiskVersion, action }),
+      })
+    },
+    async updateRiskAction(riskCode, actionId, expectedVersion, action) {
+      await refreshCsrf()
+      return request<RiskDetail>(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}/actions/${actionId}`, {
+        method: 'PATCH', body: JSON.stringify({ expectedVersion, action }),
+      })
+    },
+    async deleteRiskAction(riskCode, actionId, expectedVersion) {
+      await refreshCsrf()
+      return request<RiskDetail>(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}/actions/${actionId}?expectedVersion=${expectedVersion}`, { method: 'DELETE' })
+    },
     listMonthlyReports: (month) =>
       request<MonthlyReport[]>(
         `/api/v1/monthly-reports${month ? `?month=${encodeURIComponent(month)}` : ''}`,

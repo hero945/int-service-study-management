@@ -68,8 +68,9 @@ test -> 需要验证的模块
 `npm run dev` 将 `/api` 代理到本地 Spring Boot。mock 只用于页面开发和视觉回归，
 不得被描述为真实后端、生产权限或数据库。
 
-前后端当前以一个 Spring Boot 服务交付：Vite 先生成 `frontend/dist/`，Maven 再把
-该目录复制到后端 classpath。Maven 不负责安装 npm 依赖或自动执行 Vite 构建；
+前后端当前以一个 Spring Boot 服务交付：首次安装 npm 依赖后，Maven 在
+`generate-resources` 阶段执行 Vite 构建并生成 `frontend/dist/`，随后把该目录复制到
+后端 classpath；直接调用 `spring-boot:run` 时仍需显式先执行 `generate-resources`。
 Dockerfile 会按 Node 构建前端、Maven 构建后端的顺序完成这两步。除非任务明确要求
 改变部署方式，不要新增第二个生产运行时或第二套前端源代码。
 

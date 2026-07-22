@@ -47,6 +47,8 @@ public class SecurityConfig {
             .hasAuthority("role.page.view")
             .requestMatchers("/team")
             .hasAuthority("team.page.view")
+            .requestMatchers("/risks")
+            .hasAuthority("risk.page.view")
             .anyRequest()
             .authenticated())
         .formLogin(form -> form

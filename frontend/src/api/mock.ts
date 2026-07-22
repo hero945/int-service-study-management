@@ -7,6 +7,7 @@ import type {
   PipelineProject,
   PlatformPermission,
   PlatformRole,
+  RiskDetail,
   Study,
   TeamMatrixAssignment,
   TeamMatrixRole,
@@ -38,6 +39,11 @@ const users: Array<CurrentUser & { password: string }> = [
       'team.page.view',
       'team.edit_mode',
       'team.update',
+      'risk.page.view',
+      'risk.read',
+      'risk.create',
+      'risk.update',
+      'risk.delete',
     ],
     dataScope: 'ALL',
     password: '1234',
@@ -47,7 +53,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '张伟',
     title: '项目负责人 · PL',
     roles: ['USER'],
-    permissions: ['pipeline.page.view', 'study.read'],
+    permissions: ['pipeline.page.view', 'study.read', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -56,7 +62,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '刘洋',
     title: '质量观察员',
     roles: ['VIEWER'],
-    permissions: ['pipeline.page.view', 'study.read'],
+    permissions: ['pipeline.page.view', 'study.read', 'risk.page.view', 'risk.read'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -124,6 +130,25 @@ export const demoStudies: Study[] = [
     origin: '中国',
   },
 ]
+
+let nextRiskId = 19
+let nextRiskActionId = 2
+const mockRisks: RiskDetail[] = [{
+  risk: {
+    riskCode: 'RSK-2026-000018', studyId: 3, studyCode: 'HDM1005-302',
+    programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'RA',
+    functionName: '注册', description: '监管沟通窗口可能影响计划节点',
+    ownerUserId: 2, ownerName: '张伟', score: 48, level: 'HIGH', status: 'OPEN',
+    actionCount: 1, version: 0, updatedAt: '2026-07-22T09:00:00Z',
+  },
+  registeredDate: '2026-07-15', closeReason: '',
+  assessments: [{ id: 1, number: 1, impact: 4, likelihood: 4, detectability: 3,
+    score: 48, level: 'HIGH', reason: '首次评估', assessedBy: '张伟',
+    assessedAt: '2026-07-15T09:00:00Z' }],
+  actions: [{ id: 1, description: '每周跟踪监管沟通材料', ownerUserId: 2,
+    ownerName: '张伟', plannedDate: '2026-08-15', completedDate: null,
+    status: 'IN_PROGRESS', completionNote: '', version: 0 }],
+}]
 
 const teamRoles: TeamMatrixRole[] = [
   ['PL', 'PL 项目负责人', 'PM', '项目管理'],
@@ -314,19 +339,132 @@ export function createMockApiClient(): ApiClient {
     async listStudies() {
       return demoStudies
     },
-    async listRisks() {
-      return [
-        {
-          id: 'RSK-001',
-          studyCode: 'HDM1005-302',
-          program: 'HDM1005',
-          functionName: '注册',
-          description: '监管沟通窗口可能影响计划节点',
-          owner: '王芳',
-          severity: '中',
-          status: 'Open',
+    async listRisks(query = {}) {
+      const keyword = query.query?.trim().toLowerCase() ?? ''
+      const base = mockRisks.filter(({ risk }) =>
+        (!keyword || [risk.riskCode, risk.description, risk.ownerName, risk.programCode]
+          .some(value => value.toLowerCase().includes(keyword))) &&
+        (!query.functionCode || risk.functionCode === query.functionCode))
+      const filtered = base.filter(({ risk }) =>
+        (!query.status || risk.status === query.status) &&
+        (!query.level || risk.level === query.level))
+      const page = query.page ?? 1
+      const pageSize = query.pageSize ?? 20
+      return {
+        data: filtered.slice((page - 1) * pageSize, page * pageSize).map(item => item.risk),
+        stats: {
+          total: base.length,
+          open: base.filter(item => item.risk.status === 'OPEN').length,
+          high: base.filter(item => item.risk.level === 'HIGH').length,
+          medium: base.filter(item => item.risk.level === 'MEDIUM').length,
         },
-      ]
+        pagination: { page, pageSize, totalItems: filtered.length,
+          totalPages: Math.max(1, Math.ceil(filtered.length / pageSize)) },
+      }
+    },
+    async getRisk(riskCode) {
+      const risk = mockRisks.find(item => item.risk.riskCode === riskCode)
+      if (!risk) throw new Error('风险不存在')
+      return structuredClone(risk)
+    },
+    async getRiskFormOptions(studyId) {
+      return {
+        studies: demoStudies.map(study => ({ id: study.id, studyCode: study.code,
+          programCode: study.program ?? '', projectCode: study.project ?? '' })),
+        functions: studyId ? [
+          { id: 1, code: 'PM', name: '项目管理' },
+          { id: 2, code: 'RA', name: '注册' },
+          { id: 3, code: 'CLINICAL', name: '临床运营' },
+        ] : [],
+        owners: studyId ? users.map((item, index) => ({ id: index + 1,
+          email: item.username, displayName: item.displayName })) : [],
+      }
+    },
+    async createRisk(input) {
+      const study = demoStudies.find(item => item.id === input.studyId)!
+      const options = await this.getRiskFormOptions(input.studyId)
+      const fn = options.functions.find(item => item.id === input.functionLineId)!
+      const owner = options.owners.find(item => item.id === input.ownerUserId)!
+      const score = input.assessment.impact * input.assessment.likelihood * input.assessment.detectability
+      const level = score <= 12 ? 'LOW' : score <= 36 ? 'MEDIUM' : 'HIGH'
+      const now = new Date().toISOString()
+      const detail: RiskDetail = {
+        risk: { riskCode: `RSK-${new Date().getFullYear()}-${String(nextRiskId++).padStart(6, '0')}`,
+          studyId: study.id, studyCode: study.code, programCode: study.program ?? '',
+          projectCode: study.project ?? '', functionCode: fn.code, functionName: fn.name,
+          description: input.description, ownerUserId: owner.id, ownerName: owner.displayName,
+          score, level, status: 'OPEN', actionCount: input.actions.length, version: 0, updatedAt: now },
+        registeredDate: input.registeredDate ?? now.slice(0, 10), closeReason: '',
+        assessments: [{ id: Date.now(), number: 1, ...input.assessment, score, level,
+          reason: input.assessment.reason ?? '', assessedBy: currentUser?.displayName ?? '', assessedAt: now }],
+        actions: input.actions.map(action => ({ id: nextRiskActionId++, description: action.description,
+          ownerUserId: action.ownerUserId,
+          ownerName: options.owners.find(item => item.id === action.ownerUserId)?.displayName ?? '',
+          plannedDate: action.plannedDate ?? null, completedDate: action.completedDate ?? null,
+          status: action.status ?? 'OPEN', completionNote: action.completionNote ?? '', version: 0 })),
+      }
+      mockRisks.unshift(detail)
+      return structuredClone(detail)
+    },
+    async updateRisk(riskCode, input) {
+      const detail = mockRisks.find(item => item.risk.riskCode === riskCode)
+      if (!detail) throw new Error('风险不存在')
+      if (detail.risk.version !== input.expectedVersion) throw new Error('风险已被其他用户修改，请刷新后重试')
+      const options = await this.getRiskFormOptions(input.studyId)
+      const study = demoStudies.find(item => item.id === input.studyId)!
+      const fn = options.functions.find(item => item.id === input.functionLineId)!
+      const owner = options.owners.find(item => item.id === input.ownerUserId)!
+      Object.assign(detail.risk, { studyId: study.id, studyCode: study.code,
+        programCode: study.program ?? '', projectCode: study.project ?? '',
+        functionCode: fn.code, functionName: fn.name, ownerUserId: owner.id,
+        ownerName: owner.displayName, description: input.description, status: input.status,
+        version: detail.risk.version + 1, updatedAt: new Date().toISOString() })
+      detail.registeredDate = input.registeredDate ?? detail.registeredDate
+      detail.closeReason = input.statusReason ?? ''
+      if (input.assessment) {
+        const score = input.assessment.impact * input.assessment.likelihood * input.assessment.detectability
+        const level = score <= 12 ? 'LOW' : score <= 36 ? 'MEDIUM' : 'HIGH'
+        Object.assign(detail.risk, { score, level })
+        detail.assessments.unshift({ id: Date.now(), number: detail.assessments.length + 1,
+          ...input.assessment, score, level, reason: input.assessment.reason ?? '',
+          assessedBy: currentUser?.displayName ?? '', assessedAt: new Date().toISOString() })
+      }
+      return structuredClone(detail)
+    },
+    async deleteRisk(riskCode, expectedVersion) {
+      const index = mockRisks.findIndex(item => item.risk.riskCode === riskCode)
+      if (index < 0 || mockRisks[index].risk.version !== expectedVersion) throw new Error('风险不存在或版本已变化')
+      mockRisks.splice(index, 1)
+    },
+    async addRiskAction(riskCode, expectedRiskVersion, action) {
+      const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      if (detail.risk.version !== expectedRiskVersion) throw new Error('风险版本已变化')
+      const options = await this.getRiskFormOptions(detail.risk.studyId)
+      detail.actions.push({ id: nextRiskActionId++, description: action.description,
+        ownerUserId: action.ownerUserId,
+        ownerName: options.owners.find(item => item.id === action.ownerUserId)?.displayName ?? '',
+        plannedDate: action.plannedDate ?? null, completedDate: action.completedDate ?? null,
+        status: action.status ?? 'OPEN', completionNote: action.completionNote ?? '', version: 0 })
+      detail.risk.actionCount = detail.actions.length
+      detail.risk.version++
+      return structuredClone(detail)
+    },
+    async updateRiskAction(riskCode, actionId, expectedVersion, action) {
+      const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      const target = detail.actions.find(item => item.id === actionId)!
+      if (target.version !== expectedVersion) throw new Error('措施版本已变化')
+      Object.assign(target, action, { version: target.version + 1 })
+      detail.risk.version++
+      return structuredClone(detail)
+    },
+    async deleteRiskAction(riskCode, actionId, expectedVersion) {
+      const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      const index = detail.actions.findIndex(item => item.id === actionId && item.version === expectedVersion)
+      if (index < 0) throw new Error('措施不存在或版本已变化')
+      detail.actions.splice(index, 1)
+      detail.risk.actionCount = detail.actions.length
+      detail.risk.version++
+      return structuredClone(detail)
     },
     async listMonthlyReports() {
       return []
