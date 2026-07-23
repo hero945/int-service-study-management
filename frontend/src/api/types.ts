@@ -307,6 +307,77 @@ export interface MonthlyEntryUpdateInput {
   content?: string
 }
 
+export type MonthlyExportScopeType = 'ALL' | 'TA' | 'PROGRAM'
+
+export interface MonthlyExportQuery {
+  startDate: string
+  endDate: string
+  scopeType: MonthlyExportScopeType
+  taIds?: number[]
+  programIds?: number[]
+}
+
+export interface MonthlyExportMeta {
+  startDate: string
+  endDate: string
+  scopeType: MonthlyExportScopeType
+  scopeLabels: string[]
+  generatedAt: string
+}
+
+export interface MonthlyExportSummary {
+  total: number
+  notStarted: number
+  inProgress: number
+  completed: number
+  reportedStudyCount: number
+  openRiskCount: number
+}
+
+export interface MonthlyExportSnapshotRow {
+  programCode: string
+  productName: string
+  studyCode: string
+  indication: string
+  phase: string
+  projectStatus: string
+}
+
+export interface MonthlyExportSnapshotGroup {
+  taCode: string
+  taName: string
+  rows: MonthlyExportSnapshotRow[]
+}
+
+export interface MonthlyExportProgressItem {
+  studyCode: string
+  programCode: string
+  taName: string
+  entryDate: string
+  functionCode: string
+  functionName: string
+  content: string
+}
+
+export interface MonthlyExportRiskItem {
+  riskCode: string
+  programCode: string
+  description: string
+  score: number
+  level: string
+  ownerName: string
+}
+
+export interface MonthlyExportReport {
+  meta: MonthlyExportMeta
+  summary: MonthlyExportSummary
+  snapshotGroups: MonthlyExportSnapshotGroup[]
+  progress: MonthlyExportProgressItem[]
+  openRisks: MonthlyExportRiskItem[]
+}
+
+export type MonthlyExportFormat = 'html' | 'csv' | 'xlsx'
+
 export interface TeamMatrixStudy {
   studyId: number
   studyCode: string

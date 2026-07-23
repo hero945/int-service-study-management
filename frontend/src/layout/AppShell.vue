@@ -39,7 +39,9 @@ const navItems = computed(() => [
   ...(user.value?.permissions.includes('config.page.view')
     ? [{ label: '管线配置', icon: '⚙', to: '/config' }]
     : []),
-  { label: '月报导出', icon: '⭳', to: '/reports' },
+  ...(user.value?.permissions.includes('report.page.view')
+    ? [{ label: '月报导出', icon: '⭳', to: '/reports' }]
+    : []),
   ...(user.value?.permissions.includes('account.page.view')
     ? [{ label: '账号管理', icon: '⚷', to: '/accounts' }]
     : []),

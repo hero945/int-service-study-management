@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.StringJoiner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
@@ -75,6 +76,35 @@ public class JdbcRiskRepository implements RiskRepository {
         """ + filtered + " ORDER BY " + sort + " " + order + ", r.id DESC LIMIT ? OFFSET ?",
         (rs, row) -> summary(rs), args.toArray());
     return new RiskPage(data, stats, query.page(), query.pageSize(), total);
+  }
+
+  @Override
+  public List<RiskSummary> findOpenByStudyIds(StudyAccessScope scope, List<Long> studyIds) {
+    if (studyIds == null || studyIds.isEmpty()) {
+      return List.of();
+    }
+    List<Object> args = new ArrayList<>();
+    StringJoiner placeholders = new StringJoiner(", ");
+    for (Long studyId : studyIds) {
+      placeholders.add("?");
+      args.add(studyId);
+    }
+    StringBuilder sql = new StringBuilder("""
+        SELECT r.risk_code, r.study_id, r.study_code_snapshot,
+          r.program_code_snapshot, r.project_code_snapshot,
+          r.function_line_code_snapshot, r.function_line_name_snapshot,
+          r.risk_description, r.owner_user_id, r.owner_name_snapshot,
+          r.current_score, r.current_level_code, r.status_code,
+          (SELECT COUNT(*) FROM hd_plt_risk_action a
+             WHERE a.risk_id = r.id AND a.sys_deleted = 0) action_count,
+          r.row_version, r.sys_update_time
+        FROM hd_plt_risk r
+        WHERE r.sys_deleted = 0 AND r.status_code = 'OPEN'
+          AND r.study_id IN (""");
+    sql.append(placeholders).append(")");
+    sql.append(scopeClause(scope, args, "r.study_id"));
+    sql.append(" ORDER BY r.current_score DESC, r.risk_code");
+    return jdbc.query(sql.toString(), (rs, row) -> summary(rs), args.toArray());
   }
 
   @Override

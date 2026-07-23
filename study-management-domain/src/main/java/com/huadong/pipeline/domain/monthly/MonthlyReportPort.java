@@ -63,7 +63,25 @@ public interface MonthlyReportPort {
   /** Previous-month history entries for a function line (report_month IN given months). */
   List<HistoryEntry> findHistoryEntries(long studyId, long functionLineId, List<LocalDate> reportMonths);
 
+  /**
+   * Non-empty progress entries for export: studyIds ∩ entryDate ∈ [start, end],
+   * ordered by entry date then study then function line.
+   */
+  List<ExportProgressEntry> findProgressEntries(
+      List<Long> studyIds, LocalDate startDate, LocalDate endDate);
+
   // ──────────── records ────────────
+
+  record ExportProgressEntry(
+      long studyId,
+      String studyCode,
+      String programCode,
+      String taName,
+      LocalDate entryDate,
+      String functionCode,
+      String functionName,
+      String content) {}
+
 
   record StudyRef(long id, String studyCode,
                   long programId, String programCode, String productName,

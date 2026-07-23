@@ -15,6 +15,9 @@ import type {
   MonthlyReportEntry,
   MonthlyReportPage,
   FunctionLineHistory,
+  MonthlyExportFormat,
+  MonthlyExportQuery,
+  MonthlyExportReport,
   StageProjection,
   OverviewArea,
   OverviewProject,
@@ -57,6 +60,8 @@ const users: Array<CurrentUser & { password: string }> = [
       'monthly.read',
       'monthly.create',
       'monthly.update',
+      'report.page.view',
+      'report.export',
     ],
     dataScope: 'ALL',
     password: '1234',
@@ -66,7 +71,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '张伟',
     title: '项目负责人 · PL',
     roles: ['USER'],
-    permissions: ['pipeline.page.view', 'study.read', 'milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
+    permissions: ['pipeline.page.view', 'study.read', 'milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'report.page.view', 'report.export', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -75,7 +80,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '刘洋',
     title: '质量观察员',
     roles: ['VIEWER'],
-    permissions: ['pipeline.page.view', 'study.read', 'monthly.read', 'risk.page.view', 'risk.read'],
+    permissions: ['pipeline.page.view', 'study.read', 'monthly.read', 'report.page.view', 'risk.page.view', 'risk.read'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -963,6 +968,23 @@ export function createMockApiClient(): ApiClient {
       }
       return result
     },
+    async previewMonthlyExport(query) {
+      await delay(180)
+      return buildMockMonthlyExport(query, therapeuticAreas, programs)
+    },
+    async downloadMonthlyExport(query, format) {
+      await delay(180)
+      const report = buildMockMonthlyExport(query, therapeuticAreas, programs)
+      const blob = mockExportBlob(report, format)
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = `研发管线月报_${query.startDate}_${query.endDate}.${format}`
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    },
     async listTeamMatrix(query = {}) {
       const studyQuery = query.studyQuery?.trim().toLowerCase() ?? ''
       const roleQuery = query.roleQuery?.trim().toLowerCase() ?? ''
@@ -1323,4 +1345,135 @@ export function createMockApiClient(): ApiClient {
       return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '' }
     },
   }
+}
+
+function buildMockMonthlyExport(
+  query: MonthlyExportQuery,
+  therapeuticAreas: TherapeuticArea[],
+  programs: PipelineProgram[],
+): MonthlyExportReport {
+  if (!query.startDate || !query.endDate) {
+    throw new Error('请选择汇报开始与结束日期')
+  }
+  if (query.endDate < query.startDate) {
+    throw new Error('结束日期不能早于开始日期')
+  }
+  let scoped = [...demoStudies]
+  let scopeLabels = ['全部项目']
+  if (query.scopeType === 'TA') {
+    if (!query.taIds?.length) throw new Error('请至少选择一个治疗领域')
+    const selected = therapeuticAreas.filter((area) => query.taIds!.includes(area.id))
+    const codes = new Set(selected.map((area) => area.code))
+    scoped = demoStudies.filter((study) => codes.has(study.therapeuticAreaCode ?? ''))
+    scopeLabels = selected.map((area) => area.name || area.code)
+  } else if (query.scopeType === 'PROGRAM') {
+    if (!query.programIds?.length) throw new Error('请至少选择一个 Program')
+    const selected = programs.filter((program) => query.programIds!.includes(program.id))
+    const codes = new Set(selected.map((program) => program.code))
+    scoped = demoStudies.filter((study) => codes.has(study.programCode ?? ''))
+    scopeLabels = selected.map((program) => program.code)
+  }
+
+  const progress = scoped.flatMap((study) => {
+    const page = mockMonthlyPages.get(`${study.id}|${query.startDate.slice(0, 7)}`)
+      ?? getMockMonthlyPage(study.id, query.startDate.slice(0, 7))
+    return page.functionLines.flatMap((line) =>
+      line.entries
+        .filter((entry) => entry.entryDate >= query.startDate && entry.entryDate <= query.endDate
+          && entry.content.trim())
+        .map((entry) => ({
+          studyCode: study.code,
+          programCode: study.programCode ?? '',
+          taName: study.therapeuticAreaName ?? '',
+          entryDate: entry.entryDate,
+          functionCode: line.functionCode,
+          functionName: line.functionName,
+          content: entry.content,
+        })))
+  })
+
+  const openRisks = mockRisks
+    .filter((item) => item.risk.status === 'OPEN'
+      && scoped.some((study) => study.id === item.risk.studyId))
+    .map((item) => ({
+      riskCode: item.risk.riskCode,
+      programCode: item.risk.programCode,
+      description: item.risk.description,
+      score: item.risk.score,
+      level: item.risk.level,
+      ownerName: item.risk.ownerName,
+    }))
+
+  const groupMap = new Map<string, MonthlyExportReport['snapshotGroups'][number]>()
+  for (const study of scoped) {
+    const key = `${study.therapeuticAreaCode ?? ''}\0${study.therapeuticAreaName ?? ''}`
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        taCode: study.therapeuticAreaCode ?? '',
+        taName: study.therapeuticAreaName ?? '',
+        rows: [],
+      })
+    }
+    groupMap.get(key)!.rows.push({
+      programCode: study.programCode ?? '',
+      productName: study.productName ?? '',
+      studyCode: study.code,
+      indication: study.indication,
+      phase: study.phase,
+      projectStatus: deriveMockStatus(study),
+    })
+  }
+
+  return {
+    meta: {
+      startDate: query.startDate,
+      endDate: query.endDate,
+      scopeType: query.scopeType,
+      scopeLabels,
+      generatedAt: new Date().toISOString(),
+    },
+    summary: {
+      total: scoped.length,
+      notStarted: scoped.filter((s) => deriveMockStatus(s) === '未开始').length,
+      inProgress: scoped.filter((s) => deriveMockStatus(s) === '进行中').length,
+      completed: scoped.filter((s) => deriveMockStatus(s) === '已完成').length,
+      reportedStudyCount: new Set(progress.map((item) => item.studyCode)).size,
+      openRiskCount: openRisks.length,
+    },
+    snapshotGroups: [...groupMap.values()],
+    progress,
+    openRisks,
+  }
+}
+
+/** Mock approximates milestone-based export status from Study list fields. */
+function deriveMockStatus(study: Study): string {
+  if (study.status === 'COMPLETED' || study.statusLabel === '已完成') return '已完成'
+  if (study.status === 'ACTIVE' || study.statusLabel === '进行中') return '进行中'
+  return '未开始'
+}
+
+function mockExportBlob(report: MonthlyExportReport, format: MonthlyExportFormat): Blob {
+  if (format === 'csv') {
+    const lines = [
+      '汇报开始,汇报结束,TA,Program,Study,功能线代码,功能线名称,进展日期,月报进展',
+      ...report.progress.map((item) =>
+        [report.meta.startDate, report.meta.endDate, item.taName, item.programCode,
+          item.studyCode, item.functionCode, item.functionName, item.entryDate, item.content]
+          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
+          .join(',')),
+    ]
+    return new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' })
+  }
+  if (format === 'xlsx') {
+    return new Blob([JSON.stringify(report)], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+  }
+  const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>临床研发管线月度报告</title></head>
+<body><h1>临床研发管线月度报告</h1>
+<p>${report.meta.startDate} 至 ${report.meta.endDate} · ${report.meta.scopeLabels.join('、')}</p>
+<p>Study ${report.summary.total} · 进展 ${report.progress.length} · Open 风险 ${report.summary.openRiskCount}</p>
+</body></html>`
+  return new Blob([html], { type: 'text/html;charset=utf-8' })
 }

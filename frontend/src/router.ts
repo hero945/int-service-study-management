@@ -100,7 +100,11 @@ export const router = createRouter({
           path: 'reports',
           name: 'reports',
           component: MonthlyExportView,
-          meta: { title: '月报导出', subtitle: '汇总并导出月度进展' },
+          meta: {
+            title: '月报导出',
+            subtitle: '汇总并导出月度进展',
+            requiredPermission: 'report.page.view',
+          },
         },
         {
           path: 'accounts',

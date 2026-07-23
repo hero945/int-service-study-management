@@ -8,6 +8,10 @@ import java.util.Optional;
 
 public interface RiskRepository {
   RiskPage findPage(StudyAccessScope scope, RiskQuery query);
+
+  /** Open risks for the given study ids (already scope-filtered caller-side). */
+  List<RiskSummary> findOpenByStudyIds(StudyAccessScope scope, List<Long> studyIds);
+
   Optional<RiskDetail> findDetail(StudyAccessScope scope, String riskCode);
   FormOptions findFormOptions(StudyAccessScope scope, Long studyId);
   Optional<StudyContext> findStudy(StudyAccessScope scope, long studyId);
