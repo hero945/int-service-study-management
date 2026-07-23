@@ -46,7 +46,9 @@ public class StudyApiService implements StudyApi {
                             study.globallyCompleted(),
                             study.currentPhaseCompleted(),
                             study.startDate(),
-                            study.updatedAt()))
+                            study.updatedAt(),
+                            study.plName(),
+                            study.pmName()))
                         .toList()))
                 .toList()))
         .toList();

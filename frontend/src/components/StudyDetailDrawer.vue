@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { apiClient } from '../api/client'
-import type { Study, MilestonePage, MonthlyReportPage, RiskPage, TeamMatrixPage } from '../api/types'
+import type { Study, MilestonePage, RiskPage, TeamMatrixPage } from '../api/types'
 import PageState from '../components/PageState.vue'
 
 const props = defineProps<{
@@ -11,17 +11,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 
-type TabKey = 'milestone' | 'monthly' | 'team' | 'risk'
+type TabKey = 'milestone' | 'team' | 'risk'
 const activeTab = ref<TabKey>('milestone')
 
 // ── per-tab state ──
 const milestoneLoading = ref(false)
 const milestoneError = ref('')
 const milestoneData = ref<MilestonePage>()
-
-const monthlyLoading = ref(false)
-const monthlyError = ref('')
-const monthlyData = ref<MonthlyReportPage>()
 
 const teamLoading = ref(false)
 const teamError = ref('')
@@ -40,17 +36,10 @@ const teamCount = computed(() => {
     .reduce((sum, a) => sum + a.members.length, 0)
 })
 
-// current month string YYYY-MM
-const currentMonth = (() => {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-})()
-
 watch(() => props.open, (val) => {
   if (val && props.study) {
     activeTab.value = 'milestone'
     loadMilestone()
-    loadMonthly()
     loadTeam()
     loadRisks()
   }
@@ -63,15 +52,6 @@ function loadMilestone() {
     .then(d => { milestoneData.value = d })
     .catch(e => { milestoneError.value = e instanceof Error ? e.message : '里程碑加载失败' })
     .finally(() => { milestoneLoading.value = false })
-}
-
-function loadMonthly() {
-  if (!props.study) return
-  monthlyLoading.value = true; monthlyError.value = ''
-  apiClient.getMonthlyReports(props.study.id, currentMonth)
-    .then(d => { monthlyData.value = d })
-    .catch(e => { monthlyError.value = e instanceof Error ? e.message : '月度进展加载失败' })
-    .finally(() => { monthlyLoading.value = false })
 }
 
 async function loadTeam() {
@@ -160,7 +140,6 @@ const teamHasMembers = computed(() => teamRoles.value.some(r => r.members.length
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'milestone', label: '里程碑' },
-  { key: 'monthly', label: '月度进展' },
   { key: 'team', label: '团队' },
   { key: 'risk', label: '风险' },
 ]
@@ -224,27 +203,6 @@ const tabs: { key: TabKey; label: string }[] = [
                       </tr>
                     </tbody>
                   </table>
-                </div>
-              </div>
-            </PageState>
-          </section>
-
-          <!-- ── monthly progress ── -->
-          <section v-show="activeTab === 'monthly'" role="tabpanel" class="drawer-panel">
-            <PageState :loading="monthlyLoading" :error="monthlyError" :empty="!monthlyData?.functionLines.length" empty-title="暂无月度进展">
-              <div v-if="monthlyData" class="drawer-monthly">
-                <div v-for="line in monthlyData.functionLines" :key="line.functionLineId" class="mp-line">
-                  <div class="mp-line-header">
-                    <span class="mp-line-code">{{ line.functionCode }}</span>
-                    <span class="mp-line-name">{{ line.functionName }}</span>
-                  </div>
-                  <div v-if="line.entries.length" class="mp-entries">
-                    <div v-for="entry in line.entries" :key="entry.entryId" class="mp-entry">
-                      <span class="mp-entry-date mono">{{ entry.entryDate.slice(0, 10) }}</span>
-                      <span class="mp-entry-content">{{ entry.content }}</span>
-                    </div>
-                  </div>
-                  <p v-else class="mp-empty">本月暂无进展记录</p>
                 </div>
               </div>
             </PageState>

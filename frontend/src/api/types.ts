@@ -33,6 +33,8 @@ export interface OverviewStudy {
   currentPhaseCompleted: boolean
   startDate: string | null
   updatedAt: string
+  plName?: string
+  pmName?: string
 }
 
 export interface OverviewProject {

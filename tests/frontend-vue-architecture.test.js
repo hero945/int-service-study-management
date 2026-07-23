@@ -184,6 +184,23 @@ test('pipeline overview keeps sticky id columns and stacked project/study drawer
   assert.match(overview, /colspan="3"/);
   assert.match(overview, /pipeline-stage-wrap/);
   assert.match(overview, /cell-stage-caption/);
+  assert.match(overview, /pipeline-hover-tip/);
+  assert.match(overview, /showCellTip/);
+  assert.doesNotMatch(overview, /legend-bar/);
+  assert.doesNotMatch(overview, /quick-metrics/);
+  assert.doesNotMatch(overview, /filter-bar/);
+  assert.match(overview, /page-toolbar/);
+  assert.match(overview, /filter-group/);
+  assert.match(overview, /filter-field/);
+  assert.match(overview, /filter-field__label/);
+  assert.match(overview, /filter-count/);
+  assert.match(mainCss, /\.filter-group\s*\{/s);
+  assert.match(mainCss, /\.filter-field\s*\{/s);
+  assert.match(mainCss, /\.filter-select\s*\{/s);
+  assert.match(mainCss, /\.filter-count\s*\{/s);
+  assert.match(studyList, /page-toolbar/);
+  assert.match(studyList, /filter-group/);
+  assert.match(studyList, /filter-field/);
   assert.match(overview, /openProjectDrawer/);
   assert.match(overview, /toStudy/);
 

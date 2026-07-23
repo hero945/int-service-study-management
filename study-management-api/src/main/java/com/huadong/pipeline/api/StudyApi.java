@@ -69,7 +69,9 @@ public interface StudyApi {
       boolean globallyCompleted,
       boolean currentPhaseCompleted,
       LocalDate startDate,
-      LocalDateTime updatedAt) {
+      LocalDateTime updatedAt,
+      String plName,
+      String pmName) {
   }
 
   record OverviewProjectResponse(

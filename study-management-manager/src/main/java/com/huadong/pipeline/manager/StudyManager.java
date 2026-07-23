@@ -144,13 +144,16 @@ public class StudyManager {
         .flatMap(project -> project.studies().stream())
         .map(OverviewStudy::id)
         .toList();
+    Set<Long> studyIdSet = Set.copyOf(studyIds);
     Map<Long, List<PersistedMilestone>> milestonesByStudy = studyMilestones.findByStudyIds(studyIds)
         .stream()
         .collect(Collectors.groupingBy(PersistedMilestone::studyId));
+    Map<Long, String> plNames = team.findRoleMemberNames(studyIdSet, "PL");
+    Map<Long, String> pmNames = team.findRoleMemberNames(studyIdSet, "PM");
 
     // Override each study's status with its milestone-derived status where milestones exist.
     List<OverviewProject> enriched = projects.stream()
-        .map(project -> enrichProject(project, milestonesByStudy))
+        .map(project -> enrichProject(project, milestonesByStudy, plNames, pmNames))
         .toList();
 
     Map<String, List<OverviewProject>> projectsByArea = new LinkedHashMap<>();
@@ -167,17 +170,22 @@ public class StudyManager {
   }
 
   private OverviewProject enrichProject(
-      OverviewProject project, Map<Long, List<PersistedMilestone>> milestonesByStudy) {
+      OverviewProject project,
+      Map<Long, List<PersistedMilestone>> milestonesByStudy,
+      Map<Long, String> plNames,
+      Map<Long, String> pmNames) {
     List<OverviewStudy> enrichedStudies = project.studies().stream()
         .map(study -> {
+          String plName = plNames.getOrDefault(study.id(), "");
+          String pmName = pmNames.getOrDefault(study.id(), "");
           List<PersistedMilestone> milestones = milestonesByStudy.get(study.id());
           if (milestones == null || milestones.isEmpty()) {
-            return study; // no milestone data → keep date-based status from repository
+            return withOwners(study, plName, pmName);
           }
           MilestoneManager.MilestoneOverviewStatus derived =
               milestoneManager.computeOverviewStatus(milestones);
           if (derived == null) {
-            return study;
+            return withOwners(study, plName, pmName);
           }
           return new OverviewStudy(
               study.id(), study.code(), study.phase(), derived.status(),
@@ -185,13 +193,22 @@ public class StudyManager {
               derived.mainStageCode(), derived.mainStageLabel(),
               derived.subStatusLabel(),
               derived.preindCompleted(), derived.indCompleted(), derived.globallyCompleted(),
-              derived.currentPhaseCompleted());
+              derived.currentPhaseCompleted(), plName, pmName);
         })
         .toList();
     return new OverviewProject(
         project.id(), project.code(), project.indication(), project.programCode(),
         project.productName(), project.moa(), project.sourceCode(), project.originCode(),
         project.therapeuticAreaCode(), project.therapeuticAreaName(), enrichedStudies);
+  }
+
+  private static OverviewStudy withOwners(OverviewStudy study, String plName, String pmName) {
+    return new OverviewStudy(
+        study.id(), study.code(), study.phase(), study.status(),
+        study.startDate(), study.updatedAt(),
+        study.mainStageCode(), study.mainStageLabel(), study.subStatusLabel(),
+        study.preindCompleted(), study.indCompleted(), study.globallyCompleted(),
+        study.currentPhaseCompleted(), plName, pmName);
   }
 
   private StudyAccessScope accessScope(String username) {

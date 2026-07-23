@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { OverviewProject, OverviewStudy, PipelineOverview, Study } from '../api/types'
@@ -9,7 +9,7 @@ import {
   sourceLabel,
   type PipelinePhase,
 } from '../domain/pipeline-status'
-import { furthestPhaseOf, getProjectCell } from '../domain/pipeline-aggregation'
+import { getProjectCell, type ProjectCell } from '../domain/pipeline-aggregation'
 import PageState from '../components/PageState.vue'
 import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
@@ -20,18 +20,48 @@ interface ProjectRow extends OverviewProject {
   therapeuticAreaName: string
 }
 
+interface HoverTip {
+  stage: string
+  status: string
+  explanation?: string
+  updated: string
+  owner: string
+  tone: string
+  x: number
+  y: number
+}
+
+const TA_OPTIONS = ['肿瘤', '自身免疫', '代谢与心血管', '呼吸系统', '感染性疾病', '神经科学']
+// 阶段/状态与 Study 列表、MilestoneDefinition 对齐
+const PHASE_OPTIONS = ['PreIND', 'IND', 'Pre3', 'Protocol', 'SSU', 'Enrollment', 'IA', 'Data & Report', 'PreNDA/BLA', 'NDA/BLA']
+const STATUS_BY_PHASE: Record<string, string[]> = {
+  PreIND: ['PreIND 递交', 'PreIND 反馈-临床医学', 'PreIND 反馈-数统', 'PreIND 反馈-临床药理', 'PreIND 反馈-非临床', 'PreIND 反馈-药学'],
+  IND: ['IND 递交', 'IND 形审发补', 'IND 形审补正', 'IND 受理', 'IND 获批'],
+  Pre3: ['Pre3 递交', 'Pre3 反馈-临床医学', 'Pre3 反馈-数统', 'Pre3 反馈-临床药理', 'Pre3 反馈-非临床', 'Pre3 反馈-药学'],
+  Protocol: ['方案摘要定稿', '方案讨论会', '方案定稿'],
+  SSU: [
+    '组长单位立项递交', '组长单位立项获批', '组长单位伦理递交', '组长单位伦理获批',
+    '组长单位合同签署', '首家中心启动', '组长单位启动', '所有中心启动',
+    '人遗递交', '人遗批准', 'CDE 平台登记', 'ClinicalTrial 登记',
+  ],
+  Enrollment: ['FPI', 'LPI', 'LPO'],
+  IA: ['IA 数据冻结', 'IA 数据分析'],
+  'Data & Report': ['DBL', 'TLR初稿', 'TLR定稿', 'TFL初稿', 'TFL定稿', 'CSR初稿', 'CSR定稿', '中心关闭'],
+  'PreNDA/BLA': ['PreNDA 递交', 'PreNDA 反馈-临床医学', 'PreNDA 反馈-数统', 'PreNDA 反馈-临床药理', 'PreNDA 反馈-非临床', 'PreNDA 反馈-药学'],
+  'NDA/BLA': [
+    'NDA/BLA 递交', 'NDA/BLA 形审发补', 'NDA/BLA 形审补正', 'NDA/BLA 受理',
+    '临床核查', '药学核查', 'NDA/BLA 发补', 'NDA/BLA 补正', 'NDA/BLA 获批',
+  ],
+}
+
 const router = useRouter()
 const phases = PHASE_TAGS
 const overview = ref<PipelineOverview>()
 const loading = ref(true)
 const errorMessage = ref('')
+const hoverTip = ref<HoverTip | null>(null)
 
-// 筛选状态
-const query = ref('')
-const therapeuticArea = ref('全部')
-const program = ref('全部')
-const phaseFilter = ref<'全部' | PipelinePhase>('全部')
-const statusFilter = ref('')
+const filters = reactive({ ta: '', program: '', phase: '', status: '' })
 
 const projectDrawerOpen = ref(false)
 const selectedProject = ref<OverviewProject | null>(null)
@@ -46,48 +76,30 @@ const allProjects = computed<ProjectRow[]>(() =>
       therapeuticAreaCode: area.therapeuticAreaCode,
       therapeuticAreaName: area.therapeuticAreaName,
     }))))
-const allStudies = computed(() => allProjects.value.flatMap((project) => project.studies))
 
-const areas = computed(() => [
-  '全部',
-  ...new Set(allProjects.value.map((p) => p.therapeuticAreaName).filter(Boolean)),
-])
-const programs = computed(() => [
-  '全部',
-  ...new Set(allProjects.value.map((p) => p.programCode).filter(Boolean)),
-])
-const phaseOptions = computed(() => ['全部', ...phases] as const)
-
-// quick chip：从全部 study 按 StudyStatus 统计
-const statusMetrics = computed(() => {
-  const defs = [
-    { status: 'PLANNED', label: '计划中', tone: 'neutral' },
-    { status: 'ACTIVE', label: '进行中', tone: 'positive' },
-    { status: 'ON_HOLD', label: '已暂停', tone: 'warning' },
-    { status: 'COMPLETED', label: '已完成', tone: 'info' },
-  ] as const
-  return defs.map((def) => ({
-    ...def,
-    count: allStudies.value.filter((s) => s.status === def.status).length,
-  }))
+const statusOptions = computed(() => {
+  if (!filters.phase) return []
+  return STATUS_BY_PHASE[filters.phase] ?? []
 })
 
-// project 级筛选（TA / Program / 状态 / 阶段 / 关键词）
+function onPhaseChange() {
+  filters.status = ''
+}
+
+function studyMatchesFilters(study: OverviewStudy): boolean {
+  if (filters.phase && study.mainStageLabel !== filters.phase) return false
+  if (filters.status && study.subStatusLabel !== filters.status) return false
+  return true
+}
+
+// project 级筛选：TA / Program 文本 / 里程碑阶段·状态（任一 study 命中即保留行）
 const filteredProjects = computed(() => allProjects.value.filter((project) => {
-  const text = [
-    project.code,
-    project.indication,
-    project.productName,
-    project.programCode,
-    ...project.studies.map((s) => s.code),
-  ].join(' ').toLowerCase()
-  const matchesQuery = text.includes(query.value.toLowerCase())
-  const matchesArea =
-    therapeuticArea.value === '全部' || project.therapeuticAreaName === therapeuticArea.value
-  const matchesProgram = program.value === '全部' || project.programCode === program.value
-  const matchesStatus = !statusFilter.value || project.studies.some((s) => s.status === statusFilter.value)
-  const matchesPhase = phaseFilter.value === '全部' || furthestPhaseOf(project.studies) === phaseFilter.value
-  return matchesQuery && matchesArea && matchesProgram && matchesStatus && matchesPhase
+  if (filters.ta && project.therapeuticAreaName !== filters.ta) return false
+  if (filters.program && !project.programCode.toLowerCase().includes(filters.program.toLowerCase())) {
+    return false
+  }
+  if ((filters.phase || filters.status) && !project.studies.some(studyMatchesFilters)) return false
+  return true
 }))
 
 // 筛选后按 TA 重新分组展示
@@ -105,27 +117,59 @@ const areaGroups = computed(() => {
   }))
 })
 const resultCount = computed(() => filteredProjects.value.length)
-const hasActiveFilter = computed(() =>
-  query.value !== '' ||
-  therapeuticArea.value !== '全部' ||
-  program.value !== '全部' ||
-  phaseFilter.value !== '全部' ||
-  statusFilter.value !== '')
 
-const cell = (project: OverviewProject, phase: PipelinePhase) => getProjectCell(project.studies, phase)
+const tipStyle = computed(() => {
+  const tip = hoverTip.value
+  if (!tip) return {}
+  const width = 210
+  const left = Math.min(tip.x + 14, (typeof window !== 'undefined' ? window.innerWidth : 1400) - width - 12)
+  const top = Math.min(tip.y + 16, (typeof window !== 'undefined' ? window.innerHeight : 800) - 120)
+  return { left: `${left}px`, top: `${top}px` }
+})
 
-function toggleStatus(status: string) {
-  statusFilter.value = statusFilter.value === status ? '' : status
+function cell(project: OverviewProject, phase: PipelinePhase): ProjectCell {
+  return getProjectCell(
+    project.studies.map((study) => ({
+      ...study,
+      productName: project.productName,
+    })),
+    phase,
+  )
 }
-function clearFilters() {
-  query.value = ''
-  therapeuticArea.value = '全部'
-  program.value = '全部'
-  phaseFilter.value = '全部'
-  statusFilter.value = ''
-}
+
 function openStudy(studyId?: number) {
   if (studyId != null) router.push(`/milestones/${studyId}`)
+}
+
+function showCellTip(event: MouseEvent, project: OverviewProject, phase: PipelinePhase) {
+  const item = cell(project, phase)
+  if (item.tone === 'empty' || !item.tipStage || !item.tipStatus) {
+    hoverTip.value = null
+    return
+  }
+  hoverTip.value = {
+    stage: item.tipStage,
+    status: item.tipStatus,
+    explanation: item.explanation,
+    updated: item.tipUpdated || '—',
+    owner: item.tipOwner || '—',
+    tone: item.tone,
+    x: event.clientX,
+    y: event.clientY,
+  }
+}
+
+function moveCellTip(event: MouseEvent) {
+  if (!hoverTip.value) return
+  hoverTip.value = {
+    ...hoverTip.value,
+    x: event.clientX,
+    y: event.clientY,
+  }
+}
+
+function hideCellTip() {
+  hoverTip.value = null
 }
 
 function toStudy(o: OverviewStudy, p: OverviewProject): Study {
@@ -145,6 +189,8 @@ function toStudy(o: OverviewStudy, p: OverviewProject): Study {
     productName: p.productName,
     currentPhase: o.mainStageLabel ?? undefined,
     currentStatus: o.subStatusLabel ?? undefined,
+    plName: o.plName,
+    pmName: o.pmName,
   }
 }
 
@@ -184,62 +230,35 @@ onMounted(async () => {
 
 <template>
   <section class="page-content">
-    <div class="filter-bar">
-      <label>
-        <span>TA</span>
-        <select v-model="therapeuticArea">
-          <option v-for="area in areas" :key="area">{{ area }}</option>
-        </select>
-      </label>
-      <label>
-        <span>Program</span>
-        <select v-model="program">
-          <option v-for="item in programs" :key="item">{{ item }}</option>
-        </select>
-      </label>
-      <label>
-        <span>阶段</span>
-        <select v-model="phaseFilter">
-          <option v-for="phase in phaseOptions" :key="phase">{{ phase }}</option>
-        </select>
-      </label>
-      <label>
-        <span>状态</span>
-        <select v-model="statusFilter">
-          <option value="">全部</option>
-          <option v-for="item in statusMetrics" :key="item.status" :value="item.status">
-            {{ item.label }}
-          </option>
-        </select>
-      </label>
-      <label>
-        <span>关键词</span>
-        <input v-model.trim="query" type="search" placeholder="Product / Program / Project / Study">
-      </label>
-      <div class="quick-metrics">
-        <button
-          v-for="metric in statusMetrics"
-          :key="metric.status"
-          type="button"
-          class="quick-chip"
-          :class="[`quick-chip--${metric.tone}`, { 'quick-chip--active': statusFilter === metric.status }]"
-          @click="toggleStatus(metric.status)"
-        >
-          <strong>{{ metric.count }}</strong>{{ metric.label }}
-        </button>
-        <button v-if="hasActiveFilter" type="button" class="quick-clear" @click="clearFilters">
-          清除筛选
-        </button>
+    <div class="page-toolbar">
+      <div class="filter-group">
+        <label class="filter-field">
+          <span class="filter-field__label">TA</span>
+          <select v-model="filters.ta" class="filter-select">
+            <option value="">全部</option>
+            <option v-for="o in TA_OPTIONS" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-field__label">Program</span>
+          <input v-model.trim="filters.program" type="text" class="filter-input" placeholder="输入编号搜索">
+        </label>
+        <label class="filter-field">
+          <span class="filter-field__label">阶段</span>
+          <select v-model="filters.phase" class="filter-select" @change="onPhaseChange">
+            <option value="">全部</option>
+            <option v-for="o in PHASE_OPTIONS" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-field__label">状态</span>
+          <select v-model="filters.status" class="filter-select" :disabled="!filters.phase">
+            <option value="">全部</option>
+            <option v-for="o in statusOptions" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </label>
       </div>
-      <span class="result-summary">{{ resultCount }} 个项目</span>
-    </div>
-
-    <div class="legend-bar">
-      <span>状态图例</span>
-      <span><i class="legend-dot legend-dot--blue"></i>进行中</span>
-      <span><i class="legend-dot legend-dot--green"></i>已完成</span>
-      <span><i class="legend-dot legend-dot--gray"></i>准备中</span>
-      <span><i class="legend-dot legend-dot--red"></i>延期</span>
+      <span class="filter-count">{{ resultCount }} 个项目</span>
     </div>
 
     <PageState
@@ -295,6 +314,9 @@ onMounted(async () => {
                 class="pipeline-stage-td"
                 :class="{ 'cell-clickable': cell(project, phase).clickable }"
                 @click="cell(project, phase).clickable && openStudy(cell(project, phase).studyId)"
+                @mouseenter="showCellTip($event, project, phase)"
+                @mousemove="moveCellTip"
+                @mouseleave="hideCellTip"
               >
                 <div
                   v-if="cell(project, phase).tone !== 'empty'"
@@ -307,7 +329,6 @@ onMounted(async () => {
                   <span
                     class="status-chip"
                     :class="`status-chip--${cell(project, phase).tone}`"
-                    :title="cell(project, phase).explanation"
                   >{{ cell(project, phase).label }}</span>
                 </div>
                 <span
@@ -320,6 +341,27 @@ onMounted(async () => {
         </table>
       </div>
     </PageState>
+
+    <Teleport to="body">
+      <div
+        v-if="hoverTip"
+        class="pipeline-hover-tip"
+        :style="tipStyle"
+        aria-hidden="true"
+      >
+        <div class="pipeline-hover-tip__title">
+          <i class="pipeline-hover-tip__dot" :class="`pipeline-hover-tip__dot--${hoverTip.tone}`"></i>
+          {{ hoverTip.stage }} · {{ hoverTip.status }}
+        </div>
+        <div v-if="hoverTip.explanation" class="pipeline-hover-tip__sub">
+          {{ hoverTip.explanation }}
+        </div>
+        <div class="pipeline-hover-tip__meta">
+          <div>最近更新 · {{ hoverTip.updated }}</div>
+          <div>负责人 · {{ hoverTip.owner }}</div>
+        </div>
+      </div>
+    </Teleport>
 
     <ProjectStudiesDrawer
       :open="projectDrawerOpen"
@@ -342,15 +384,15 @@ onMounted(async () => {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 3px;
-  min-height: 44px;
+  gap: 4px;
+  min-height: 46px;
 }
 .cell-stage-caption {
   display: block;
   font-size: 9px;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: 0.35px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   color: #9aa2ad;
   font-family: "IBM Plex Mono", "Cascadia Mono", monospace;

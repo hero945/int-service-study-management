@@ -679,6 +679,9 @@ export function createMockApiClient(): ApiClient {
           originCode: first.originCode ?? '',
           studies: studies.map((s) => {
             const mv = mockOverviewMilestoneView[s.code]
+            const nameOf = (userId: number) => users[userId - 1]?.displayName ?? ''
+            const roleNames = (studyId: number, roleCode: string) =>
+              (teamAssignments.get(`${studyId}|${roleCode}`) ?? []).map(nameOf).filter(Boolean).join('?')
             return {
               id: s.id,
               code: s.code,
@@ -695,6 +698,8 @@ export function createMockApiClient(): ApiClient {
               currentPhaseCompleted: mv?.currentPhaseCompleted ?? false,
               startDate: s.startDate,
               updatedAt: s.updatedAt,
+              plName: roleNames(s.id, 'PL'),
+              pmName: roleNames(s.id, 'PM'),
             }
           }),
         }

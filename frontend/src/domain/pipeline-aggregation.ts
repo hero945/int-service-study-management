@@ -1,7 +1,6 @@
 import {
   PHASE_TAGS,
   normalizePhase,
-  toneForStatus,
   type PipelinePhase,
   type PipelineTone,
   type Study,
@@ -70,6 +69,7 @@ export function groupByTherapeuticArea(projects: ProjectGroup[]): AreaGroup[] {
 /** 单元格取数所需的最小 study 字段（前端 Study 与后端 OverviewStudy 均满足） */
 export interface CellStudy {
   id: number
+  code?: string
   phase: string
   statusLabel: string
   statusTone: string
@@ -81,16 +81,25 @@ export interface CellStudy {
   indCompleted: boolean
   globallyCompleted: boolean
   currentPhaseCompleted: boolean
+  ownerName?: string
+  plName?: string
+  pmName?: string
+  productName?: string
 }
 
 export interface ProjectCell {
   label: string
   tone: PipelineTone
+  /** 悬浮框副文案：回填说明或 Study · Product */
   explanation?: string
   clickable: boolean
   studyId?: number
   /** 副文本：主状态（stage 名，灰色，仅在当前阶段列且未完成时显示） */
   subText?: string
+  tipStage?: string
+  tipStatus?: string
+  tipUpdated?: string
+  tipOwner?: string
 }
 
 /** 该 project 下阶段最靠后的 study（作为"当前阶段"基准）。
@@ -138,6 +147,42 @@ export function displaySubNodeLabel(
   return label
 }
 
+export function formatTipMonth(updatedAt: string | null | undefined): string {
+  if (!updatedAt) return '—'
+  return updatedAt.slice(0, 7) || '—'
+}
+
+export function formatTipOwner(study: CellStudy | undefined): string {
+  if (!study) return '—'
+  const parts = [study.plName, study.pmName].map((v) => v?.trim()).filter(Boolean)
+  if (parts.length) return parts.join(' / ')
+  return study.ownerName?.trim() || '—'
+}
+
+function tipRefLine(study: CellStudy): string {
+  const code = study.code?.trim()
+  const product = study.productName?.trim()
+  if (code && product) return `${code} · ${product}`
+  return code || product || ''
+}
+
+function withTip(
+  cell: ProjectCell,
+  stage: string,
+  status: string,
+  study: CellStudy | undefined,
+  explanation?: string,
+): ProjectCell {
+  return {
+    ...cell,
+    tipStage: stage,
+    tipStatus: status,
+    tipUpdated: formatTipMonth(study?.updatedAt),
+    tipOwner: formatTipOwner(study),
+    explanation: explanation || (study ? tipRefLine(study) : undefined),
+  }
+}
+
 /**
  * 单元格取数与状态（对齐参考样式：早于当前阶段=已完成 / 等于=当前进度 / 晚于=—）。
  *
@@ -156,10 +201,28 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
   }
   const targetIndex = PHASE_TAGS.indexOf(targetPhase)
   const currentIndex = PHASE_TAGS.indexOf(currentPhase)
+  const fillSource = furthestStudy(studies)
 
   // 早于当前阶段 → 已完成，上方显示列阶段名
   if (targetIndex < currentIndex) {
-    return { label: '已完成', tone: 'green', clickable: true, subText: targetPhase }
+    const own = studies.find((s) => normalizePhase(s.phase) === targetPhase)
+    const tipStudy = own ?? fillSource
+    const backfill = !own && fillSource
+      ? `${targetPhase} 实际无项目，由 ${currentPhase} 回填`
+      : undefined
+    return withTip(
+      {
+        label: '已完成',
+        tone: 'green',
+        clickable: true,
+        studyId: tipStudy?.id,
+        subText: targetPhase,
+      },
+      targetPhase,
+      '已完成',
+      tipStudy,
+      backfill,
+    )
   }
   // 晚于当前阶段 → 尚未到达
   if (targetIndex > currentIndex) {
@@ -172,31 +235,48 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
   }
   // 当前阶段已完成 → 绿底「已完成」，上方显示列阶段名
   if (study.currentPhaseCompleted || study.globallyCompleted) {
-    return {
-      label: '已完成',
-      tone: 'green',
-      clickable: true,
-      studyId: study.id,
-      subText: targetPhase,
-    }
+    return withTip(
+      {
+        label: '已完成',
+        tone: 'green',
+        clickable: true,
+        studyId: study.id,
+        subText: targetPhase,
+      },
+      targetPhase,
+      '已完成',
+      study,
+    )
   }
   // 进行中：pill = 仅子节点名（去主节点英文前缀）；上方灰色 = 主节点名
   const subStatus = study.subStatusLabel?.trim()
   if (subStatus) {
-    return {
-      label: displaySubNodeLabel(subStatus, study.mainStageLabel),
-      tone: 'blue',
-      clickable: true,
-      studyId: study.id,
-      subText: study.mainStageLabel ?? undefined,
-    }
+    const label = displaySubNodeLabel(subStatus, study.mainStageLabel)
+    const stage = study.mainStageLabel ?? targetPhase
+    return withTip(
+      {
+        label,
+        tone: 'blue',
+        clickable: true,
+        studyId: study.id,
+        subText: study.mainStageLabel ?? undefined,
+      },
+      stage,
+      label,
+      study,
+    )
   }
   // 无子节点时回退主节点/statusLabel，且不重复设 caption
   const fallback = study.mainStageLabel ?? study.statusLabel
-  return {
-    label: fallback,
-    tone: 'blue',
-    clickable: true,
-    studyId: study.id,
-  }
+  return withTip(
+    {
+      label: fallback,
+      tone: 'blue',
+      clickable: true,
+      studyId: study.id,
+    },
+    study.mainStageLabel ?? targetPhase,
+    fallback,
+    study,
+  )
 }

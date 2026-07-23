@@ -31,6 +31,11 @@ const ms = (init: Partial<CellStudy> & { phase: string }): CellStudy => ({
   indCompleted: init.indCompleted ?? false,
   globallyCompleted: init.globallyCompleted ?? false,
   currentPhaseCompleted: init.currentPhaseCompleted ?? false,
+  code: init.code,
+  ownerName: init.ownerName,
+  plName: init.plName,
+  pmName: init.pmName,
+  productName: init.productName,
 })
 
 describe('groupByProject', () => {
@@ -46,6 +51,27 @@ describe('groupByProject', () => {
 })
 
 describe('getProjectCell', () => {
+  it('marks earlier phases as backfilled with tip explanation when no own study exists', () => {
+    const studies = [ms({
+      phase: 'PHASE_3_1',
+      code: 'HDM2001-301',
+      plName: '张伟',
+      pmName: '李静',
+      productName: 'HDM2001',
+      updatedAt: '2026-06-15T00:00:00',
+    })]
+    const cell = getProjectCell(studies, 'PreIND')
+    expect(cell).toMatchObject({
+      label: '已完成',
+      tone: 'green',
+      tipStage: 'PreIND',
+      tipStatus: '已完成',
+      tipUpdated: '2026-06',
+      tipOwner: '张伟 / 李静',
+      explanation: 'PreIND 实际无项目，由 Phase 3-1 回填',
+    })
+  })
+
   it('marks all phases earlier than current as 已完成 (green) with column caption', () => {
     const studies = [ms({ phase: 'PHASE_2', statusLabel: '进行中', statusTone: 'positive' })]
     // current = Phase 2 → PreIND / IND / Phase 1 are earlier

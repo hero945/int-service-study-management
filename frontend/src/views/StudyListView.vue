@@ -5,12 +5,8 @@ import { apiClient } from '../api/client'
 import type { Study } from '../api/types'
 import PageState from '../components/PageState.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
-import { session } from '../session'
 
 const router = useRouter()
-const canReadMonthly = computed(() =>
-  session.currentUser.value?.permissions.includes('monthly.read') ?? false,
-)
 
 const studies = ref<Study[]>([])
 const loading = ref(true)
@@ -84,10 +80,6 @@ function goMilestones(studyId: number) {
   router.push(`/milestones/${studyId}`)
 }
 
-function goMonthlyReport(studyId: number) {
-  router.push(`/studies/${studyId}/monthly-report`)
-}
-
 onMounted(async () => {
   try {
     studies.value = await apiClient.listStudies()
@@ -103,19 +95,31 @@ onMounted(async () => {
   <section class="page-content">
     <div class="page-toolbar">
       <div class="filter-group">
-        <select v-model="filters.ta" class="filter-select">
-          <option value="">TA 全部</option>
-          <option v-for="o in TA_OPTIONS" :key="o" :value="o">{{ o }}</option>
-        </select>
-        <input v-model.trim="filters.program" type="text" class="filter-input" placeholder="Program 搜索">
-        <select v-model="filters.phase" class="filter-select" @change="onPhaseChange">
-          <option value="">阶段 全部</option>
-          <option v-for="o in PHASE_OPTIONS" :key="o" :value="o">{{ o }}</option>
-        </select>
-        <select v-model="filters.status" class="filter-select" :disabled="!filters.phase">
-          <option value="">状态 全部</option>
-          <option v-for="o in statusOptions" :key="o" :value="o">{{ o }}</option>
-        </select>
+        <label class="filter-field">
+          <span class="filter-field__label">TA</span>
+          <select v-model="filters.ta" class="filter-select">
+            <option value="">全部</option>
+            <option v-for="o in TA_OPTIONS" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-field__label">Program</span>
+          <input v-model.trim="filters.program" type="text" class="filter-input" placeholder="输入编号搜索">
+        </label>
+        <label class="filter-field">
+          <span class="filter-field__label">阶段</span>
+          <select v-model="filters.phase" class="filter-select" @change="onPhaseChange">
+            <option value="">全部</option>
+            <option v-for="o in PHASE_OPTIONS" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </label>
+        <label class="filter-field">
+          <span class="filter-field__label">状态</span>
+          <select v-model="filters.status" class="filter-select" :disabled="!filters.phase">
+            <option value="">全部</option>
+            <option v-for="o in statusOptions" :key="o" :value="o">{{ o }}</option>
+          </select>
+        </label>
       </div>
       <span class="filter-count">{{ filtered.length }} 个研究</span>
     </div>
@@ -125,7 +129,7 @@ onMounted(async () => {
           <thead><tr>
             <th>TA</th>
             <th>Program</th>
-            <th>Compound</th>
+            <th>Product</th>
             <th>Study No.</th>
             <th>适应症</th>
             <th>当前阶段</th>
@@ -138,7 +142,7 @@ onMounted(async () => {
             <tr v-for="study in filtered" :key="study.id" class="study-row--clickable" @click="openDrawer(study)">
               <td>{{ study.therapeuticAreaName || study.therapeuticArea || study.therapeuticAreaCode || '—' }}</td>
               <td class="mono">{{ study.programCode || study.program || '—' }}</td>
-              <td class="mono">{{ study.projectCode || study.product || '—' }}</td>
+              <td class="mono">{{ study.productName || study.product || '—' }}</td>
               <td class="mono strong">{{ study.code }}</td>
               <td>{{ study.indication }}</td>
               <td>{{ study.currentPhase || '—' }}</td>
@@ -147,7 +151,6 @@ onMounted(async () => {
               <td>{{ study.updatedAt ? new Date(study.updatedAt).toLocaleDateString('zh-CN') : '—' }}</td>
               <td class="actions">
                 <button class="link-button" @click.stop="goMilestones(study.id)">里程碑</button>
-                <button v-if="canReadMonthly" class="link-button" @click.stop="goMonthlyReport(study.id)">月报</button>
               </td>
             </tr>
           </tbody>

@@ -25,5 +25,9 @@ public record OverviewStudy(
     /** 全局最末里程碑节点 actual_end != null */
     boolean globallyCompleted,
     /** 当前阶段对应里程碑最后节点 actual_end != null（当前阶段已完成） */
-    boolean currentPhaseCompleted) {
+    boolean currentPhaseCompleted,
+    /** 项目负责人姓名（可多名，顿号分隔） */
+    String plName,
+    /** 项目经理姓名（可多名，顿号分隔） */
+    String pmName) {
 }

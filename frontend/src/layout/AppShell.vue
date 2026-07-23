@@ -22,7 +22,6 @@ const roleLabel = computed(() => {
 const navItems = computed(() => [
   { label: '管线总览', icon: '▦', to: '/pipeline' },
   { label: '研究 Study 列表', icon: '▤', to: '/studies' },
-  { label: '研究月度汇报', icon: '✎', to: '/monthly' },
   { label: '风险管理', icon: '⚠', to: '/risks', badge: '1' },
   ...(user.value?.permissions.includes('team.page.view')
     ? [{ label: '团队矩阵', icon: '◫', to: '/team' }]

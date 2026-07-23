@@ -48,6 +48,6 @@ public class MybatisPlusPipelineOverviewRepository implements PipelineOverviewRe
         ? StudyStatus.COMPLETED
         : row.actualStartDate() != null ? StudyStatus.ACTIVE : StudyStatus.PLANNED;
     return new OverviewStudy(row.id(), row.code(), row.phase(), status, row.startDate(), row.updatedAt(),
-        null, null, null, false, false, false, false);
+        null, null, null, false, false, false, false, "", "");
   }
 }
