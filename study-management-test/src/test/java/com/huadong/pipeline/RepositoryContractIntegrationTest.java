@@ -7,6 +7,7 @@ import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.setting.SettingRepository;
 import com.huadong.pipeline.domain.study.DuplicateStudyCodeException;
 import com.huadong.pipeline.domain.study.Study;
+import com.huadong.pipeline.domain.study.PipelineOverviewRepository;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
@@ -25,6 +26,7 @@ class RepositoryContractIntegrationTest {
   @Autowired SettingRepository settings;
   @Autowired StudyRepository studies;
   @Autowired UserAccountRepository users;
+  @Autowired PipelineOverviewRepository overviewRepository;
   @Autowired JdbcTemplate jdbc;
 
   @Test
@@ -139,6 +141,30 @@ class RepositoryContractIntegrationTest {
         "seed@example.com"));
 
     assertThat(studies.findAll()).hasSize(500);
+  }
+
+  @Test
+  void pipelineOverviewGroupsProjectsByAreaWithStudiesAndHonoursDataScope() {
+    seedStudyHierarchy();
+    studies.save(study("STUDY-ACTIVE", true), "seed@example.com");
+    studies.save(study("STUDY-PLANNED", false), "seed@example.com");
+
+    var all = overviewRepository.findOverviewProjects(StudyAccessScope.all());
+    assertThat(all).hasSize(1);
+    assertThat(all.getFirst().code()).isEqualTo("PROJECT-001");
+    assertThat(all.getFirst().therapeuticAreaCode()).isEqualTo("ONCOLOGY");
+    assertThat(all.getFirst().therapeuticAreaName()).isEqualTo("肿瘤");
+    assertThat(all.getFirst().studies()).hasSize(2);
+
+    jdbc.update("""
+        INSERT INTO hd_plt_team_assignment(study_id, user_id)
+        SELECT id, 42 FROM hd_plt_study WHERE study_code = 'STUDY-ACTIVE'
+        """);
+    var assigned = overviewRepository.findOverviewProjects(StudyAccessScope.assignedTo(42));
+    assertThat(assigned).hasSize(1);
+    assertThat(assigned.getFirst().studies())
+        .extracting(study -> study.code())
+        .containsExactly("STUDY-ACTIVE");
   }
 
   private Study study(String code, boolean active) {

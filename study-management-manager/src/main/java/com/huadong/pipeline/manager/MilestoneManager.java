@@ -1,6 +1,7 @@
 package com.huadong.pipeline.manager;
 
 import com.huadong.pipeline.common.BusinessException;
+import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition.MilestoneNode;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition.StageGroup;
@@ -13,6 +14,7 @@ import com.huadong.pipeline.domain.user.UserAccount;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -170,6 +172,158 @@ public class MilestoneManager {
     }
   }
 
+  // ──────────── overview status (Section: pipeline overview) ────────────
+
+  /**
+   * Derive a study's pipeline-overview status from its milestones.
+   * 主状态 = current stage (frontier node); 子状态 = node reached within that stage.
+   * The three booleans describe per-study milestone completion:
+   *   - preindCompleted:  PreIND stage's last node has actual_end_date != null
+   *   - indCompleted:     IND stage's last node has actual_end_date != null
+   *   - globallyCompleted: study's globally-last milestone node has actual_end_date != null
+   *
+   * NOTE: the frontend cell rendering no longer keys off these booleans per column.
+   * It uses a phase-relative rule against the project's furthest phase
+   * (see pipeline-aggregation.getProjectCell): earlier columns → "已完成",
+   * the current column → this study's milestone sub-status (主状态作为副文本),
+   * later columns → "—". These booleans remain available for per-study detail
+   * (e.g. the current column forces "已完成" when currentPhaseCompleted).
+   *
+   * @return null when the study has no milestone rows (caller falls back to date-based status).
+   */
+  public MilestoneOverviewStatus computeOverviewStatus(List<PersistedMilestone> rows) {
+    if (rows == null || rows.isEmpty()) {
+      return null;
+    }
+    List<MilestoneNodeState> nodes = buildNodeStates(rows);
+
+    // Frontier = last node (definition order) that has any actual date.
+    MilestoneNodeState frontier = null;
+    for (MilestoneNodeState node : nodes) {
+      if (node.actualStartDate() != null || node.actualEndDate() != null) {
+        frontier = node;
+      }
+    }
+
+    String currentStageCode;
+    String currentStageLabel;
+    if (frontier != null) {
+      currentStageCode = frontier.stageCode();
+      currentStageLabel = frontier.stageLabel();
+    } else {
+      PersistedMilestone first = rows.stream().min(Comparator.comparingInt(this::position)).orElse(null);
+      if (first != null) {
+        currentStageCode = stagePart(first.milestoneCode());
+        currentStageLabel = stageLabel(first.milestoneCode());
+      } else {
+        currentStageCode = MilestoneDefinition.ALL.get(0).code();
+        currentStageLabel = MilestoneDefinition.ALL.get(0).label();
+      }
+    }
+
+    String subStatus = frontier == null ? "NOT_STARTED" : frontier.status();
+    String subStatusLabel = frontier == null ? "未开始" : frontier.milestoneLabel();
+
+    // Per-stage completion: check if the LAST node of each target stage has actual_end
+    boolean preindCompleted = isStageLastNodeCompleted(nodes, "PRE_IND");
+    boolean indCompleted = isStageLastNodeCompleted(nodes, "IND");
+
+    // Global completion: the absolute last milestone node in definition order has actual_end
+    LocalDate lastMilestoneActualEnd = rows.stream()
+        .max(Comparator.comparingInt(this::position))
+        .map(PersistedMilestone::actualEndDate)
+        .orElse(null);
+    boolean globallyCompleted = lastMilestoneActualEnd != null;
+
+    // Current-phase completion (per product owner rule):
+    // the frontier node is the LAST node of its stage AND has actual_end set,
+    // i.e. the study has finished the milestone stage that represents its current phase.
+    boolean currentPhaseCompleted = false;
+    if (frontier != null && frontier.actualEndDate() != null) {
+      final MilestoneNodeState f = frontier;
+      int maxOrderInStage = nodes.stream()
+          .filter(n -> n.stageCode().equals(f.stageCode()))
+          .mapToInt(MilestoneNodeState::nodeOrder)
+          .max().orElse(-1);
+      currentPhaseCompleted = f.nodeOrder() == maxOrderInStage;
+    }
+
+    // Study-level status: COMPLETED only when globally complete
+    StudyStatus status = globallyCompleted ? StudyStatus.COMPLETED : mapStatus(subStatus);
+
+    return new MilestoneOverviewStatus(
+        status, status.label(), status.tone(),
+        currentStageCode, currentStageLabel, subStatusLabel,
+        preindCompleted, indCompleted, globallyCompleted, currentPhaseCompleted);
+  }
+
+  /** Check whether the last node of the given stage code has actual_end_date != null. */
+  private boolean isStageLastNodeCompleted(List<MilestoneNodeState> nodes, String stageCode) {
+    int lastIndex = -1;
+    LocalDate lastActualEnd = null;
+    for (int i = 0; i < nodes.size(); i++) {
+      MilestoneNodeState node = nodes.get(i);
+      if (node.stageCode().equals(stageCode)) {
+        lastIndex = i;
+        lastActualEnd = node.actualEndDate();
+      }
+    }
+    return lastIndex >= 0 && lastActualEnd != null;
+  }
+
+  /** Build the full 60-node ordered state list, merging persisted rows by milestone code. */
+  private List<MilestoneNodeState> buildNodeStates(List<PersistedMilestone> rows) {
+    Map<String, PersistedMilestone> byCode = new LinkedHashMap<>();
+    for (PersistedMilestone row : rows) {
+      byCode.put(row.milestoneCode(), row);
+    }
+    List<MilestoneNodeState> nodes = new ArrayList<>();
+    for (StageGroup group : MilestoneDefinition.ALL) {
+      for (MilestoneNode node : group.nodes()) {
+        PersistedMilestone persisted = byCode.get(node.code());
+        nodes.add(new MilestoneNodeState(
+            group.code(), group.label(), group.sortOrder(),
+            node.code(), node.label(), node.sortOrder(),
+            persisted == null ? null : persisted.planV1Date(),
+            persisted == null ? null : persisted.planV2Date(),
+            persisted == null ? null : persisted.actualStartDate(),
+            persisted == null ? null : persisted.actualEndDate(),
+            persisted == null ? null : persisted.deviationNote()));
+      }
+    }
+    deriveStatuses(nodes);
+    return nodes;
+  }
+
+  private static String stageLabel(String milestoneCode) {
+    String stageCode = stagePart(milestoneCode);
+    return MilestoneDefinition.ALL.stream()
+        .filter(g -> g.code().equals(stageCode))
+        .findFirst()
+        .map(StageGroup::label)
+        .orElse(stageCode);
+  }
+
+  /** Monotonic key for a persisted milestone in MilestoneDefinition order. */
+  private int position(PersistedMilestone m) {
+    String stageCode = stagePart(m.milestoneCode());
+    int nodeIndex = nodeIndex(m.milestoneCode());
+    int stageOrder = MilestoneDefinition.ALL.stream()
+        .filter(g -> g.code().equals(stageCode))
+        .findFirst()
+        .map(StageGroup::sortOrder)
+        .orElse(Integer.MAX_VALUE);
+    return stageOrder * 1000 + nodeIndex;
+  }
+
+  private static StudyStatus mapStatus(String milestoneStatus) {
+    return switch (milestoneStatus) {
+      case "COMPLETED" -> StudyStatus.COMPLETED;
+      case "IN_PROGRESS" -> StudyStatus.ACTIVE;
+      default -> StudyStatus.PLANNED;
+    };
+  }
+
   // ──────────── helpers ────────────
 
   private StudyRef requireStudy(long studyId) {
@@ -210,6 +364,25 @@ public class MilestoneManager {
   // ──────────── result types ────────────
 
   public record MilestoneResult(String studyCode, List<MilestoneNodeState> nodes) {}
+
+  /**
+   * Pipeline-overview status derived from a study's milestones.
+   * @param status           column status (StudyStatus) for coloring/labeling
+   * @param statusLabel      status.label()
+   * @param statusTone       status.tone()
+   * @param mainStageCode    主状态: current stage code (e.g. "PRE_IND")
+   * @param mainStageLabel   主状态: current stage label (e.g. "PreIND")
+   * @param subStatusLabel   子状态: reached node label (e.g. "LPI"), or "未开始"
+   * @param preindCompleted  PreIND stage 最后节点 actual_end != null
+   * @param indCompleted     IND stage 最后节点 actual_end != null
+   * @param globallyCompleted 全局最末里程碑节点 actual_end != null
+   * @param currentPhaseCompleted 当前阶段对应里程碑最后节点 actual_end != null（即当前阶段已完成）
+   */
+  public record MilestoneOverviewStatus(
+      StudyStatus status, String statusLabel, String statusTone,
+      String mainStageCode, String mainStageLabel, String subStatusLabel,
+      boolean preindCompleted, boolean indCompleted, boolean globallyCompleted,
+      boolean currentPhaseCompleted) {}
 
   public record MilestoneNodeState(
       String stageCode, String stageLabel, int stageOrder,

@@ -1,21 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { Study } from '../api/types'
-import { PHASE_TAGS, getPipelineCell } from './pipeline-status'
+import {
+  PHASE_CODE_TO_TAG,
+  PHASE_TAGS,
+  PHASE_TAG_TO_CODE,
+  normalizePhase,
+  originLabel,
+  sourceLabel,
+  toneForStatus,
+} from './pipeline-status'
 
-const study = (phase: string, statusLabel = '进行中'): Study => ({
-  id: 1,
-  code: 'S1',
-  indication: '适应症',
-  phase,
-  status: 'ACTIVE',
-  statusLabel,
-  statusTone: 'info',
-  ownerName: '张伟',
-  startDate: null,
-  updatedAt: '2026-07-17T00:00:00',
-})
-
-describe('pipeline phase cells', () => {
+describe('pipeline phase dictionary', () => {
   it('keeps the seven historical overview columns in order', () => {
     expect(PHASE_TAGS).toEqual([
       'PreIND',
@@ -28,20 +22,43 @@ describe('pipeline phase cells', () => {
     ])
   })
 
-  it('backfills earlier columns for a study configured at a later phase', () => {
-    expect(getPipelineCell(study('Phase 2'), 'PreIND')).toEqual({
-      label: '已完成',
-      tone: 'green',
-      explanation: 'PreIND 实际无项目，由 Phase 2 回填',
-    })
+  it('maps every backend phase code to an overview column', () => {
+    expect(normalizePhase('PRE_IND')).toBe('PreIND')
+    expect(normalizePhase('IND')).toBe('IND')
+    expect(normalizePhase('PHASE_1')).toBe('Phase 1')
+    expect(normalizePhase('PHASE_2')).toBe('Phase 2')
+    expect(normalizePhase('PRE_3')).toBe('PRE-3')
+    expect(normalizePhase('PHASE_3_1')).toBe('Phase 3-1')
+    expect(normalizePhase('PHASE_3_2')).toBe('Phase 3-2')
   })
 
-  it('shows current status only in the configured phase and leaves future phases empty', () => {
-    expect(getPipelineCell(study('IND', '已递交'), 'IND')).toEqual({
-      label: '已递交',
-      tone: 'blue',
-      explanation: undefined,
-    })
-    expect(getPipelineCell(study('IND', '已递交'), 'Phase 1').label).toBe('—')
+  it('returns undefined for unknown phase codes', () => {
+    expect(normalizePhase('NDA')).toBeUndefined()
+    expect(normalizePhase('')).toBeUndefined()
+  })
+
+  it('keeps code and tag dictionaries inverse to each other', () => {
+    for (const [code, tag] of Object.entries(PHASE_CODE_TO_TAG)) {
+      expect(PHASE_TAG_TO_CODE[tag as keyof typeof PHASE_TAG_TO_CODE]).toBe(code)
+    }
+  })
+
+  it('maps study status tones to overview tones', () => {
+    expect(toneForStatus('positive')).toBe('blue')
+    expect(toneForStatus('info')).toBe('green')
+    expect(toneForStatus('neutral')).toBe('blue')
+    expect(toneForStatus('warning')).toBe('orange')
+    expect(toneForStatus('danger')).toBe('red')
+    expect(toneForStatus('unknown')).toBe('blue')
+  })
+
+  it('maps source and origin codes to Chinese labels', () => {
+    expect(sourceLabel('SELF_DEVELOPED')).toBe('自研')
+    expect(sourceLabel('IN_LICENSE')).toBe('引进')
+    expect(sourceLabel('COOPERATION')).toBe('合作')
+    expect(originLabel('DOMESTIC')).toBe('国产')
+    expect(originLabel('IMPORTED')).toBe('进口')
+    expect(sourceLabel(undefined)).toBe('')
+    expect(originLabel(undefined)).toBe('')
   })
 })

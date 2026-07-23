@@ -1,45 +1,128 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
-import type { PipelineOverview, Study } from '../api/types'
-import { PHASE_TAGS, getPipelineCell, type PipelinePhase } from '../domain/pipeline-status'
+import type { OverviewProject, PipelineOverview } from '../api/types'
+import {
+  PHASE_TAGS,
+  originLabel,
+  sourceLabel,
+  type PipelinePhase,
+} from '../domain/pipeline-status'
+import { furthestPhaseOf, getProjectCell } from '../domain/pipeline-aggregation'
+import PageState from '../components/PageState.vue'
 
+// 后端已按 TA 聚合的 project，附带 TA 信息便于筛选
+interface ProjectRow extends OverviewProject {
+  therapeuticAreaCode: string
+  therapeuticAreaName: string
+}
+
+const router = useRouter()
 const phases = PHASE_TAGS
 const overview = ref<PipelineOverview>()
-const studies = ref<Study[]>([])
 const loading = ref(true)
 const errorMessage = ref('')
+
+// 筛选状态
 const query = ref('')
 const therapeuticArea = ref('全部')
+const program = ref('全部')
+const phaseFilter = ref<'全部' | PipelinePhase>('全部')
+const statusFilter = ref('')
+
+const allProjects = computed<ProjectRow[]>(() =>
+  (overview.value?.areas ?? []).flatMap((area) =>
+    area.projects.map((project) => ({
+      ...project,
+      therapeuticAreaCode: area.therapeuticAreaCode,
+      therapeuticAreaName: area.therapeuticAreaName,
+    }))))
+const allStudies = computed(() => allProjects.value.flatMap((project) => project.studies))
 
 const areas = computed(() => [
   '全部',
-  ...new Set(studies.value.map((study) => study.therapeuticArea).filter(Boolean)),
+  ...new Set(allProjects.value.map((p) => p.therapeuticAreaName).filter(Boolean)),
 ])
-const filteredStudies = computed(() => studies.value.filter((study) => {
-  const text = `${study.code} ${study.indication} ${study.program} ${study.project}`.toLowerCase()
-  const matchesQuery = text.includes(query.value.toLowerCase())
-  const matchesArea =
-    therapeuticArea.value === '全部' || study.therapeuticArea === therapeuticArea.value
-  return matchesQuery && matchesArea
-}))
-const groups = computed(() => {
-  const result = new Map<string, Study[]>()
-  for (const study of filteredStudies.value) {
-    const key = study.therapeuticArea ?? '其他'
-    result.set(key, [...(result.get(key) ?? []), study])
-  }
-  return [...result.entries()]
+const programs = computed(() => [
+  '全部',
+  ...new Set(allProjects.value.map((p) => p.programCode).filter(Boolean)),
+])
+const phaseOptions = computed(() => ['全部', ...phases] as const)
+
+// quick chip：从全部 study 按 StudyStatus 统计
+const statusMetrics = computed(() => {
+  const defs = [
+    { status: 'PLANNED', label: '计划中', tone: 'neutral' },
+    { status: 'ACTIVE', label: '进行中', tone: 'positive' },
+    { status: 'ON_HOLD', label: '已暂停', tone: 'warning' },
+    { status: 'COMPLETED', label: '已完成', tone: 'info' },
+  ] as const
+  return defs.map((def) => ({
+    ...def,
+    count: allStudies.value.filter((s) => s.status === def.status).length,
+  }))
 })
 
-const phaseStatus = (study: Study, phase: PipelinePhase) => getPipelineCell(study, phase)
+// project 级筛选（TA / Program / 状态 / 阶段 / 关键词）
+const filteredProjects = computed(() => allProjects.value.filter((project) => {
+  const text = [
+    project.code,
+    project.indication,
+    project.productName,
+    project.programCode,
+    ...project.studies.map((s) => s.code),
+  ].join(' ').toLowerCase()
+  const matchesQuery = text.includes(query.value.toLowerCase())
+  const matchesArea =
+    therapeuticArea.value === '全部' || project.therapeuticAreaName === therapeuticArea.value
+  const matchesProgram = program.value === '全部' || project.programCode === program.value
+  const matchesStatus = !statusFilter.value || project.studies.some((s) => s.status === statusFilter.value)
+  const matchesPhase = phaseFilter.value === '全部' || furthestPhaseOf(project.studies) === phaseFilter.value
+  return matchesQuery && matchesArea && matchesProgram && matchesStatus && matchesPhase
+}))
+
+// 筛选后按 TA 重新分组展示
+const areaGroups = computed(() => {
+  const map = new Map<string, ProjectRow[]>()
+  for (const project of filteredProjects.value) {
+    const key = project.therapeuticAreaName || '其他'
+    const list = map.get(key)
+    if (list) list.push(project)
+    else map.set(key, [project])
+  }
+  return [...map.entries()].map(([therapeuticAreaName, projects]) => ({
+    therapeuticAreaName,
+    projects,
+  }))
+})
+const resultCount = computed(() => filteredProjects.value.length)
+const hasActiveFilter = computed(() =>
+  query.value !== '' ||
+  therapeuticArea.value !== '全部' ||
+  program.value !== '全部' ||
+  phaseFilter.value !== '全部' ||
+  statusFilter.value !== '')
+
+const cell = (project: OverviewProject, phase: PipelinePhase) => getProjectCell(project.studies, phase)
+
+function toggleStatus(status: string) {
+  statusFilter.value = statusFilter.value === status ? '' : status
+}
+function clearFilters() {
+  query.value = ''
+  therapeuticArea.value = '全部'
+  program.value = '全部'
+  phaseFilter.value = '全部'
+  statusFilter.value = ''
+}
+function openStudy(studyId?: number) {
+  if (studyId != null) router.push(`/milestones/${studyId}`)
+}
 
 onMounted(async () => {
   try {
-    ;[overview.value, studies.value] = await Promise.all([
-      apiClient.getPipelineOverview(),
-      apiClient.listStudies(),
-    ])
+    overview.value = await apiClient.getPipelineOverview()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '管线数据加载失败'
   } finally {
@@ -58,20 +141,46 @@ onMounted(async () => {
         </select>
       </label>
       <label>
+        <span>Program</span>
+        <select v-model="program">
+          <option v-for="item in programs" :key="item">{{ item }}</option>
+        </select>
+      </label>
+      <label>
+        <span>阶段</span>
+        <select v-model="phaseFilter">
+          <option v-for="phase in phaseOptions" :key="phase">{{ phase }}</option>
+        </select>
+      </label>
+      <label>
+        <span>状态</span>
+        <select v-model="statusFilter">
+          <option value="">全部</option>
+          <option v-for="item in statusMetrics" :key="item.status" :value="item.status">
+            {{ item.label }}
+          </option>
+        </select>
+      </label>
+      <label>
         <span>关键词</span>
-        <input v-model.trim="query" type="search" placeholder="Program / Project / Study">
+        <input v-model.trim="query" type="search" placeholder="Product / Program / Project / Study">
       </label>
       <div class="quick-metrics">
-        <span
-          v-for="metric in overview?.statuses ?? []"
+        <button
+          v-for="metric in statusMetrics"
           :key="metric.status"
+          type="button"
           class="quick-chip"
-          :class="`quick-chip--${metric.tone}`"
+          :class="[`quick-chip--${metric.tone}`, { 'quick-chip--active': statusFilter === metric.status }]"
+          @click="toggleStatus(metric.status)"
         >
           <strong>{{ metric.count }}</strong>{{ metric.label }}
-        </span>
+        </button>
+        <button v-if="hasActiveFilter" type="button" class="quick-clear" @click="clearFilters">
+          清除筛选
+        </button>
       </div>
-      <span class="result-summary">{{ filteredStudies.length }} 个研究</span>
+      <span class="result-summary">{{ resultCount }} 个项目</span>
     </div>
 
     <div class="legend-bar">
@@ -82,44 +191,76 @@ onMounted(async () => {
       <span><i class="legend-dot legend-dot--red"></i>延期</span>
     </div>
 
-    <div v-if="loading" class="state-panel" aria-live="polite">正在加载管线数据…</div>
-    <div v-else-if="errorMessage" class="state-panel state-panel--error" role="alert">
-      {{ errorMessage }}
-    </div>
-    <div v-else-if="!groups.length" class="state-panel">
-      <strong>暂无匹配项目</strong>
-      <span>请调整筛选条件后重试。</span>
-    </div>
-    <div v-else class="pipeline-table-wrap">
-      <table class="pipeline-table">
-        <thead>
-          <tr>
-            <th>Product</th>
-            <th>Program (MOA)</th>
-            <th>Project (Indication)</th>
-            <th v-for="phase in phases" :key="phase">{{ phase }}</th>
-          </tr>
-        </thead>
-        <tbody v-for="[area, rows] in groups" :key="area">
-          <tr class="area-row">
-            <td :colspan="10"><span class="area-dot"></span>{{ area }}<small>{{ rows.length }} 个项目</small></td>
-          </tr>
-          <tr v-for="study in rows" :key="study.id">
-            <td><strong>{{ study.product || study.code }}</strong><small>{{ study.source }} · {{ study.origin }}</small></td>
-            <td><strong class="mono">{{ study.program || study.code }}</strong><small>{{ study.moa }}</small></td>
-            <td><strong>{{ study.project || study.code }}</strong><small>{{ study.indication }}</small></td>
-            <td v-for="phase in phases" :key="phase">
-              <span
-                class="status-chip"
-                :class="`status-chip--${phaseStatus(study, phase).tone}`"
-                :title="phaseStatus(study, phase).explanation"
+    <PageState
+      :loading="loading"
+      :error="errorMessage"
+      :empty="!loading && !errorMessage && !areaGroups.length"
+      empty-title="暂无匹配项目"
+      empty-description="请调整筛选条件后重试。"
+    >
+      <div class="pipeline-table-wrap">
+        <table class="pipeline-table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Program (MOA)</th>
+              <th>Project (Indication)</th>
+              <th v-for="phase in phases" :key="phase">{{ phase }}</th>
+            </tr>
+          </thead>
+          <tbody v-for="area in areaGroups" :key="area.therapeuticAreaName">
+            <tr class="area-row">
+              <td :colspan="10">
+                <span class="area-dot"></span>{{ area.therapeuticAreaName }}
+                <small>{{ area.projects.length }} 个项目</small>
+              </td>
+            </tr>
+            <tr v-for="project in area.projects" :key="project.code">
+              <td>
+                <strong>{{ project.productName || project.code }}</strong>
+                <small>{{ sourceLabel(project.sourceCode) }} · {{ originLabel(project.originCode) }}</small>
+              </td>
+              <td>
+                <strong class="mono">{{ project.programCode }}</strong>
+                <small>{{ project.moa }}</small>
+              </td>
+              <td>
+                <strong>{{ project.code }}</strong>
+                <small>{{ project.indication }}</small>
+              </td>
+              <td
+                v-for="phase in phases"
+                :key="phase"
+                :class="{ 'cell-clickable': cell(project, phase).clickable }"
+                @click="cell(project, phase).clickable && openStudy(cell(project, phase).studyId)"
               >
-                {{ phaseStatus(study, phase).label }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+                <span
+                  class="status-chip"
+                  :class="`status-chip--${cell(project, phase).tone}`"
+                  :title="cell(project, phase).explanation"
+                >
+                  {{ cell(project, phase).label }}
+                </span>
+                <small
+                  v-if="cell(project, phase).subText"
+                  class="cell-sub"
+                >{{ cell(project, phase).subText }}</small>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </PageState>
   </section>
 </template>
+
+<style scoped>
+.cell-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--text-muted, #8a93a6);
+  font-weight: 500;
+}
+</style>

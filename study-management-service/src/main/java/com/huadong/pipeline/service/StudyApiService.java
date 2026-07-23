@@ -16,14 +16,41 @@ public class StudyApiService implements StudyApi {
   @Override
   public PipelineOverviewResponse overview(String username) {
     var overview = manager.overview(username);
-    var metrics = overview.statuses().stream()
-        .map(metric -> new StatusMetricResponse(
-            metric.status().name(),
-            metric.status().label(),
-            metric.status().tone(),
-            metric.count()))
+    var areas = overview.areas().stream()
+        .map(area -> new OverviewAreaResponse(
+            area.therapeuticAreaCode(),
+            area.therapeuticAreaName(),
+            area.projects().stream()
+                .map(project -> new OverviewProjectResponse(
+                    project.id(),
+                    project.code(),
+                    project.indication(),
+                    project.programCode(),
+                    project.productName(),
+                    project.moa(),
+                    project.sourceCode(),
+                    project.originCode(),
+                    project.studies().stream()
+                        .map(study -> new OverviewStudyResponse(
+                            study.id(),
+                            study.code(),
+                            study.phase(),
+                            study.status().name(),
+                            study.status().label(),
+                            study.status().tone(),
+                            study.mainStageCode(),
+                            study.mainStageLabel(),
+                            study.subStatusLabel(),
+                            study.preindCompleted(),
+                            study.indCompleted(),
+                            study.globallyCompleted(),
+                            study.currentPhaseCompleted(),
+                            study.startDate(),
+                            study.updatedAt()))
+                        .toList()))
+                .toList()))
         .toList();
-    return new PipelineOverviewResponse(overview.title(), overview.total(), metrics);
+    return new PipelineOverviewResponse(overview.title(), areas);
   }
 
   @Override
@@ -47,7 +74,16 @@ public class StudyApiService implements StudyApi {
             study.plName(),
             study.pmName(),
             study.currentPhase(),
-            study.currentStatus()))
+            study.currentStatus()),
+            study.updatedAt(),
+            study.therapeuticAreaCode(),
+            study.therapeuticAreaName(),
+            study.programCode(),
+            study.projectCode(),
+            study.productName(),
+            study.moa(),
+            study.sourceCode(),
+            study.originCode())
         .toList();
   }
 

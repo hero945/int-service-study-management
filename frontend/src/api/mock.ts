@@ -16,6 +16,8 @@ import type {
   MonthlyReportPage,
   FunctionLineHistory,
   StageProjection,
+  OverviewArea,
+  OverviewProject,
   Study,
   TeamMatrixAssignment,
   TeamMatrixRole,
@@ -79,68 +81,126 @@ const users: Array<CurrentUser & { password: string }> = [
   },
 ]
 
-export const demoStudies: Study[] = [
-  {
-    id: 1,
-    code: 'HDM2020-001',
-    indication: '晚期实体瘤',
-    phase: 'PreIND',
-    status: 'ACTIVE',
-    statusLabel: '准备中',
-    statusTone: 'neutral',
-    ownerName: '张伟',
-    startDate: '2026-02-01',
-    updatedAt: '2026-07-15T09:20:00',
-    therapeuticArea: '肿瘤',
-    therapeuticAreaEn: 'Oncology',
-    product: 'HDM2020',
-    program: 'HDM2020',
-    project: 'HDM2020-1',
-    moa: 'ADC',
-    source: '自研',
-    origin: '中国',
-  },
-  {
-    id: 2,
-    code: 'HDM2015-102',
-    indication: '系统性红斑狼疮',
-    phase: 'IND',
-    status: 'ACTIVE',
-    statusLabel: '已递交',
-    statusTone: 'info',
-    ownerName: '王芳',
-    startDate: '2025-11-18',
-    updatedAt: '2026-07-14T16:40:00',
-    therapeuticArea: '自身免疫',
-    therapeuticAreaEn: 'Autoimmune Disease',
-    product: 'HDM2015',
-    program: 'HDM2015',
-    project: 'HDM2015-1',
-    moa: 'Small Molecule',
-    source: '合作',
-    origin: '中国',
-  },
-  {
-    id: 3,
-    code: 'HDM1005-302',
-    indication: '2 型糖尿病',
-    phase: 'Phase 1',
-    status: 'ACTIVE',
-    statusLabel: 'FPI',
-    statusTone: 'info',
-    ownerName: '李静',
-    startDate: '2025-05-06',
-    updatedAt: '2026-07-12T13:10:00',
-    therapeuticArea: '代谢与心血管',
-    therapeuticAreaEn: 'Metabolic & Cardiovascular',
-    product: 'HDM1005',
-    program: 'HDM1005',
-    project: 'HDM1005-3',
-    moa: 'Peptide',
-    source: '自研',
-    origin: '中国',
-  },
+const STUDY_STATUS_META = {
+  PLANNED: { label: '计划中', tone: 'neutral' },
+  ACTIVE: { label: '进行中', tone: 'positive' },
+  COMPLETED: { label: '已完成', tone: 'info' },
+} as const
+
+type StudySeed = Omit<Study, 'id' | 'status' | 'statusLabel' | 'statusTone'> & {
+  status: keyof typeof STUDY_STATUS_META
+}
+type StudyBase = Omit<StudySeed, 'code' | 'phase' | 'status' | 'ownerName' | 'startDate' | 'updatedAt'>
+type StudyVariant = Pick<StudySeed, 'code' | 'phase' | 'status' | 'ownerName' | 'startDate' | 'updatedAt'>
+
+function expand(base: StudyBase, variants: StudyVariant[]): StudySeed[] {
+  return variants.map((variant) => ({ ...base, ...variant }))
+}
+
+// 覆盖 6 个治疗领域；同一 project 下含多个不同 phase 的 study，用于验证 byProject 聚合与回填
+const studySeeds: StudySeed[] = [
+  // 肿瘤
+  ...expand({ indication: '晚期实体瘤', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-1', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2020-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-03-10', updatedAt: '2026-07-15T09:20:00' },
+    { code: 'HDM2020-002', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-09-01', updatedAt: '2026-07-10T14:05:00' },
+  ]),
+  ...expand({ indication: '非小细胞肺癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-2', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2020-101', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '李静', startDate: '2025-06-20', updatedAt: '2026-07-08T10:30:00' },
+  ]),
+  ...expand({ indication: '乳腺癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-3', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2020-201', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-11-05', updatedAt: '2026-07-01T16:40:00' },
+    { code: 'HDM2020-202', phase: 'PHASE_2', status: 'PLANNED', ownerName: '王芳', startDate: '2026-08-01', updatedAt: '2026-06-28T11:00:00' },
+  ]),
+  ...expand({ indication: '胃癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2031', projectCode: 'HDM2031-1', productName: 'HDM2031', moa: '单克隆抗体', sourceCode: 'IN_LICENSE', originCode: 'IMPORTED' }, [
+    { code: 'HDM2031-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-05-12', updatedAt: '2026-07-12T13:10:00' },
+    { code: 'HDM2031-002', phase: 'PHASE_3_2', status: 'PLANNED', ownerName: '陈研发', startDate: '2026-09-01', updatedAt: '2026-07-05T09:45:00' },
+  ]),
+  // 自身免疫
+  ...expand({ indication: '系统性红斑狼疮', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '自身免疫', programCode: 'HDM2015', projectCode: 'HDM2015-1', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2015-101', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-02-18', updatedAt: '2026-07-14T16:40:00' },
+    { code: 'HDM2015-102', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '王芳', startDate: '2023-08-01', updatedAt: '2025-12-20T10:00:00' },
+  ]),
+  ...expand({ indication: '类风湿关节炎', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '自身免疫', programCode: 'HDM2015', projectCode: 'HDM2015-2', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2015-201', phase: 'IND', status: 'ACTIVE', ownerName: '李静', startDate: '2025-10-10', updatedAt: '2026-07-09T15:20:00' },
+  ]),
+  // 代谢与心血管
+  ...expand({ indication: '2 型糖尿病', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '代谢与心血管', programCode: 'HDM1005', projectCode: 'HDM1005-3', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM1005-301', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '李静', startDate: '2023-05-06', updatedAt: '2024-11-30T09:00:00' },
+    { code: 'HDM1005-302', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '李静', startDate: '2025-01-15', updatedAt: '2026-07-12T13:10:00' },
+    { code: 'HDM1005-303', phase: 'PHASE_3_1', status: 'PLANNED', ownerName: '李静', startDate: '2026-10-01', updatedAt: '2026-07-06T10:20:00' },
+  ]),
+  ...expand({ indication: '肥胖', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '代谢与心血管', programCode: 'HDM1005', projectCode: 'HDM1005-5', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM1005-501', phase: 'PRE_IND', status: 'ACTIVE', ownerName: '张伟', startDate: '2026-01-20', updatedAt: '2026-07-03T14:00:00' },
+  ]),
+  // 呼吸系统
+  ...expand({ indication: '哮喘', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-1', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2042-001', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '刘洋', startDate: '2025-04-22', updatedAt: '2026-07-11T09:30:00' },
+  ]),
+  ...expand({ indication: '慢阻肺', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-2', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2042-201', phase: 'PHASE_1', status: 'PLANNED', ownerName: '刘洋', startDate: '2026-07-01', updatedAt: '2026-06-30T17:00:00' },
+  ]),
+  ...expand({ indication: '特发性肺纤维化', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-3', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2042-301', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-12-08', updatedAt: '2026-07-07T11:15:00' },
+  ]),
+  // 感染性疾病
+  ...expand({ indication: '慢性乙肝', therapeuticAreaCode: 'INFECTIOUS_DISEASE', therapeuticAreaName: '感染性疾病', programCode: 'HDM2050', projectCode: 'HDM2050-1', productName: 'HDM2050', moa: '抗病毒', sourceCode: 'COOPERATION', originCode: 'IMPORTED' }, [
+    { code: 'HDM2050-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-03-15', updatedAt: '2026-07-13T10:50:00' },
+    { code: 'HDM2050-002', phase: 'PHASE_3_2', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-11-20', updatedAt: '2026-07-04T15:35:00' },
+  ]),
+  // 神经科学
+  ...expand({ indication: '阿尔茨海默病', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-1', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2066-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '李静', startDate: '2025-07-30', updatedAt: '2026-07-10T09:10:00' },
+    { code: 'HDM2066-002', phase: 'PRE_IND', status: 'COMPLETED', ownerName: '李静', startDate: '2024-02-14', updatedAt: '2025-06-30T14:20:00' },
+  ]),
+  ...expand({ indication: '帕金森病', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-2', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2066-201', phase: 'IND', status: 'PLANNED', ownerName: '张伟', startDate: '2026-08-15', updatedAt: '2026-07-02T10:40:00' },
+  ]),
+  ...expand({ indication: '抑郁症', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-3', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2066-301', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-05-25', updatedAt: '2026-07-09T13:25:00' },
+  ]),
 ]
+
+export const demoStudies: Study[] = studySeeds.map((seed, index) => ({
+  ...seed,
+  id: index + 1,
+  statusLabel: STUDY_STATUS_META[seed.status].label,
+  statusTone: STUDY_STATUS_META[seed.status].tone,
+}))
+
+// 每个 study 的里程碑总览状态（演示用，模拟里程碑推导出的【主状态/子状态/当前阶段完成】）。
+// 主显示 = 子状态（节点名，如 "LPI"）；灰色副文本 = 主状态（stage 名，如 "Enrollment"）。
+const mockOverviewMilestoneView: Record<string, {
+  mainStageLabel: string
+  subStatusLabel: string
+  currentPhaseCompleted: boolean
+}> = {
+  'HDM2020-001': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPI', currentPhaseCompleted: false },
+  'HDM2020-002': { mainStageLabel: 'IA', subStatusLabel: 'IA 数据冻结', currentPhaseCompleted: false },
+  'HDM2020-101': { mainStageLabel: 'SSU', subStatusLabel: '所有中心启动', currentPhaseCompleted: false },
+  'HDM2020-201': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
+  'HDM2020-202': { mainStageLabel: 'Protocol', subStatusLabel: '方案定稿', currentPhaseCompleted: false },
+  'HDM2031-001': { mainStageLabel: 'Data & Report', subStatusLabel: 'DBL', currentPhaseCompleted: false },
+  'HDM2031-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
+  'HDM2015-101': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR初稿', currentPhaseCompleted: false },
+  'HDM2015-102': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
+  'HDM2015-201': { mainStageLabel: 'IND', subStatusLabel: 'IND 获批', currentPhaseCompleted: false },
+  'HDM1005-301': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
+  'HDM1005-302': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR定稿', currentPhaseCompleted: false },
+  'HDM1005-303': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
+  'HDM1005-501': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-药学', currentPhaseCompleted: false },
+  'HDM2042-001': { mainStageLabel: 'IA', subStatusLabel: 'IA 数据分析', currentPhaseCompleted: false },
+  'HDM2042-201': { mainStageLabel: 'Protocol', subStatusLabel: '方案讨论会', currentPhaseCompleted: false },
+  'HDM2042-301': { mainStageLabel: 'SSU', subStatusLabel: '首家中心启动', currentPhaseCompleted: false },
+  'HDM2050-001': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR定稿', currentPhaseCompleted: false },
+  'HDM2050-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: '临床核查', currentPhaseCompleted: false },
+  'HDM2066-001': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPI', currentPhaseCompleted: false },
+  'HDM2066-002': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-药学', currentPhaseCompleted: true },
+  'HDM2066-201': { mainStageLabel: 'IND', subStatusLabel: 'IND 递交', currentPhaseCompleted: false },
+  'HDM2066-301': { mainStageLabel: 'SSU', subStatusLabel: '所有中心启动', currentPhaseCompleted: false },
+}
+
+const SOURCE_LABEL: Record<string, string> = { SELF_DEVELOPED: '自研', IN_LICENSE: '引进', COOPERATION: '合作' }
+const ORIGIN_LABEL: Record<string, string> = { DOMESTIC: '国产', IMPORTED: '进口' }
 
 let nextRiskId = 19
 let nextRiskActionId = 2
@@ -535,34 +595,6 @@ export function createMockApiClient(): ApiClient {
     },
   ]
   const now = () => new Date().toISOString()
-  let nextProgramId = 4
-  let nextProjectId = 4
-  let nextStudyId = 4
-  const programs: PipelineProgram[] = demoStudies.map((study, index) => ({
-    id: index + 1,
-    code: study.program ?? '',
-    productName: study.product ?? '',
-    moa: study.moa ?? null,
-    sourceCode: study.source === '合作' ? 'COOPERATION' : 'SELF_DEVELOPED',
-    sourceLabel: study.source ?? '',
-    originCode: 'DOMESTIC',
-    originLabel: study.origin ?? '',
-    projectCount: 1,
-    studyCount: 1,
-    updatedAt: study.updatedAt,
-  }))
-  const projects: PipelineProject[] = demoStudies.map((study, index) => ({
-    id: index + 1,
-    code: study.project ?? '',
-    programId: index + 1,
-    programCode: study.program ?? '',
-    indication: study.indication,
-    therapeuticAreaId: index + 1,
-    therapeuticAreaCode: study.therapeuticAreaEn?.toUpperCase().replaceAll(' ', '_') ?? 'OTHER',
-    therapeuticAreaName: study.therapeuticArea ?? '',
-    studyCount: 1,
-    updatedAt: study.updatedAt,
-  }))
   const therapeuticAreas: TherapeuticArea[] = [
     { id: 1, code: 'ONCOLOGY', name: '肿瘤', englishName: 'Oncology' },
     { id: 2, code: 'AUTOIMMUNE', name: '自身免疫', englishName: 'Autoimmune Disease' },
@@ -571,6 +603,39 @@ export function createMockApiClient(): ApiClient {
     { id: 5, code: 'INFECTIOUS_DISEASE', name: '感染性疾病', englishName: 'Infectious Disease' },
     { id: 6, code: 'NEUROSCIENCE', name: '神经科学', englishName: 'Neuroscience' },
   ]
+  // 一个 program/project 下可有多个 study，按 code 去重派生，避免重复行
+  const uniqueBy = <T,>(items: T[], key: (item: T) => string) =>
+    [...new Map(items.map((item) => [key(item), item])).values()]
+  const programs: PipelineProgram[] = uniqueBy(demoStudies, (s) => s.programCode ?? '')
+    .map((study, index) => ({
+      id: index + 1,
+      code: study.programCode ?? '',
+      productName: study.productName ?? '',
+      moa: study.moa ?? null,
+      sourceCode: study.sourceCode ?? '',
+      sourceLabel: SOURCE_LABEL[study.sourceCode ?? ''] ?? '',
+      originCode: study.originCode ?? '',
+      originLabel: ORIGIN_LABEL[study.originCode ?? ''] ?? '',
+      projectCount: new Set(demoStudies.filter((s) => s.programCode === study.programCode).map((s) => s.projectCode)).size,
+      studyCount: demoStudies.filter((s) => s.programCode === study.programCode).length,
+      updatedAt: study.updatedAt,
+    }))
+  const projects: PipelineProject[] = uniqueBy(demoStudies, (s) => s.projectCode ?? '')
+    .map((study, index) => ({
+      id: index + 1,
+      code: study.projectCode ?? '',
+      programId: programs.find((p) => p.code === study.programCode)?.id ?? 0,
+      programCode: study.programCode ?? '',
+      indication: study.indication,
+      therapeuticAreaId: therapeuticAreas.find((t) => t.code === study.therapeuticAreaCode)?.id ?? 0,
+      therapeuticAreaCode: study.therapeuticAreaCode ?? '',
+      therapeuticAreaName: study.therapeuticAreaName ?? '',
+      studyCount: demoStudies.filter((s) => s.projectCode === study.projectCode).length,
+      updatedAt: study.updatedAt,
+    }))
+  let nextProgramId = programs.length + 1
+  let nextProjectId = projects.length + 1
+  let nextStudyId = demoStudies.length + 1
 
   return {
     async getCurrentUser() {
@@ -592,15 +657,59 @@ export function createMockApiClient(): ApiClient {
       currentUser = undefined
     },
     async getPipelineOverview() {
-      return {
-        title: '临床研发管线',
-        total: demoStudies.length,
-        statuses: [
-          { status: 'ATTENTION', label: '需关注', tone: 'warning', count: 1 },
-          { status: 'APPROVED', label: '已获批', tone: 'positive', count: 0 },
-          { status: 'UPDATED', label: '本月有更新', tone: 'info', count: 3 },
-        ],
+      // 按 projectCode 聚合 study → project，再按 TA code 分组 → area
+      const byProject = new Map<string, Study[]>()
+      for (const s of demoStudies) {
+        const key = s.projectCode ?? s.code
+        const list = byProject.get(key)
+        if (list) list.push(s)
+        else byProject.set(key, [s])
       }
+      const byArea = new Map<string, { name: string; projects: OverviewProject[] }>()
+      for (const [projectCode, studies] of byProject) {
+        const first = studies[0]
+        const project: OverviewProject = {
+          id: first.id,
+          code: projectCode,
+          indication: first.indication,
+          programCode: first.programCode ?? '',
+          productName: first.productName ?? '',
+          moa: first.moa ?? '',
+          sourceCode: first.sourceCode ?? '',
+          originCode: first.originCode ?? '',
+          studies: studies.map((s) => {
+            const mv = mockOverviewMilestoneView[s.code]
+            return {
+              id: s.id,
+              code: s.code,
+              phase: s.phase,
+              status: s.status,
+              statusLabel: s.statusLabel,
+              statusTone: s.statusTone,
+              mainStageCode: null,
+              mainStageLabel: mv?.mainStageLabel ?? null,
+              subStatusLabel: mv?.subStatusLabel ?? null,
+              preindCompleted: false,
+              indCompleted: false,
+              globallyCompleted: false,
+              currentPhaseCompleted: mv?.currentPhaseCompleted ?? false,
+              startDate: s.startDate,
+              updatedAt: s.updatedAt,
+            }
+          }),
+        }
+        const taCode = first.therapeuticAreaCode ?? 'OTHER'
+        const taName = first.therapeuticAreaName ?? '其他'
+        const entry = byArea.get(taCode)
+        if (entry) entry.projects.push(project)
+        else byArea.set(taCode, { name: taName, projects: [project] })
+      }
+      const areas: OverviewArea[] = [...byArea.entries()].map(([code, { name, projects }]) => ({
+        therapeuticAreaCode: code,
+        therapeuticAreaName: name,
+        projects,
+      }))
+      return { title: '临床研发管线', areas }
     },
     async listStudies() {
       const nameOf = (userId: number) => users[userId - 1]?.displayName ?? ''
@@ -653,7 +762,7 @@ export function createMockApiClient(): ApiClient {
     async getRiskFormOptions(studyId) {
       return {
         studies: demoStudies.map(study => ({ id: study.id, studyCode: study.code,
-          programCode: study.program ?? '', projectCode: study.project ?? '' })),
+          programCode: study.programCode ?? '', projectCode: study.projectCode ?? '' })),
         functions: studyId ? [
           { id: 1, code: 'PM', name: '项目管理' },
           { id: 2, code: 'RA', name: '注册' },
@@ -673,8 +782,8 @@ export function createMockApiClient(): ApiClient {
       const now = new Date().toISOString()
       const detail: RiskDetail = {
         risk: { riskCode: `RSK-${new Date().getFullYear()}-${String(nextRiskId++).padStart(6, '0')}`,
-          studyId: study.id, studyCode: study.code, programCode: study.program ?? '',
-          projectCode: study.project ?? '', functionCode: fn.code, functionName: fn.name,
+          studyId: study.id, studyCode: study.code, programCode: study.programCode ?? '',
+          projectCode: study.projectCode ?? '', functionCode: fn.code, functionName: fn.name,
           description: input.description, ownerUserId: owner.id, ownerName: owner.displayName,
           score, level, status: 'OPEN', actionCount: input.actions.length, version: 0, updatedAt: now },
         registeredDate: input.registeredDate ?? now.slice(0, 10), closeReason: '',
@@ -698,7 +807,7 @@ export function createMockApiClient(): ApiClient {
       const fn = options.functions.find(item => item.id === input.functionLineId)!
       const owner = options.owners.find(item => item.id === input.ownerUserId)!
       Object.assign(detail.risk, { studyId: study.id, studyCode: study.code,
-        programCode: study.program ?? '', projectCode: study.project ?? '',
+        programCode: study.programCode ?? '', projectCode: study.projectCode ?? '',
         functionCode: fn.code, functionName: fn.name, ownerUserId: owner.id,
         ownerName: owner.displayName, description: input.description, status: input.status,
         version: detail.risk.version + 1, updatedAt: new Date().toISOString() })
@@ -922,7 +1031,7 @@ export function createMockApiClient(): ApiClient {
     },
     async listPipelineConfig() {
       return demoStudies.map((study) => {
-        const project = projects.find((item) => item.code === study.project)!
+        const project = projects.find((item) => item.code === study.projectCode)!
         const program = programs.find((item) => item.id === project.programId)!
         return {
         studyId: study.id,
@@ -1013,10 +1122,13 @@ export function createMockApiClient(): ApiClient {
       if (!project) throw new Error('Project 不存在')
       demoStudies.push({ id: nextStudyId++, code: input.code,
         indication: project.indication, phase: input.phase, status: 'ACTIVE', statusLabel: '进行中',
-        statusTone: 'info', ownerName: '', startDate: null, updatedAt: now(),
-        program: project.programCode, project: project.code,
-        therapeuticArea: project.therapeuticAreaName,
-        product: programs.find((item) => item.id === project.programId)?.productName })
+        statusTone: 'positive', ownerName: '', startDate: null, updatedAt: now(),
+        programCode: project.programCode, projectCode: project.code,
+        therapeuticAreaCode: project.therapeuticAreaCode, therapeuticAreaName: project.therapeuticAreaName,
+        productName: programs.find((item) => item.id === project.programId)?.productName,
+        moa: programs.find((item) => item.id === project.programId)?.moa ?? undefined,
+        sourceCode: programs.find((item) => item.id === project.programId)?.sourceCode,
+        originCode: programs.find((item) => item.id === project.programId)?.originCode })
       project.studyCount++
     },
     async updateStudyConfig(id, input) {
@@ -1024,8 +1136,11 @@ export function createMockApiClient(): ApiClient {
       const project = projects.find((item) => item.id === input.projectId)
       if (!study || !project) throw new Error('Study 或 Project 不存在')
       study.phase = input.phaseStatusCode
-      study.project = project.code
-      study.program = project.programCode
+      study.projectCode = project.code
+      study.programCode = project.programCode
+      study.therapeuticAreaCode = project.therapeuticAreaCode
+      study.therapeuticAreaName = project.therapeuticAreaName
+      study.indication = project.indication
       return (await this.listPipelineConfig()).find((item) => item.studyId === id)!
     },
     async deleteStudyConfig(id) {

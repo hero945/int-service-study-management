@@ -13,56 +13,63 @@ export const PHASE_TAGS = [
 export type PipelinePhase = (typeof PHASE_TAGS)[number]
 export type PipelineTone = 'blue' | 'green' | 'orange' | 'red' | 'empty'
 
-const phaseAliases: Record<string, PipelinePhase> = {
-  'Pre-IND': 'PreIND',
-  PreIND: 'PreIND',
+/**
+ * phase code（后端/DB 契约，见 PipelineConfigManager.PHASES）→ 总览列 tag。
+ * 这是阶段编码的单一真相源：后端契约固定返回 code，展示标签在此映射。
+ */
+export const PHASE_CODE_TO_TAG: Record<string, PipelinePhase> = {
+  PRE_IND: 'PreIND',
   IND: 'IND',
-  Ph1: 'Phase 1',
-  'Phase 1': 'Phase 1',
-  Ph2: 'Phase 2',
-  'Phase 2': 'Phase 2',
-  'Pre-3': 'PRE-3',
-  'PRE-3': 'PRE-3',
-  'Ph3-1': 'Phase 3-1',
-  'Phase 3-1': 'Phase 3-1',
-  'Ph3-2': 'Phase 3-2',
-  'Phase 3-2': 'Phase 3-2',
+  PHASE_1: 'Phase 1',
+  PHASE_2: 'Phase 2',
+  PRE_3: 'PRE-3',
+  PHASE_3_1: 'Phase 3-1',
+  PHASE_3_2: 'Phase 3-2',
 }
 
-const statusTone: Record<string, PipelineTone> = {
-  positive: 'green',
+/** 总览列 tag → phase code（由 PHASE_CODE_TO_TAG 派生） */
+export const PHASE_TAG_TO_CODE = Object.fromEntries(
+  Object.entries(PHASE_CODE_TO_TAG).map(([code, tag]) => [tag, code]),
+) as Record<PipelinePhase, string>
+
+/** 将后端返回的 phase code 归一为总览列 tag；未知 code 返回 undefined */
+export function normalizePhase(phase: string): PipelinePhase | undefined {
+  return PHASE_CODE_TO_TAG[phase]
+}
+
+const STATUS_TONE: Record<string, PipelineTone> = {
+  positive: 'blue',
+  info: 'green',
+  neutral: 'blue',
   warning: 'orange',
   danger: 'red',
-  info: 'blue',
-  neutral: 'blue',
 }
 
-export function normalizePhase(phase: string): PipelinePhase | undefined {
-  return phaseAliases[phase]
+/** 将后端 StudyStatus.tone 映射为总览单元格色调 */
+export function toneForStatus(statusTone: string): PipelineTone {
+  return STATUS_TONE[statusTone] ?? 'blue'
 }
 
-export function getPipelineCell(study: Study, targetPhase: PipelinePhase) {
-  const configuredPhase = normalizePhase(study.phase)
-  if (!configuredPhase) {
-    return { label: '—', tone: 'empty' as const, explanation: undefined }
-  }
-
-  const configuredIndex = PHASE_TAGS.indexOf(configuredPhase)
-  const targetIndex = PHASE_TAGS.indexOf(targetPhase)
-
-  if (targetIndex < configuredIndex) {
-    return {
-      label: '已完成',
-      tone: 'green' as const,
-      explanation: `${targetPhase} 实际无项目，由 ${configuredPhase} 回填`,
-    }
-  }
-  if (targetIndex === configuredIndex) {
-    return {
-      label: study.statusLabel,
-      tone: statusTone[study.statusTone] ?? 'blue',
-      explanation: undefined,
-    }
-  }
-  return { label: '—', tone: 'empty' as const, explanation: undefined }
+/** 来源 code → 中文标签（与 PipelineConfigManager.SOURCES、配置页字典一致） */
+export const SOURCE_LABELS: Record<string, string> = {
+  SELF_DEVELOPED: '自研',
+  IN_LICENSE: '引进',
+  COOPERATION: '合作',
 }
+
+/** 产地 code → 中文标签（与 PipelineConfigManager.ORIGINS、配置页字典一致） */
+export const ORIGIN_LABELS: Record<string, string> = {
+  DOMESTIC: '国产',
+  IMPORTED: '进口',
+}
+
+export function sourceLabel(sourceCode: string | undefined): string {
+  return sourceCode ? (SOURCE_LABELS[sourceCode] ?? sourceCode) : ''
+}
+
+export function originLabel(originCode: string | undefined): string {
+  return originCode ? (ORIGIN_LABELS[originCode] ?? originCode) : ''
+}
+
+// Study 类型在此重新导出，便于聚合模块与视图统一引用
+export type { Study }
