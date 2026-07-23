@@ -108,7 +108,7 @@ function openMilestones(studyId: number) {
   margin: 0;
   font-size: 22px;
   font-weight: 700;
-  color: #2a303b;
+  color: var(--body);
   line-height: 1.25;
 }
 .project-studies-sub {
@@ -135,22 +135,22 @@ function openMilestones(studyId: number) {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--surface);
   cursor: pointer;
   transition: background .12s ease, border-color .12s ease;
 }
 .project-study-card:hover {
-  background: #f7faff;
+  background: var(--hover-surface);
   border-color: #d7e3f5;
 }
 .project-study-card__main strong {
   display: block;
   font-size: 14px;
-  color: #2a303b;
+  color: var(--body);
 }
 .project-study-card__main p {
   margin: 6px 0 0;
-  color: #4a5360;
+  color: var(--secondary);
   font-size: 12.5px;
 }
 .project-study-card__main small {

@@ -91,7 +91,9 @@ public class SecurityConfig {
                 Map.of("code", "ACCESS_DENIED", "message", "无权执行此操作"))))
         .headers(headers -> headers
             .contentSecurityPolicy(csp -> csp.policyDirectives(
-                "default-src 'self'; script-src 'self'; style-src 'self'; "
+                "default-src 'self'; script-src 'self'; "
+                    + "style-src 'self' https://fonts.googleapis.com; "
+                    + "font-src 'self' https://fonts.gstatic.com data:; "
                     + "img-src 'self' data:; object-src 'none'; "
                     + "frame-ancestors 'none'; base-uri 'self'"))
             .frameOptions(frame -> frame.deny()))
