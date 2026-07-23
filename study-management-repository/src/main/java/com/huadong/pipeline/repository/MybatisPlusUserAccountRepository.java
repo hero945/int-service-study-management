@@ -151,6 +151,18 @@ public class MybatisPlusUserAccountRepository implements UserAccountRepository {
   }
 
   @Override
+  public void updatePasswordHash(String username, String passwordHash, String operator) {
+    int updated = mapper.updatePasswordHash(
+        username.trim().toLowerCase(),
+        passwordHash,
+        UUID.randomUUID().toString(),
+        operator);
+    if (updated != 1) {
+      throw new IllegalArgumentException("User not found: " + username);
+    }
+  }
+
+  @Override
   public Map<Long, Long> countStudyAssignments(List<Long> userIds) {
     if (userIds.isEmpty()) {
       return Map.of();

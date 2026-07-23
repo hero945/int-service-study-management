@@ -21,6 +21,7 @@ public interface TeamMatrixApi {
       String indication,
       String statusCode,
       String statusLabel,
+      String currentStatus,
       long version) {
   }
 

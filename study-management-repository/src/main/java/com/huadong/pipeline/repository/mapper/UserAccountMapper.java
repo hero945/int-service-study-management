@@ -98,6 +98,20 @@ public interface UserAccountMapper extends BaseMapper<UserAccountEntity> {
   int softDeleteUser(@Param("id") long id, @Param("operator") String operator);
 
   @Update("""
+      UPDATE hd_plt_user
+      SET password_hash = #{passwordHash},
+          security_stamp = #{securityStamp},
+          sys_update_by = #{operator},
+          sys_update_time = CURRENT_TIMESTAMP
+      WHERE email = #{username} AND sys_deleted = 0
+      """)
+  int updatePasswordHash(
+      @Param("username") String username,
+      @Param("passwordHash") String passwordHash,
+      @Param("securityStamp") String securityStamp,
+      @Param("operator") String operator);
+
+  @Update("""
       UPDATE hd_plt_user_role
       SET sys_deleted = 1,
           sys_update_by = #{operator},

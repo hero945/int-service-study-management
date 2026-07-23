@@ -35,6 +35,7 @@ public interface TeamMatrixRepository {
       String indication,
       String statusCode,
       String statusLabel,
+      String currentStatus,
       long version) {
   }
 

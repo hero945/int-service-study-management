@@ -1,5 +1,6 @@
 import type {
   AssignRolesInput,
+  ChangePasswordInput,
   CreateUserInput,
   CsrfToken,
   CurrentUser,
@@ -87,6 +88,8 @@ export interface ApiClient {
   deleteStudyConfig(id: number): Promise<void>
   listUsers(keyword?: string, roleCode?: string): Promise<PlatformUser[]>
   createUser(input: CreateUserInput): Promise<void>
+  changePassword(input: ChangePasswordInput): Promise<void>
+  resetPassword(id: number): Promise<void>
   updateUser(id: number, input: UpdateUserInput): Promise<void>
   deleteUser(id: number): Promise<void>
   assignRoles(id: number, input: AssignRolesInput): Promise<void>
@@ -343,6 +346,19 @@ export function createHttpApiClient(): ApiClient {
       await request<void>('/api/v1/platform/users', {
         method: 'POST',
         body: JSON.stringify(input),
+      })
+    },
+    async changePassword(input) {
+      await refreshCsrf()
+      await request<void>('/api/v1/platform/me/password', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      })
+    },
+    async resetPassword(id) {
+      await refreshCsrf()
+      await request<void>(`/api/v1/platform/users/${id}/password-reset`, {
+        method: 'POST',
       })
     },
     async updateUser(id, input) {

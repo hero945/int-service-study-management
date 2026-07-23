@@ -41,6 +41,7 @@ const matrix = {
     indication: '非小细胞肺癌',
     statusCode: 'ACTIVE',
     statusLabel: '进行中',
+    currentStatus: 'IND 获批',
     version: 0,
   }],
   roles: [{

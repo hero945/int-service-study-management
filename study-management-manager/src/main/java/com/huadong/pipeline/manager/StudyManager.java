@@ -12,7 +12,7 @@ import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
 import com.huadong.pipeline.domain.study.OverviewStudy;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
-import com.huadong.pipeline.domain.milestone.MilestoneDefinition;
+import com.huadong.pipeline.domain.milestone.CurrentMilestoneStatus;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilestone;
 import com.huadong.pipeline.domain.config.ProjectRepository;
@@ -64,7 +64,8 @@ public class StudyManager {
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIds, "PM");
     return all.stream()
         .map(study -> {
-          CurrentPhaseStatus derived = deriveCurrentPhaseStatus(study.id());
+          CurrentMilestoneStatus.PhaseStatus derived =
+              CurrentMilestoneStatus.derive(studyMilestones.findByStudyId(study.id()));
           return new StudyView(
               study.id(),
               study.code(),
@@ -88,50 +89,6 @@ public class StudyManager {
               study.originCode());
         })
         .toList();
-  }
-
-  /**
-   * Load milestones once per study, then derive phase + status together.
-   * Current phase: first StageGroup (reverse sortOrder) with ≥1 child node that has
-   * actualStartDate or actualEndDate. Current status: under that group, first node
-   * (reverse sortOrder) with an actual date. Labels come from MilestoneDefinition.ALL.
-   */
-  private CurrentPhaseStatus deriveCurrentPhaseStatus(long studyId) {
-    return deriveCurrentPhaseStatus(studyMilestones.findByStudyId(studyId));
-  }
-
-  private static CurrentPhaseStatus deriveCurrentPhaseStatus(List<PersistedMilestone> persisted) {
-    MilestoneDefinition.StageGroup currentGroup = MilestoneDefinition.ALL.stream()
-        .sorted((a, b) -> Integer.compare(b.sortOrder(), a.sortOrder()))
-        .filter(group -> groupHasActualData(persisted, group))
-        .findFirst()
-        .orElse(null);
-    if (currentGroup == null) {
-      return new CurrentPhaseStatus("", "");
-    }
-    String status = currentGroup.nodes().stream()
-        .sorted((a, b) -> Integer.compare(b.sortOrder(), a.sortOrder()))
-        .filter(node -> hasMilestoneData(persisted, node.code()))
-        .map(MilestoneDefinition.MilestoneNode::label)
-        .findFirst()
-        .orElse("");
-    return new CurrentPhaseStatus(currentGroup.label(), status);
-  }
-
-  private static boolean groupHasActualData(
-      List<PersistedMilestone> persisted,
-      MilestoneDefinition.StageGroup group) {
-    return group.nodes().stream()
-        .anyMatch(node -> hasMilestoneData(persisted, node.code()));
-  }
-
-  private static boolean hasMilestoneData(List<PersistedMilestone> persisted, String milestoneCode) {
-    return persisted.stream()
-        .filter(m -> m.milestoneCode().equals(milestoneCode))
-        .anyMatch(m -> m.actualStartDate() != null || m.actualEndDate() != null);
-  }
-
-  private record CurrentPhaseStatus(String phase, String status) {
   }
 
   @Transactional(readOnly = true)

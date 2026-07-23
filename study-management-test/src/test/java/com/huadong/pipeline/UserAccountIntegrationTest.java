@@ -35,8 +35,7 @@ class UserAccountIntegrationTest {
             .with(user("account-admin").authorities(authority("account.create"))).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"username":"%s","displayName":"Reassign Tester",
-                 "password":"SuperSecret123","roleCodes":["USER"]}
+                {"username":"%s","displayName":"Reassign Tester","roleCodes":["USER"]}
                 """.formatted(email)))
         .andExpect(status().isCreated());
 
@@ -88,8 +87,7 @@ class UserAccountIntegrationTest {
             .with(user("account-admin").authorities(authority("account.create"))).with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
-                {"username":"%s","displayName":"Disable Tester",
-                 "password":"SuperSecret123","roleCodes":["USER"]}
+                {"username":"%s","displayName":"Disable Tester","roleCodes":["USER"]}
                 """.formatted(email)))
         .andExpect(status().isCreated());
 

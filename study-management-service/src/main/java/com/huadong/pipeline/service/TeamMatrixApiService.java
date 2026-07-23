@@ -19,7 +19,7 @@ public class TeamMatrixApiService implements TeamMatrixApi {
     var studies = matrix.studies().stream()
         .map(study -> new StudyResponse(
             study.studyId(), study.studyCode(), study.indication(),
-            study.statusCode(), study.statusLabel(), study.version()))
+            study.statusCode(), study.statusLabel(), study.currentStatus(), study.version()))
         .toList();
     var roles = matrix.roles().stream()
         .map(role -> new RoleResponse(

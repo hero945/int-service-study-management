@@ -119,6 +119,13 @@ public class UserManager {
     users.assignRoles(userId, distinctRoleCodes, operator);
   }
 
+  @Transactional
+  public void updatePasswordHash(String username, String passwordHash) {
+    var existing = users.findByUsername(username)
+        .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
+    users.updatePasswordHash(existing.username(), passwordHash, existing.username());
+  }
+
   public record AuthenticationUser(
       String username,
       String passwordHash,

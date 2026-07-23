@@ -27,15 +27,19 @@ const toggleConfirmOpen = ref(false)
 const toggleTargetId = ref<number | null>(null)
 const toggleTargetName = ref('')
 const toggleTargetEnabled = ref(true)
+const resetConfirmOpen = ref(false)
+const resetTargetId = ref<number | null>(null)
+const resetTargetName = ref('')
 
 let noticeTimer: ReturnType<typeof setTimeout> | undefined
 
 const form = ref({
   username: '',
   displayName: '',
-  password: '',
   roleCodes: [] as string[],
 })
+
+const DEFAULT_PASSWORD = 'Hd123456'
 
 const userPermissions = computed(() => session.currentUser.value?.permissions ?? [])
 const canCreate = computed(() => userPermissions.value.includes('account.create'))
@@ -85,7 +89,7 @@ function onKeywordInput(value: string) {
 }
 
 function openCreateDialog() {
-  form.value = { username: '', displayName: '', password: '', roleCodes: [] }
+  form.value = { username: '', displayName: '', roleCodes: [] }
   formError.value = ''
   dialogOpen.value = true
 }
@@ -99,7 +103,7 @@ async function submitForm() {
   formError.value = ''
   saving.value = true
   try {
-    if (!form.value.username || !form.value.displayName || !form.value.password || form.value.roleCodes.length === 0) {
+    if (!form.value.username || !form.value.displayName || form.value.roleCodes.length === 0) {
       formError.value = '请完整填写所有必填字段'
       saving.value = false
       return
@@ -107,7 +111,6 @@ async function submitForm() {
     const input: CreateUserInput = {
       username: form.value.username,
       displayName: form.value.displayName,
-      password: form.value.password,
       roleCodes: form.value.roleCodes,
     }
     await apiClient.createUser(input)
@@ -161,6 +164,32 @@ function closeToggleConfirm() {
   toggleConfirmOpen.value = false
   toggleTargetId.value = null
   toggleTargetName.value = ''
+}
+
+function confirmResetPassword(user: PlatformUser) {
+  resetTargetId.value = user.id
+  resetTargetName.value = user.displayName
+  resetConfirmOpen.value = true
+}
+
+function closeResetConfirm() {
+  resetConfirmOpen.value = false
+  resetTargetId.value = null
+  resetTargetName.value = ''
+}
+
+async function executeResetPassword() {
+  if (resetTargetId.value === null) return
+  saving.value = true
+  try {
+    await apiClient.resetPassword(resetTargetId.value)
+    showNotice(`已将 ${resetTargetName.value} 的密码重置为 ${DEFAULT_PASSWORD}`)
+    closeResetConfirm()
+  } catch (reason) {
+    error.value = reason instanceof Error ? reason.message : '重置密码失败'
+  } finally {
+    saving.value = false
+  }
 }
 
 async function executeToggle() {
@@ -250,7 +279,7 @@ onUnmounted(() => {
               <th>范围模式</th>
               <th>可见范围</th>
               <th>状态</th>
-              <th style="width: 120px;">操作</th>
+              <th style="width: 200px;">操作</th>
             </tr>
           </thead>
           <tbody>
@@ -293,6 +322,12 @@ onUnmounted(() => {
                     class="link-button"
                     @click="openAssignDialog(user)"
                   >分配角色</button>
+                  <button
+                    v-if="canUpdate"
+                    type="button"
+                    class="link-button"
+                    @click="confirmResetPassword(user)"
+                  >重置密码</button>
                   <button
                     v-if="canUpdate"
                     type="button"
@@ -340,20 +375,21 @@ onUnmounted(() => {
             <label class="role-form-wide">
               登录密码
               <input
-                v-model="form.password"
-                type="password"
-                placeholder="至少 12 位密码"
-                minlength="12"
-                maxlength="128"
+                type="text"
+                :value="DEFAULT_PASSWORD"
+                readonly
+                title="初始密码由系统自动赋予，管理员不可修改"
               />
+              <small style="margin-top: 4px; color: var(--muted); font-size: 11px;">
+                系统默认赋予初始密码，管理员不可修改；用户登录后可自行修改密码
+              </small>
             </label>
             <label class="role-form-wide">
               角色
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; padding-top: 4px;">
+              <div class="role-check-options">
                 <label
                   v-for="role in roles"
                   :key="role.roleCode"
-                  style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #2a303b;"
                 >
                   <input
                     type="checkbox"
@@ -391,11 +427,10 @@ onUnmounted(() => {
             <button type="button" @click="closeAssignDialog" aria-label="关闭">&#x2715;</button>
           </header>
           <div style="padding: 18px 22px;">
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <div class="role-check-options">
               <label
                 v-for="role in roles"
                 :key="role.roleCode"
-                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #2a303b; min-width: 140px;"
               >
                 <input
                   type="checkbox"
@@ -444,6 +479,35 @@ onUnmounted(() => {
               :disabled="saving"
               @click="executeToggle"
             >{{ saving ? '处理中…' : (toggleTargetEnabled ? '确认停用' : '确认启用') }}</button>
+          </footer>
+        </div>
+      </div>
+
+      <!-- 重置密码确认弹窗 -->
+      <div v-if="resetConfirmOpen" class="dialog-backdrop" @click.self="closeResetConfirm">
+        <div class="role-dialog" style="width: min(400px, 100%);">
+          <header>
+            <div>
+              <h2>确认重置密码</h2>
+              <p>密码将恢复为系统初始密码</p>
+            </div>
+            <button type="button" @click="closeResetConfirm" aria-label="关闭">&#x2715;</button>
+          </header>
+          <div style="padding: 18px 22px;">
+            <p style="margin: 0; color: #3b424e; font-size: 13px;">
+              确定将账号 <strong>{{ resetTargetName }}</strong> 的密码重置为
+              <strong class="mono">{{ DEFAULT_PASSWORD }}</strong> 吗？
+              该用户的现有登录会话将被强制退出。
+            </p>
+          </div>
+          <footer>
+            <button class="secondary-button" type="button" @click="closeResetConfirm">取消</button>
+            <button
+              class="primary-button"
+              type="button"
+              :disabled="saving"
+              @click="executeResetPassword"
+            >{{ saving ? '处理中…' : '确认重置' }}</button>
           </footer>
         </div>
       </div>

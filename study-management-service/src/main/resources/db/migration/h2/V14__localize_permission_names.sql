@@ -1,0 +1,17 @@
+UPDATE hd_plt_permission SET permission_name = '查看管线总览' WHERE permission_code = 'pipeline.page.view';
+UPDATE hd_plt_permission SET permission_name = '查询 Study' WHERE permission_code = 'study.read';
+UPDATE hd_plt_permission SET permission_name = '新增管线配置' WHERE permission_code = 'config.create';
+UPDATE hd_plt_permission SET permission_name = '查看管线配置' WHERE permission_code = 'config.page.view';
+UPDATE hd_plt_permission SET permission_name = '修改管线配置' WHERE permission_code = 'config.update';
+UPDATE hd_plt_permission SET permission_name = '删除管线配置' WHERE permission_code = 'config.delete';
+UPDATE hd_plt_permission SET permission_name = '查看账号管理' WHERE permission_code = 'account.page.view';
+UPDATE hd_plt_permission SET permission_name = '新增账号' WHERE permission_code = 'account.create';
+UPDATE hd_plt_permission SET permission_name = '修改账号' WHERE permission_code = 'account.update';
+UPDATE hd_plt_permission SET permission_name = '分配角色' WHERE permission_code = 'account.assignRole';
+UPDATE hd_plt_permission SET permission_name = '删除账号' WHERE permission_code = 'account.delete';
+UPDATE hd_plt_permission SET permission_name = '查询系统设置' WHERE permission_code = 'platform.setting.read';
+UPDATE hd_plt_permission SET permission_name = '修改系统设置' WHERE permission_code = 'platform.setting.update';
+UPDATE hd_plt_permission SET permission_name = '查看角色权限管理' WHERE permission_code = 'role.page.view';
+UPDATE hd_plt_permission SET permission_name = '新增角色' WHERE permission_code = 'role.create';
+UPDATE hd_plt_permission SET permission_name = '修改角色' WHERE permission_code = 'role.update';
+UPDATE hd_plt_permission SET permission_name = '删除角色' WHERE permission_code = 'role.delete';

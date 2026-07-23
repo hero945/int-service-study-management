@@ -158,6 +158,41 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .user-summary > span:last-child, .topbar-user > span:last-child { min-width: 0; display: flex; flex-direction: column; }
 .user-summary strong, .topbar-user strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .user-summary small, .topbar-user small { margin-top: 2px; color: #969ea9; font-size: 11px; }
+.topbar-user {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+.topbar-user-menu { position: relative; }
+.topbar-user-dropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 148px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(20, 27, 40, .16);
+}
+.topbar-user-dropdown button {
+  display: block;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #2a303b;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.topbar-user-dropdown button:hover { background: #edf4ff; color: var(--accent); }
 .avatar {
   width: 30px;
   height: 30px;
@@ -626,10 +661,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   border-radius: 4px;
 }
 .risk-toolbar .toolbar-filters { min-width: 0; flex: 1; flex-wrap: wrap; }
-.risk-stats { display: grid; grid-template-columns: repeat(4, minmax(130px, 1fr)); gap: 10px; margin: 16px 22px 0; }
-.risk-stats button { display: flex; min-height: 74px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 5px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--muted); text-align: left; cursor: pointer; }
+.risk-stats { display: grid; grid-template-columns: repeat(4, minmax(100px, 1fr)); gap: 8px; margin: 12px 22px 0; }
+.risk-stats button { display: flex; min-height: 50px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); text-align: left; cursor: pointer; }
 .risk-stats button:hover, .risk-stats button.active { border-color: #9db9e8; background: #f7faff; }
-.risk-stats strong { color: #2a303b; font: 600 23px "IBM Plex Mono", "Cascadia Mono", monospace; }
+.risk-stats strong { color: #2a303b; font: 600 17px "IBM Plex Mono", "Cascadia Mono", monospace; }
 .risk-stats .risk-stat--red { color: var(--red-text); }
 .risk-stats .risk-stat--orange { color: var(--orange-text); }
 .risk-table-card { margin-top: 12px; }
@@ -886,19 +921,63 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 }
 .role-form-grid input, .role-form-grid select { height: 36px; }
 .role-form-grid input:focus, .role-form-grid select:focus, .role-form-grid textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30, 94, 214, .1); }
-.role-form-grid input:disabled, .role-form-grid select:disabled { background: #f3f4f6; color: #8a929e; cursor: not-allowed; }
+.role-form-grid input:disabled, .role-form-grid select:disabled,
+.role-form-grid input[readonly] { background: #f3f4f6; color: #8a929e; cursor: not-allowed; }
 .role-form-wide { grid-column: 1 / -1; }
 .permission-editor { margin: 0 22px 18px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .permission-editor__title { display: flex; justify-content: space-between; padding: 11px 13px; background: #f8fafc; font-size: 12px; }
 .permission-editor__title span { color: var(--muted); }
 .permission-group { border-top: 1px solid var(--line); }
 .permission-group__heading { display: flex; align-items: center; gap: 8px; padding: 10px 13px; background: #fcfcfd; font-size: 12px; }
+.permission-group__heading > label { display: flex; align-items: center; gap: 8px; min-width: 0; cursor: pointer; }
 .permission-group__heading span { margin-left: auto; color: var(--subtle); font-size: 10.5px; }
+.permission-group__toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.permission-group__toggle:hover { background: #eef2f7; color: #2a303b; }
 .permission-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; padding: 8px 13px 12px 39px; }
 .permission-options label { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; font-size: 11.5px; }
 .permission-options label > span { display: grid; gap: 2px; }
 .permission-options small { color: var(--subtle); font-size: 10px; }
 .permission-group input { margin: 2px 0 0; accent-color: var(--accent); }
+.role-check-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding-top: 4px;
+}
+.role-check-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 140px;
+  padding: 6px 0;
+  font-size: 11.5px;
+  color: #2a303b;
+}
+.role-check-options input {
+  margin: 2px 0 0;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+}
+.permission-group input[type="checkbox"],
+.permission-options input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
 .role-dialog > .form-error { margin: 0 22px 14px; }
 .report-layout { display: grid; grid-template-columns: minmax(320px, 520px) 1fr; gap: 18px; margin: 18px 22px; }
 .report-layout .data-card, .report-layout .state-panel { margin: 0; }

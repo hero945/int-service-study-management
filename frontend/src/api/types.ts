@@ -313,6 +313,7 @@ export interface TeamMatrixStudy {
   indication: string
   statusCode: string
   statusLabel: string
+  currentStatus: string
   version: number
 }
 
@@ -466,8 +467,12 @@ export interface PlatformUser {
 export interface CreateUserInput {
   username: string
   displayName: string
-  password: string
   roleCodes: RoleCode[]
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string
+  newPassword: string
 }
 
 export interface UpdateUserInput {

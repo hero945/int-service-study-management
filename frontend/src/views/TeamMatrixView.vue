@@ -238,7 +238,7 @@ onMounted(loadMatrix)
                 <th v-for="study in matrix?.studies" :key="study.studyId" scope="col">
                   <strong>{{ study.studyCode }}</strong>
                   <span>{{ study.indication || '—' }}</span>
-                  <small>{{ study.statusLabel }}</small>
+                  <small>{{ study.currentStatus || '—' }}</small>
                 </th>
               </tr>
             </thead>

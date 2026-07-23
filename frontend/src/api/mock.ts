@@ -1,6 +1,7 @@
 import type { ApiClient } from './client'
 import type {
   AssignRolesInput,
+  ChangePasswordInput,
   CreateUserInput,
   CurrentUser,
   PipelineProgram,
@@ -28,8 +29,8 @@ import type {
 const users: Array<CurrentUser & { password: string }> = [
   {
     username: 'chen@eastchinapharm.com',
-    displayName: '陈研发',
-    title: '系统管理员',
+    displayName: '???',
+    title: '?????',
     roles: ['ADMIN'],
     permissions: [
       'pipeline.page.view',
@@ -63,8 +64,8 @@ const users: Array<CurrentUser & { password: string }> = [
   },
   {
     username: 'zhangwei@eastchinapharm.com',
-    displayName: '张伟',
-    title: '项目负责人 · PL',
+    displayName: '??',
+    title: '????? ? PL',
     roles: ['USER'],
     permissions: ['pipeline.page.view', 'study.read', 'milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
     dataScope: 'ALL',
@@ -72,8 +73,8 @@ const users: Array<CurrentUser & { password: string }> = [
   },
   {
     username: 'liuyang@eastchinapharm.com',
-    displayName: '刘洋',
-    title: '质量观察员',
+    displayName: '??',
+    title: '?????',
     roles: ['VIEWER'],
     permissions: ['pipeline.page.view', 'study.read', 'monthly.read', 'risk.page.view', 'risk.read'],
     dataScope: 'ALL',
@@ -82,9 +83,9 @@ const users: Array<CurrentUser & { password: string }> = [
 ]
 
 const STUDY_STATUS_META = {
-  PLANNED: { label: '计划中', tone: 'neutral' },
-  ACTIVE: { label: '进行中', tone: 'positive' },
-  COMPLETED: { label: '已完成', tone: 'info' },
+  PLANNED: { label: '???', tone: 'neutral' },
+  ACTIVE: { label: '???', tone: 'positive' },
+  COMPLETED: { label: '???', tone: 'info' },
 } as const
 
 type StudySeed = Omit<Study, 'id' | 'status' | 'statusLabel' | 'statusTone'> & {
@@ -97,66 +98,66 @@ function expand(base: StudyBase, variants: StudyVariant[]): StudySeed[] {
   return variants.map((variant) => ({ ...base, ...variant }))
 }
 
-// 覆盖 6 个治疗领域；同一 project 下含多个不同 phase 的 study，用于验证 byProject 聚合与回填
+// ?? 6 ???????? project ?????? phase ? study????? byProject ?????
 const studySeeds: StudySeed[] = [
-  // 肿瘤
-  ...expand({ indication: '晚期实体瘤', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-1', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2020-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-03-10', updatedAt: '2026-07-15T09:20:00' },
-    { code: 'HDM2020-002', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-09-01', updatedAt: '2026-07-10T14:05:00' },
+  // ??
+  ...expand({ indication: '?????', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '??', programCode: 'HDM2020', projectCode: 'HDM2020-1', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2020-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '??', startDate: '2025-03-10', updatedAt: '2026-07-15T09:20:00' },
+    { code: 'HDM2020-002', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '??', startDate: '2025-09-01', updatedAt: '2026-07-10T14:05:00' },
   ]),
-  ...expand({ indication: '非小细胞肺癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-2', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2020-101', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '李静', startDate: '2025-06-20', updatedAt: '2026-07-08T10:30:00' },
+  ...expand({ indication: '??????', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '??', programCode: 'HDM2020', projectCode: 'HDM2020-2', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2020-101', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '??', startDate: '2025-06-20', updatedAt: '2026-07-08T10:30:00' },
   ]),
-  ...expand({ indication: '乳腺癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-3', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2020-201', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-11-05', updatedAt: '2026-07-01T16:40:00' },
-    { code: 'HDM2020-202', phase: 'PHASE_2', status: 'PLANNED', ownerName: '王芳', startDate: '2026-08-01', updatedAt: '2026-06-28T11:00:00' },
+  ...expand({ indication: '???', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '??', programCode: 'HDM2020', projectCode: 'HDM2020-3', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2020-201', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '??', startDate: '2025-11-05', updatedAt: '2026-07-01T16:40:00' },
+    { code: 'HDM2020-202', phase: 'PHASE_2', status: 'PLANNED', ownerName: '??', startDate: '2026-08-01', updatedAt: '2026-06-28T11:00:00' },
   ]),
-  ...expand({ indication: '胃癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2031', projectCode: 'HDM2031-1', productName: 'HDM2031', moa: '单克隆抗体', sourceCode: 'IN_LICENSE', originCode: 'IMPORTED' }, [
-    { code: 'HDM2031-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-05-12', updatedAt: '2026-07-12T13:10:00' },
-    { code: 'HDM2031-002', phase: 'PHASE_3_2', status: 'PLANNED', ownerName: '陈研发', startDate: '2026-09-01', updatedAt: '2026-07-05T09:45:00' },
+  ...expand({ indication: '??', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '??', programCode: 'HDM2031', projectCode: 'HDM2031-1', productName: 'HDM2031', moa: '?????', sourceCode: 'IN_LICENSE', originCode: 'IMPORTED' }, [
+    { code: 'HDM2031-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '???', startDate: '2024-05-12', updatedAt: '2026-07-12T13:10:00' },
+    { code: 'HDM2031-002', phase: 'PHASE_3_2', status: 'PLANNED', ownerName: '???', startDate: '2026-09-01', updatedAt: '2026-07-05T09:45:00' },
   ]),
-  // 自身免疫
-  ...expand({ indication: '系统性红斑狼疮', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '自身免疫', programCode: 'HDM2015', projectCode: 'HDM2015-1', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2015-101', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-02-18', updatedAt: '2026-07-14T16:40:00' },
-    { code: 'HDM2015-102', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '王芳', startDate: '2023-08-01', updatedAt: '2025-12-20T10:00:00' },
+  // ????
+  ...expand({ indication: '???????', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '????', programCode: 'HDM2015', projectCode: 'HDM2015-1', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2015-101', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '??', startDate: '2025-02-18', updatedAt: '2026-07-14T16:40:00' },
+    { code: 'HDM2015-102', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '??', startDate: '2023-08-01', updatedAt: '2025-12-20T10:00:00' },
   ]),
-  ...expand({ indication: '类风湿关节炎', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '自身免疫', programCode: 'HDM2015', projectCode: 'HDM2015-2', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2015-201', phase: 'IND', status: 'ACTIVE', ownerName: '李静', startDate: '2025-10-10', updatedAt: '2026-07-09T15:20:00' },
+  ...expand({ indication: '??????', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '????', programCode: 'HDM2015', projectCode: 'HDM2015-2', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2015-201', phase: 'IND', status: 'ACTIVE', ownerName: '??', startDate: '2025-10-10', updatedAt: '2026-07-09T15:20:00' },
   ]),
-  // 代谢与心血管
-  ...expand({ indication: '2 型糖尿病', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '代谢与心血管', programCode: 'HDM1005', projectCode: 'HDM1005-3', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM1005-301', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '李静', startDate: '2023-05-06', updatedAt: '2024-11-30T09:00:00' },
-    { code: 'HDM1005-302', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '李静', startDate: '2025-01-15', updatedAt: '2026-07-12T13:10:00' },
-    { code: 'HDM1005-303', phase: 'PHASE_3_1', status: 'PLANNED', ownerName: '李静', startDate: '2026-10-01', updatedAt: '2026-07-06T10:20:00' },
+  // ??????
+  ...expand({ indication: '2 ????', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '??????', programCode: 'HDM1005', projectCode: 'HDM1005-3', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM1005-301', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '??', startDate: '2023-05-06', updatedAt: '2024-11-30T09:00:00' },
+    { code: 'HDM1005-302', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '??', startDate: '2025-01-15', updatedAt: '2026-07-12T13:10:00' },
+    { code: 'HDM1005-303', phase: 'PHASE_3_1', status: 'PLANNED', ownerName: '??', startDate: '2026-10-01', updatedAt: '2026-07-06T10:20:00' },
   ]),
-  ...expand({ indication: '肥胖', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '代谢与心血管', programCode: 'HDM1005', projectCode: 'HDM1005-5', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM1005-501', phase: 'PRE_IND', status: 'ACTIVE', ownerName: '张伟', startDate: '2026-01-20', updatedAt: '2026-07-03T14:00:00' },
+  ...expand({ indication: '??', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '??????', programCode: 'HDM1005', projectCode: 'HDM1005-5', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM1005-501', phase: 'PRE_IND', status: 'ACTIVE', ownerName: '??', startDate: '2026-01-20', updatedAt: '2026-07-03T14:00:00' },
   ]),
-  // 呼吸系统
-  ...expand({ indication: '哮喘', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-1', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2042-001', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '刘洋', startDate: '2025-04-22', updatedAt: '2026-07-11T09:30:00' },
+  // ????
+  ...expand({ indication: '??', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '????', programCode: 'HDM2042', projectCode: 'HDM2042-1', productName: 'HDM2042', moa: '???', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2042-001', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '??', startDate: '2025-04-22', updatedAt: '2026-07-11T09:30:00' },
   ]),
-  ...expand({ indication: '慢阻肺', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-2', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2042-201', phase: 'PHASE_1', status: 'PLANNED', ownerName: '刘洋', startDate: '2026-07-01', updatedAt: '2026-06-30T17:00:00' },
+  ...expand({ indication: '???', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '????', programCode: 'HDM2042', projectCode: 'HDM2042-2', productName: 'HDM2042', moa: '???', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2042-201', phase: 'PHASE_1', status: 'PLANNED', ownerName: '??', startDate: '2026-07-01', updatedAt: '2026-06-30T17:00:00' },
   ]),
-  ...expand({ indication: '特发性肺纤维化', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-3', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2042-301', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-12-08', updatedAt: '2026-07-07T11:15:00' },
+  ...expand({ indication: '???????', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '????', programCode: 'HDM2042', projectCode: 'HDM2042-3', productName: 'HDM2042', moa: '???', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2042-301', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '??', startDate: '2025-12-08', updatedAt: '2026-07-07T11:15:00' },
   ]),
-  // 感染性疾病
-  ...expand({ indication: '慢性乙肝', therapeuticAreaCode: 'INFECTIOUS_DISEASE', therapeuticAreaName: '感染性疾病', programCode: 'HDM2050', projectCode: 'HDM2050-1', productName: 'HDM2050', moa: '抗病毒', sourceCode: 'COOPERATION', originCode: 'IMPORTED' }, [
-    { code: 'HDM2050-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-03-15', updatedAt: '2026-07-13T10:50:00' },
-    { code: 'HDM2050-002', phase: 'PHASE_3_2', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-11-20', updatedAt: '2026-07-04T15:35:00' },
+  // ?????
+  ...expand({ indication: '????', therapeuticAreaCode: 'INFECTIOUS_DISEASE', therapeuticAreaName: '?????', programCode: 'HDM2050', projectCode: 'HDM2050-1', productName: 'HDM2050', moa: '???', sourceCode: 'COOPERATION', originCode: 'IMPORTED' }, [
+    { code: 'HDM2050-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '???', startDate: '2024-03-15', updatedAt: '2026-07-13T10:50:00' },
+    { code: 'HDM2050-002', phase: 'PHASE_3_2', status: 'ACTIVE', ownerName: '???', startDate: '2024-11-20', updatedAt: '2026-07-04T15:35:00' },
   ]),
-  // 神经科学
-  ...expand({ indication: '阿尔茨海默病', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-1', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2066-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '李静', startDate: '2025-07-30', updatedAt: '2026-07-10T09:10:00' },
-    { code: 'HDM2066-002', phase: 'PRE_IND', status: 'COMPLETED', ownerName: '李静', startDate: '2024-02-14', updatedAt: '2025-06-30T14:20:00' },
+  // ????
+  ...expand({ indication: '??????', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '????', programCode: 'HDM2066', projectCode: 'HDM2066-1', productName: 'HDM2066', moa: '???', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2066-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '??', startDate: '2025-07-30', updatedAt: '2026-07-10T09:10:00' },
+    { code: 'HDM2066-002', phase: 'PRE_IND', status: 'COMPLETED', ownerName: '??', startDate: '2024-02-14', updatedAt: '2025-06-30T14:20:00' },
   ]),
-  ...expand({ indication: '帕金森病', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-2', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2066-201', phase: 'IND', status: 'PLANNED', ownerName: '张伟', startDate: '2026-08-15', updatedAt: '2026-07-02T10:40:00' },
+  ...expand({ indication: '????', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '????', programCode: 'HDM2066', projectCode: 'HDM2066-2', productName: 'HDM2066', moa: '???', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2066-201', phase: 'IND', status: 'PLANNED', ownerName: '??', startDate: '2026-08-15', updatedAt: '2026-07-02T10:40:00' },
   ]),
-  ...expand({ indication: '抑郁症', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-3', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2066-301', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-05-25', updatedAt: '2026-07-09T13:25:00' },
+  ...expand({ indication: '???', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '????', programCode: 'HDM2066', projectCode: 'HDM2066-3', productName: 'HDM2066', moa: '???', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
+    { code: 'HDM2066-301', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '??', startDate: '2025-05-25', updatedAt: '2026-07-09T13:25:00' },
   ]),
 ]
 
@@ -167,40 +168,40 @@ export const demoStudies: Study[] = studySeeds.map((seed, index) => ({
   statusTone: STUDY_STATUS_META[seed.status].tone,
 }))
 
-// 每个 study 的里程碑总览状态（演示用，模拟里程碑推导出的【主状态/子状态/当前阶段完成】）。
-// 主显示 = 子状态（节点名，如 "LPI"）；灰色副文本 = 主状态（stage 名，如 "Enrollment"）。
+// ?? study ??????????????????????????/???/?????????
+// ??? = ????????? "LPI"??????? = ????stage ??? "Enrollment"??
 const mockOverviewMilestoneView: Record<string, {
   mainStageLabel: string
   subStatusLabel: string
   currentPhaseCompleted: boolean
 }> = {
   'HDM2020-001': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPI', currentPhaseCompleted: false },
-  'HDM2020-002': { mainStageLabel: 'IA', subStatusLabel: 'IA 数据冻结', currentPhaseCompleted: false },
-  'HDM2020-101': { mainStageLabel: 'SSU', subStatusLabel: '所有中心启动', currentPhaseCompleted: false },
+  'HDM2020-002': { mainStageLabel: 'IA', subStatusLabel: 'IA ????', currentPhaseCompleted: false },
+  'HDM2020-101': { mainStageLabel: 'SSU', subStatusLabel: '??????', currentPhaseCompleted: false },
   'HDM2020-201': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
-  'HDM2020-202': { mainStageLabel: 'Protocol', subStatusLabel: '方案定稿', currentPhaseCompleted: false },
+  'HDM2020-202': { mainStageLabel: 'Protocol', subStatusLabel: '????', currentPhaseCompleted: false },
   'HDM2031-001': { mainStageLabel: 'Data & Report', subStatusLabel: 'DBL', currentPhaseCompleted: false },
-  'HDM2031-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
-  'HDM2015-101': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR初稿', currentPhaseCompleted: false },
+  'HDM2031-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA ??', currentPhaseCompleted: false },
+  'HDM2015-101': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR??', currentPhaseCompleted: false },
   'HDM2015-102': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
-  'HDM2015-201': { mainStageLabel: 'IND', subStatusLabel: 'IND 获批', currentPhaseCompleted: false },
+  'HDM2015-201': { mainStageLabel: 'IND', subStatusLabel: 'IND ??', currentPhaseCompleted: false },
   'HDM1005-301': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
-  'HDM1005-302': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR定稿', currentPhaseCompleted: false },
-  'HDM1005-303': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
-  'HDM1005-501': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-药学', currentPhaseCompleted: false },
-  'HDM2042-001': { mainStageLabel: 'IA', subStatusLabel: 'IA 数据分析', currentPhaseCompleted: false },
-  'HDM2042-201': { mainStageLabel: 'Protocol', subStatusLabel: '方案讨论会', currentPhaseCompleted: false },
-  'HDM2042-301': { mainStageLabel: 'SSU', subStatusLabel: '首家中心启动', currentPhaseCompleted: false },
-  'HDM2050-001': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR定稿', currentPhaseCompleted: false },
-  'HDM2050-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: '临床核查', currentPhaseCompleted: false },
+  'HDM1005-302': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR??', currentPhaseCompleted: false },
+  'HDM1005-303': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA ??', currentPhaseCompleted: false },
+  'HDM1005-501': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND ??-??', currentPhaseCompleted: false },
+  'HDM2042-001': { mainStageLabel: 'IA', subStatusLabel: 'IA ????', currentPhaseCompleted: false },
+  'HDM2042-201': { mainStageLabel: 'Protocol', subStatusLabel: '?????', currentPhaseCompleted: false },
+  'HDM2042-301': { mainStageLabel: 'SSU', subStatusLabel: '??????', currentPhaseCompleted: false },
+  'HDM2050-001': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR??', currentPhaseCompleted: false },
+  'HDM2050-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: '????', currentPhaseCompleted: false },
   'HDM2066-001': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPI', currentPhaseCompleted: false },
-  'HDM2066-002': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-药学', currentPhaseCompleted: true },
-  'HDM2066-201': { mainStageLabel: 'IND', subStatusLabel: 'IND 递交', currentPhaseCompleted: false },
-  'HDM2066-301': { mainStageLabel: 'SSU', subStatusLabel: '所有中心启动', currentPhaseCompleted: false },
+  'HDM2066-002': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND ??-??', currentPhaseCompleted: true },
+  'HDM2066-201': { mainStageLabel: 'IND', subStatusLabel: 'IND ??', currentPhaseCompleted: false },
+  'HDM2066-301': { mainStageLabel: 'SSU', subStatusLabel: '??????', currentPhaseCompleted: false },
 }
 
-const SOURCE_LABEL: Record<string, string> = { SELF_DEVELOPED: '自研', IN_LICENSE: '引进', COOPERATION: '合作' }
-const ORIGIN_LABEL: Record<string, string> = { DOMESTIC: '国产', IMPORTED: '进口' }
+const SOURCE_LABEL: Record<string, string> = { SELF_DEVELOPED: '??', IN_LICENSE: '??', COOPERATION: '??' }
+const ORIGIN_LABEL: Record<string, string> = { DOMESTIC: '??', IMPORTED: '??' }
 
 let nextRiskId = 19
 let nextRiskActionId = 2
@@ -208,69 +209,69 @@ const mockRisks: RiskDetail[] = [{
   risk: {
     riskCode: 'RSK-2026-000018', studyId: 3, studyCode: 'HDM1005-302',
     programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'RA',
-    functionName: '注册', description: '监管沟通窗口可能影响计划节点',
-    ownerUserId: 2, ownerName: '张伟', score: 48, level: 'HIGH', status: 'OPEN',
+    functionName: '??', description: '??????????????',
+    ownerUserId: 2, ownerName: '??', score: 48, level: 'HIGH', status: 'OPEN',
     actionCount: 1, version: 0, updatedAt: '2026-07-22T09:00:00Z',
   },
   registeredDate: '2026-07-15', closeReason: '',
   assessments: [{ id: 1, number: 1, impact: 4, likelihood: 4, detectability: 3,
-    score: 48, level: 'HIGH', reason: '首次评估', assessedBy: '张伟',
+    score: 48, level: 'HIGH', reason: '????', assessedBy: '??',
     assessedAt: '2026-07-15T09:00:00Z' }],
-  actions: [{ id: 1, description: '每周跟踪监管沟通材料', ownerUserId: 2,
-    ownerName: '张伟', plannedDate: '2026-08-15', completedDate: null,
+  actions: [{ id: 1, description: '??????????', ownerUserId: 2,
+    ownerName: '??', plannedDate: '2026-08-15', completedDate: null,
     status: 'IN_PROGRESS', completionNote: '', version: 0 }],
 }]
 
 const teamRoles: TeamMatrixRole[] = [
-  ['PL', 'PL 项目负责人', 'PM', '项目管理'],
-  ['APL', 'APL 副项目负责人', 'PM', '项目管理'],
-  ['PM', 'PM 项目经理', 'PM', '项目管理'],
-  ['APM', 'APM 副项目经理', 'PM', '项目管理'],
-  ['RA_SPONSOR', 'RA Sponsor', 'RA', '注册'],
-  ['RA_MANAGER', 'RA Manager', 'RA', '注册'],
-  ['RA_SPECIALIST', 'RA Specialist', 'RA', '注册'],
-  ['RA_CMC', 'RA CMC', 'RA', '注册'],
-  ['CM_SPONSOR', 'CM Sponsor', 'CM', '临床医学'],
-  ['CM', 'CM', 'CM', '临床医学'],
-  ['CP_SPONSOR', 'CP Sponsor', 'CP', '临床药理'],
-  ['CP', 'CP', 'CP', '临床药理'],
-  ['PV_SPONSOR', 'PV Sponsor', 'PV', '药物警戒'],
-  ['PVP', 'PVP', 'PV', '药物警戒'],
-  ['PVO', 'PVO', 'PV', '药物警戒'],
-  ['TM_SPONSOR', 'TM Sponsor', 'TM', '试验管理'],
-  ['TM', 'TM', 'TM', '试验管理'],
-  ['CO_SPONSOR', 'CO Sponsor', 'CO', '临床运营'],
-  ['CTM', 'CTM', 'CO', '临床运营'],
-  ['ACTM', 'ACTM', 'CO', '临床运营'],
-  ['LAB', 'Lab', 'LAB', '中心实验室'],
-  ['LAB_BACKUP', 'Lab backup', 'LAB', '中心实验室'],
-  ['SUPPLY', 'Supply', 'SUPPLY', '供应保障'],
-  ['SUPPLY_BACKUP', 'Supply backup', 'SUPPLY', '供应保障'],
-  ['CTA_PROCESS', 'CTA process', 'CTA', '临床试验协调'],
-  ['CTA_TMF', 'CTA TMF', 'CTA', '临床试验协调'],
-  ['ST_SPONSOR', 'ST Sponsor', 'ST', '生物统计'],
-  ['ST', 'ST', 'ST', '生物统计'],
-  ['PG_SPONSOR', 'PG Sponsor', 'PG', '统计编程'],
-  ['PG', 'PG', 'PG', '统计编程'],
-  ['DM_SPONSOR', 'DM Sponsor', 'DM', '数据管理'],
-  ['DM', 'DM', 'DM', '数据管理'],
-  ['MW', 'MW', 'MW', '医学写作'],
-  ['NC_CONTACT', 'NC-contact', 'NC', '非临床'],
-  ['NC_PK', 'NC-PK', 'NC', '非临床'],
-  ['NC_PD', 'NC-PD', 'NC', '非临床'],
-  ['NC_TOX', 'NC-TOX', 'NC', '非临床'],
-  ['CMC_PL', 'CMC-PL', 'CMC', '药学CMC'],
-  ['CMC_PM', 'CMC-PM', 'CMC', '药学CMC'],
-  ['CMC_DS', 'CMC-DS', 'CMC', '药学CMC'],
-  ['CMC_DP', 'CMC-DP', 'CMC', '药学CMC'],
-  ['CMC_OA', 'CMC-OA', 'CMC', '药学CMC'],
-  ['CMC_RA', 'CMC-RA', 'CMC', '药学CMC'],
-  ['IP', 'IP', 'IP', '药品管理'],
+  ['PL', 'PL ?????', 'PM', '????'],
+  ['APL', 'APL ??????', 'PM', '????'],
+  ['PM', 'PM ????', 'PM', '????'],
+  ['APM', 'APM ?????', 'PM', '????'],
+  ['RA_SPONSOR', 'RA Sponsor', 'RA', '??'],
+  ['RA_MANAGER', 'RA Manager', 'RA', '??'],
+  ['RA_SPECIALIST', 'RA Specialist', 'RA', '??'],
+  ['RA_CMC', 'RA CMC', 'RA', '??'],
+  ['CM_SPONSOR', 'CM Sponsor', 'CM', '????'],
+  ['CM', 'CM', 'CM', '????'],
+  ['CP_SPONSOR', 'CP Sponsor', 'CP', '????'],
+  ['CP', 'CP', 'CP', '????'],
+  ['PV_SPONSOR', 'PV Sponsor', 'PV', '????'],
+  ['PVP', 'PVP', 'PV', '????'],
+  ['PVO', 'PVO', 'PV', '????'],
+  ['TM_SPONSOR', 'TM Sponsor', 'TM', '????'],
+  ['TM', 'TM', 'TM', '????'],
+  ['CO_SPONSOR', 'CO Sponsor', 'CO', '????'],
+  ['CTM', 'CTM', 'CO', '????'],
+  ['ACTM', 'ACTM', 'CO', '????'],
+  ['LAB', 'Lab', 'LAB', '?????'],
+  ['LAB_BACKUP', 'Lab backup', 'LAB', '?????'],
+  ['SUPPLY', 'Supply', 'SUPPLY', '????'],
+  ['SUPPLY_BACKUP', 'Supply backup', 'SUPPLY', '????'],
+  ['CTA_PROCESS', 'CTA process', 'CTA', '??????'],
+  ['CTA_TMF', 'CTA TMF', 'CTA', '??????'],
+  ['ST_SPONSOR', 'ST Sponsor', 'ST', '????'],
+  ['ST', 'ST', 'ST', '????'],
+  ['PG_SPONSOR', 'PG Sponsor', 'PG', '????'],
+  ['PG', 'PG', 'PG', '????'],
+  ['DM_SPONSOR', 'DM Sponsor', 'DM', '????'],
+  ['DM', 'DM', 'DM', '????'],
+  ['MW', 'MW', 'MW', '????'],
+  ['NC_CONTACT', 'NC-contact', 'NC', '???'],
+  ['NC_PK', 'NC-PK', 'NC', '???'],
+  ['NC_PD', 'NC-PD', 'NC', '???'],
+  ['NC_TOX', 'NC-TOX', 'NC', '???'],
+  ['CMC_PL', 'CMC-PL', 'CMC', '??CMC'],
+  ['CMC_PM', 'CMC-PM', 'CMC', '??CMC'],
+  ['CMC_DS', 'CMC-DS', 'CMC', '??CMC'],
+  ['CMC_DP', 'CMC-DP', 'CMC', '??CMC'],
+  ['CMC_OA', 'CMC-OA', 'CMC', '??CMC'],
+  ['CMC_RA', 'CMC-RA', 'CMC', '??CMC'],
+  ['IP', 'IP', 'IP', '????'],
 ].map(([roleCode, roleName, functionCode, functionName]) => ({
   roleCode, roleName, functionCode, functionName,
 }))
 
-// ── Mock 里程碑数据 ──
+// ?? Mock ????? ??
 
 function delay(ms: number) { return new Promise(r => setTimeout(r, ms)) }
 
@@ -300,46 +301,46 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
     studyCode,
     groups: [
       { stageCode: 'PreIND', stageName: 'PreIND', nodes: [
-        { milestoneCode: 'PreIND-0', milestoneName: 'PreIND 递交', planV1Date: d(-180), planV2Date: d(-175), actualStartDate: d(-178), actualEndDate: d(-176), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'PreIND-1', milestoneName: 'PreIND 反馈-临床医学', planV1Date: d(-150), planV2Date: d(-145), actualStartDate: d(-148), actualEndDate: d(-140), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'PreIND-2', milestoneName: 'PreIND 反馈-数统', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-142), actualEndDate: d(-138), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'PreIND-3', milestoneName: 'PreIND 反馈-临床药理', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-140), actualEndDate: d(-135), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'PreIND-4', milestoneName: 'PreIND 反馈-非临床', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-138), actualEndDate: d(-130), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'PreIND-5', milestoneName: 'PreIND 反馈-药学', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-135), actualEndDate: d(-125), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-0', milestoneName: 'PreIND ??', planV1Date: d(-180), planV2Date: d(-175), actualStartDate: d(-178), actualEndDate: d(-176), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-1', milestoneName: 'PreIND ??-????', planV1Date: d(-150), planV2Date: d(-145), actualStartDate: d(-148), actualEndDate: d(-140), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-2', milestoneName: 'PreIND ??-??', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-142), actualEndDate: d(-138), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-3', milestoneName: 'PreIND ??-????', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-140), actualEndDate: d(-135), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-4', milestoneName: 'PreIND ??-???', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-138), actualEndDate: d(-130), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'PreIND-5', milestoneName: 'PreIND ??-??', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-135), actualEndDate: d(-125), status: 'COMPLETED', deviationNote: null },
       ] as MilestoneNode[]},
       { stageCode: 'IND', stageName: 'IND', nodes: [
-        { milestoneCode: 'IND-0', milestoneName: 'IND 递交', planV1Date: d(-100), planV2Date: d(-95), actualStartDate: d(-98), actualEndDate: d(-96), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'IND-1', milestoneName: 'IND 形审发补', planV1Date: d(-80), planV2Date: d(-78), actualStartDate: d(-82), actualEndDate: d(-75), status: 'COMPLETED', deviationNote: 'CDE要求补充稳定性数据' },
-        { milestoneCode: 'IND-2', milestoneName: 'IND 形审补正', planV1Date: d(-60), planV2Date: d(-58), actualStartDate: d(-62), actualEndDate: d(-55), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'IND-3', milestoneName: 'IND 受理', planV1Date: d(-50), planV2Date: d(-48), actualStartDate: d(-52), actualEndDate: d(-46), status: 'COMPLETED', deviationNote: null },
-        { milestoneCode: 'IND-4', milestoneName: 'IND 获批', planV1Date: d(-30), planV2Date: d(-28), actualStartDate: d(-30), actualEndDate: null, status: 'IN_PROGRESS', deviationNote: null },
+        { milestoneCode: 'IND-0', milestoneName: 'IND ??', planV1Date: d(-100), planV2Date: d(-95), actualStartDate: d(-98), actualEndDate: d(-96), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'IND-1', milestoneName: 'IND ????', planV1Date: d(-80), planV2Date: d(-78), actualStartDate: d(-82), actualEndDate: d(-75), status: 'COMPLETED', deviationNote: 'CDE?????????' },
+        { milestoneCode: 'IND-2', milestoneName: 'IND ????', planV1Date: d(-60), planV2Date: d(-58), actualStartDate: d(-62), actualEndDate: d(-55), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'IND-3', milestoneName: 'IND ??', planV1Date: d(-50), planV2Date: d(-48), actualStartDate: d(-52), actualEndDate: d(-46), status: 'COMPLETED', deviationNote: null },
+        { milestoneCode: 'IND-4', milestoneName: 'IND ??', planV1Date: d(-30), planV2Date: d(-28), actualStartDate: d(-30), actualEndDate: null, status: 'IN_PROGRESS', deviationNote: null },
       ] as MilestoneNode[]},
       { stageCode: 'Pre3', stageName: 'Pre3', nodes: [
-        { milestoneCode: 'Pre3-0', milestoneName: 'Pre3 递交', planV1Date: d(60), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Pre3-1', milestoneName: 'Pre3 反馈-临床医学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Pre3-2', milestoneName: 'Pre3 反馈-数统', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Pre3-3', milestoneName: 'Pre3 反馈-临床药理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Pre3-4', milestoneName: 'Pre3 反馈-非临床', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Pre3-5', milestoneName: 'Pre3 反馈-药学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-0', milestoneName: 'Pre3 ??', planV1Date: d(60), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-1', milestoneName: 'Pre3 ??-????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-2', milestoneName: 'Pre3 ??-??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-3', milestoneName: 'Pre3 ??-????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-4', milestoneName: 'Pre3 ??-???', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Pre3-5', milestoneName: 'Pre3 ??-??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
       ] as MilestoneNode[]},
       { stageCode: 'Protocol', stageName: 'Protocol', nodes: [
-        { milestoneCode: 'Protocol-0', milestoneName: '方案摘要定稿', planV1Date: d(30), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Protocol-1', milestoneName: '方案讨论会', planV1Date: d(90), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Protocol-2', milestoneName: '方案定稿', planV1Date: d(150), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Protocol-0', milestoneName: '??????', planV1Date: d(30), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Protocol-1', milestoneName: '?????', planV1Date: d(90), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Protocol-2', milestoneName: '????', planV1Date: d(150), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
       ] as MilestoneNode[]},
       { stageCode: 'SSU', stageName: 'SSU', nodes: [
-        notStarted('SSU-0', '组长单位立项递交'),
-        notStarted('SSU-1', '组长单位立项获批'),
-        notStarted('SSU-2', '组长单位伦理递交'),
-        notStarted('SSU-3', '组长单位伦理获批'),
-        notStarted('SSU-4', '组长单位合同签署'),
-        notStarted('SSU-5', '首家中心启动'),
-        notStarted('SSU-6', '组长单位启动'),
-        notStarted('SSU-7', '所有中心启动'),
-        notStarted('SSU-8', '人遗递交'),
-        notStarted('SSU-9', '人遗批准'),
-        notStarted('SSU-10', 'CDE 平台登记'),
-        notStarted('SSU-11', 'ClinicalTrial 登记'),
+        notStarted('SSU-0', '????????'),
+        notStarted('SSU-1', '????????'),
+        notStarted('SSU-2', '????????'),
+        notStarted('SSU-3', '????????'),
+        notStarted('SSU-4', '????????'),
+        notStarted('SSU-5', '??????'),
+        notStarted('SSU-6', '??????'),
+        notStarted('SSU-7', '??????'),
+        notStarted('SSU-8', '????'),
+        notStarted('SSU-9', '????'),
+        notStarted('SSU-10', 'CDE ????'),
+        notStarted('SSU-11', 'ClinicalTrial ??'),
       ] as MilestoneNode[]},
       { stageCode: 'Enrollment', stageName: 'Enrollment', nodes: [
         { milestoneCode: 'Enrollment-0', milestoneName: 'FPI', planV1Date: d(360), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
@@ -347,37 +348,37 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         { milestoneCode: 'Enrollment-2', milestoneName: 'LPO', planV1Date: d(730), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
       ] as MilestoneNode[]},
       { stageCode: 'IA', stageName: 'IA', nodes: [
-        { milestoneCode: 'IA-0', milestoneName: 'IA 数据冻结', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'IA-1', milestoneName: 'IA 数据分析', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'IA-0', milestoneName: 'IA ????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'IA-1', milestoneName: 'IA ????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
       ] as MilestoneNode[]},
       { stageCode: 'Data_Report', stageName: 'Data & Report', nodes: [
         { milestoneCode: 'Data_Report-0', milestoneName: 'DBL', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Data_Report-1', milestoneName: 'TLR初稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Data_Report-2', milestoneName: 'TLR定稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Data_Report-3', milestoneName: 'TFL初稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Data_Report-4', milestoneName: 'TFL定稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Data_Report-5', milestoneName: 'CSR初稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Data_Report-6', milestoneName: 'CSR定稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-        { milestoneCode: 'Data_Report-7', milestoneName: '中心关闭', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-1', milestoneName: 'TLR??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-2', milestoneName: 'TLR??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-3', milestoneName: 'TFL??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-4', milestoneName: 'TFL??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-5', milestoneName: 'CSR??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-6', milestoneName: 'CSR??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+        { milestoneCode: 'Data_Report-7', milestoneName: '????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
       ] as MilestoneNode[]},
       { stageCode: 'PreNDA_BLA', stageName: 'PreNDA/BLA', nodes: [
-        notStarted('PreNDA_BLA-0', 'PreNDA 递交'),
-        notStarted('PreNDA_BLA-1', 'PreNDA 反馈-临床医学'),
-        notStarted('PreNDA_BLA-2', 'PreNDA 反馈-数统'),
-        notStarted('PreNDA_BLA-3', 'PreNDA 反馈-临床药理'),
-        notStarted('PreNDA_BLA-4', 'PreNDA 反馈-非临床'),
-        notStarted('PreNDA_BLA-5', 'PreNDA 反馈-药学'),
+        notStarted('PreNDA_BLA-0', 'PreNDA ??'),
+        notStarted('PreNDA_BLA-1', 'PreNDA ??-????'),
+        notStarted('PreNDA_BLA-2', 'PreNDA ??-??'),
+        notStarted('PreNDA_BLA-3', 'PreNDA ??-????'),
+        notStarted('PreNDA_BLA-4', 'PreNDA ??-???'),
+        notStarted('PreNDA_BLA-5', 'PreNDA ??-??'),
       ] as MilestoneNode[]},
       { stageCode: 'NDA_BLA', stageName: 'NDA/BLA', nodes: [
-        notStarted('NDA_BLA-0', 'NDA/BLA 递交'),
-        notStarted('NDA_BLA-1', 'NDA/BLA 形审发补'),
-        notStarted('NDA_BLA-2', 'NDA/BLA 形审补正'),
-        notStarted('NDA_BLA-3', 'NDA/BLA 受理'),
-        notStarted('NDA_BLA-4', '临床核查'),
-        notStarted('NDA_BLA-5', '药学核查'),
-        notStarted('NDA_BLA-6', 'NDA/BLA 发补'),
-        notStarted('NDA_BLA-7', 'NDA/BLA 补正'),
-        notStarted('NDA_BLA-8', 'NDA/BLA 获批'),
+        notStarted('NDA_BLA-0', 'NDA/BLA ??'),
+        notStarted('NDA_BLA-1', 'NDA/BLA ????'),
+        notStarted('NDA_BLA-2', 'NDA/BLA ????'),
+        notStarted('NDA_BLA-3', 'NDA/BLA ??'),
+        notStarted('NDA_BLA-4', '????'),
+        notStarted('NDA_BLA-5', '????'),
+        notStarted('NDA_BLA-6', 'NDA/BLA ??'),
+        notStarted('NDA_BLA-7', 'NDA/BLA ??'),
+        notStarted('NDA_BLA-8', 'NDA/BLA ??'),
       ] as MilestoneNode[]},
     ],
   }
@@ -388,39 +389,39 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
   const demo = buildDemoMilestones(3, 'HDM1005-302')
   // SSU nodes
   demo.groups[4].nodes = [
-    { milestoneCode: 'SSU-0', milestoneName: '组长单位立项递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-1', milestoneName: '组长单位立项获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-2', milestoneName: '组长单位伦理递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-3', milestoneName: '组长单位伦理获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-4', milestoneName: '组长单位合同签署', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-5', milestoneName: '首家中心启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-6', milestoneName: '组长单位启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-7', milestoneName: '所有中心启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-8', milestoneName: '人遗递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-9', milestoneName: '人遗批准', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-10', milestoneName: 'CDE 平台登记', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-11', milestoneName: 'ClinicalTrial 登记', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-0', milestoneName: '????????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-1', milestoneName: '????????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-2', milestoneName: '????????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-3', milestoneName: '????????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-4', milestoneName: '????????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-5', milestoneName: '??????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-6', milestoneName: '??????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-7', milestoneName: '??????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-8', milestoneName: '????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-9', milestoneName: '????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-10', milestoneName: 'CDE ????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'SSU-11', milestoneName: 'ClinicalTrial ??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
   ]
   // PreNDA/BLA nodes
   demo.groups[8].nodes = [
-    { milestoneCode: 'PreNDA_BLA-0', milestoneName: 'PreNDA 递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-1', milestoneName: 'PreNDA 反馈-临床医学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-2', milestoneName: 'PreNDA 反馈-数统', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-3', milestoneName: 'PreNDA 反馈-临床药理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-4', milestoneName: 'PreNDA 反馈-非临床', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-5', milestoneName: 'PreNDA 反馈-药学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-0', milestoneName: 'PreNDA ??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-1', milestoneName: 'PreNDA ??-????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-2', milestoneName: 'PreNDA ??-??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-3', milestoneName: 'PreNDA ??-????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-4', milestoneName: 'PreNDA ??-???', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'PreNDA_BLA-5', milestoneName: 'PreNDA ??-??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
   ]
   // NDA/BLA nodes
   demo.groups[9].nodes = [
-    { milestoneCode: 'NDA_BLA-0', milestoneName: 'NDA/BLA 递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-1', milestoneName: 'NDA/BLA 形审发补', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-2', milestoneName: 'NDA/BLA 形审补正', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-3', milestoneName: 'NDA/BLA 受理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-4', milestoneName: '临床核查', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-5', milestoneName: '药学核查', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-6', milestoneName: 'NDA/BLA 发补', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-7', milestoneName: 'NDA/BLA 补正', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-8', milestoneName: 'NDA/BLA 获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-0', milestoneName: 'NDA/BLA ??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-1', milestoneName: 'NDA/BLA ????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-2', milestoneName: 'NDA/BLA ????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-3', milestoneName: 'NDA/BLA ??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-4', milestoneName: '????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-5', milestoneName: '????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-6', milestoneName: 'NDA/BLA ??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-7', milestoneName: 'NDA/BLA ??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
+    { milestoneCode: 'NDA_BLA-8', milestoneName: 'NDA/BLA ??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
   ]
   mockMilestones.set(3, demo)
   // Also for study ID 1 and 2
@@ -456,9 +457,9 @@ function deriveCurrentPhaseStatus(page: MilestonePage): { currentPhase: string; 
 }
 
 
-// ── Mock 月报填写数据 ──
-// 功能线 code/name 取自 V8__team_matrix.sql 种子；可编辑性模拟"当前用户被分配到该功能线"：
-// study 1 临床医学+生物统计可编辑，study 2 注册可编辑，study 3 全部只读。
+// ?? Mock ?????? ??
+// ??? code/name ?? V8__team_matrix.sql ?????????"????????????"?
+// study 1 ????+????????study 2 ??????study 3 ?????
 
 let nextMonthlyEntryId = 100
 const mockMonthlyPages = new Map<string, MonthlyReportPage>()
@@ -481,31 +482,31 @@ function buildDemoMonthlyPage(studyId: number, month: string): MonthlyReportPage
   })
   const linesByStudy: Record<number, FunctionLineReport[]> = {
     1: [
-      line(101, 3, 'CM', '临床医学', true, [
-        [1, '06', '完成 PreIND 反馈临床问题回复并归档。', me, '09:30:00'],
-        [2, '18', '与 CDE 沟通临床开发计划，确认关键终点设置。', me, '10:00:00'],
+      line(101, 3, 'CM', '????', true, [
+        [1, '06', '?? PreIND ????????????', me, '09:30:00'],
+        [2, '18', '? CDE ??????????????????', me, '10:00:00'],
       ]),
-      line(102, 11, 'ST', '生物统计', true, [
-        [3, '10', '完成样本量估算初稿，待内部统计评审。', me, '14:00:00'],
+      line(102, 11, 'ST', '????', true, [
+        [3, '10', '??????????????????', me, '14:00:00'],
       ]),
-      line(103, 2, 'RA', '注册', false, [
-        [4, '15', 'PreIND 申请资料已递交，等待受理。', 'wangfang@eastchinapharm.com', '11:00:00'],
+      line(103, 2, 'RA', '??', false, [
+        [4, '15', 'PreIND ?????????????', 'wangfang@eastchinapharm.com', '11:00:00'],
       ]),
     ],
     2: [
-      line(201, 2, 'RA', '注册', true, [
-        [5, '08', 'IND 形审补正资料准备中。', me, '09:00:00'],
-        [6, '21', '与监管确认核查时间表。', me, '16:00:00'],
+      line(201, 2, 'RA', '??', true, [
+        [5, '08', 'IND ??????????', me, '09:00:00'],
+        [6, '21', '???????????', me, '16:00:00'],
       ]),
-      line(202, 3, 'CM', '临床医学', false, [
-        [7, '12', '更新研究者手册临床章节。', 'lijing@eastchinapharm.com', '10:30:00'],
+      line(202, 3, 'CM', '????', false, [
+        [7, '12', '????????????', 'lijing@eastchinapharm.com', '10:30:00'],
       ]),
     ],
     3: [
-      line(301, 7, 'CO', '临床运营', false, [
-        [8, '09', 'FPI 后首例受试者随访完成。', 'lijing@eastchinapharm.com', '13:00:00'],
+      line(301, 7, 'CO', '????', false, [
+        [8, '09', 'FPI ???????????', 'lijing@eastchinapharm.com', '13:00:00'],
       ]),
-      line(302, 13, 'DM', '数据管理', false, []),
+      line(302, 13, 'DM', '????', false, []),
     ],
   }
   const functionLines = linesByStudy[studyId]
@@ -518,7 +519,7 @@ function getMockMonthlyPage(studyId: number, month: string): MonthlyReportPage {
   let page = mockMonthlyPages.get(key)
   if (!page) {
     page = buildDemoMonthlyPage(studyId, month)
-    if (!page) throw new Error('Study 不存在')
+    if (!page) throw new Error('Study ???')
     mockMonthlyPages.set(key, page)
   }
   return page
@@ -532,22 +533,22 @@ export function createMockApiClient(): ApiClient {
     [`${demoStudies[1].id}|PM`, [2]],
   ])
   const permissions: PlatformPermission[] = [
-    ['pipeline', 'pipeline.page.view', '查看管线总览', 'PAGE', 'view'],
-    ['study', 'study.read', '查看 Study', 'ACTION', 'read'],
-    ['milestone', 'milestone.update', '修改里程碑', 'DATA', 'update'],
-    ['config', 'config.page.view', '查看管线配置', 'PAGE', 'view'],
-    ['config', 'config.create', '维护管线配置', 'ACTION', 'create'],
-    ['config', 'config.update', '修改管线配置', 'ACTION', 'update'],
-    ['config', 'config.delete', '删除管线配置', 'ACTION', 'delete'],
-    ['account', 'account.page.view', '查看账号管理', 'PAGE', 'view'],
-    ['account', 'account.create', '新增账号', 'ACTION', 'create'],
-    ['role', 'role.page.view', '查看角色权限管理', 'PAGE', 'view'],
-    ['role', 'role.create', '新增角色', 'ACTION', 'create'],
-    ['role', 'role.update', '编辑角色权限', 'ACTION', 'update'],
-    ['role', 'role.delete', '删除角色', 'ACTION', 'delete'],
-    ['team', 'team.page.view', '查看团队矩阵', 'PAGE', 'view'],
-    ['team', 'team.edit_mode', '进入团队编辑模式', 'PAGE_OPERATION', 'edit_mode'],
-    ['team', 'team.update', '更新团队分配', 'ACTION', 'update'],
+    ['pipeline', 'pipeline.page.view', '??????', 'PAGE', 'view'],
+    ['study', 'study.read', '?? Study', 'ACTION', 'read'],
+    ['milestone', 'milestone.update', '?????', 'DATA', 'update'],
+    ['config', 'config.page.view', '??????', 'PAGE', 'view'],
+    ['config', 'config.create', '??????', 'ACTION', 'create'],
+    ['config', 'config.update', '??????', 'ACTION', 'update'],
+    ['config', 'config.delete', '??????', 'ACTION', 'delete'],
+    ['account', 'account.page.view', '??????', 'PAGE', 'view'],
+    ['account', 'account.create', '????', 'ACTION', 'create'],
+    ['role', 'role.page.view', '????????', 'PAGE', 'view'],
+    ['role', 'role.create', '????', 'ACTION', 'create'],
+    ['role', 'role.update', '??????', 'ACTION', 'update'],
+    ['role', 'role.delete', '????', 'ACTION', 'delete'],
+    ['team', 'team.page.view', '??????', 'PAGE', 'view'],
+    ['team', 'team.edit_mode', '????????', 'PAGE_OPERATION', 'edit_mode'],
+    ['team', 'team.update', '??????', 'ACTION', 'update'],
   ].map(([moduleCode, permissionCode, permissionName, permissionType, actionCode], index) => ({
     id: index + 1,
     moduleCode,
@@ -563,7 +564,7 @@ export function createMockApiClient(): ApiClient {
     {
       id: 1,
       roleCode: 'ADMIN',
-      roleDescription: '系统管理员',
+      roleDescription: '?????',
       dataScopeMode: 'ALL',
       status: 'ACTIVE',
       systemRole: true,
@@ -574,7 +575,7 @@ export function createMockApiClient(): ApiClient {
     {
       id: 2,
       roleCode: 'USER',
-      roleDescription: '普通业务成员',
+      roleDescription: '??????',
       dataScopeMode: 'ALL',
       status: 'ACTIVE',
       systemRole: true,
@@ -585,7 +586,7 @@ export function createMockApiClient(): ApiClient {
     {
       id: 3,
       roleCode: 'VIEWER',
-      roleDescription: '只读成员',
+      roleDescription: '????',
       dataScopeMode: 'ASSIGNED_STUDY',
       status: 'ACTIVE',
       systemRole: true,
@@ -596,14 +597,14 @@ export function createMockApiClient(): ApiClient {
   ]
   const now = () => new Date().toISOString()
   const therapeuticAreas: TherapeuticArea[] = [
-    { id: 1, code: 'ONCOLOGY', name: '肿瘤', englishName: 'Oncology' },
-    { id: 2, code: 'AUTOIMMUNE', name: '自身免疫', englishName: 'Autoimmune Disease' },
-    { id: 3, code: 'METABOLIC_CARDIOVASCULAR', name: '代谢与心血管', englishName: 'Metabolic and Cardiovascular' },
-    { id: 4, code: 'RESPIRATORY', name: '呼吸系统', englishName: 'Respiratory' },
-    { id: 5, code: 'INFECTIOUS_DISEASE', name: '感染性疾病', englishName: 'Infectious Disease' },
-    { id: 6, code: 'NEUROSCIENCE', name: '神经科学', englishName: 'Neuroscience' },
+    { id: 1, code: 'ONCOLOGY', name: '??', englishName: 'Oncology' },
+    { id: 2, code: 'AUTOIMMUNE', name: '????', englishName: 'Autoimmune Disease' },
+    { id: 3, code: 'METABOLIC_CARDIOVASCULAR', name: '??????', englishName: 'Metabolic and Cardiovascular' },
+    { id: 4, code: 'RESPIRATORY', name: '????', englishName: 'Respiratory' },
+    { id: 5, code: 'INFECTIOUS_DISEASE', name: '?????', englishName: 'Infectious Disease' },
+    { id: 6, code: 'NEUROSCIENCE', name: '????', englishName: 'Neuroscience' },
   ]
-  // 一个 program/project 下可有多个 study，按 code 去重派生，避免重复行
+  // ?? program/project ????? study?? code ??????????
   const uniqueBy = <T,>(items: T[], key: (item: T) => string) =>
     [...new Map(items.map((item) => [key(item), item])).values()]
   const programs: PipelineProgram[] = uniqueBy(demoStudies, (s) => s.programCode ?? '')
@@ -639,7 +640,7 @@ export function createMockApiClient(): ApiClient {
 
   return {
     async getCurrentUser() {
-      if (!currentUser) throw new Error('请先登录')
+      if (!currentUser) throw new Error('????')
       return currentUser
     },
     async login(credentials) {
@@ -648,7 +649,7 @@ export function createMockApiClient(): ApiClient {
           item.username === credentials.username &&
           item.password === credentials.password,
       )
-      if (!account) throw new Error('账号或密码错误')
+      if (!account) throw new Error('???????')
       const { password: _password, ...user } = account
       currentUser = user
       return user
@@ -657,7 +658,7 @@ export function createMockApiClient(): ApiClient {
       currentUser = undefined
     },
     async getPipelineOverview() {
-      // 按 projectCode 聚合 study → project，再按 TA code 分组 → area
+      // ? projectCode ?? study ? project??? TA code ?? ? area
       const byProject = new Map<string, Study[]>()
       for (const s of demoStudies) {
         const key = s.projectCode ?? s.code
@@ -704,7 +705,7 @@ export function createMockApiClient(): ApiClient {
           }),
         }
         const taCode = first.therapeuticAreaCode ?? 'OTHER'
-        const taName = first.therapeuticAreaName ?? '其他'
+        const taName = first.therapeuticAreaName ?? '??'
         const entry = byArea.get(taCode)
         if (entry) entry.projects.push(project)
         else byArea.set(taCode, { name: taName, projects: [project] })
@@ -714,12 +715,12 @@ export function createMockApiClient(): ApiClient {
         therapeuticAreaName: name,
         projects,
       }))
-      return { title: '临床研发管线', areas }
+      return { title: '??????', areas }
     },
     async listStudies() {
       const nameOf = (userId: number) => users[userId - 1]?.displayName ?? ''
       const roleNames = (studyId: number, roleCode: string) =>
-        (teamAssignments.get(`${studyId}|${roleCode}`) ?? []).map(nameOf).filter(Boolean).join('、')
+        (teamAssignments.get(`${studyId}|${roleCode}`) ?? []).map(nameOf).filter(Boolean).join('?')
       return demoStudies.map((study) => {
         const milestones = mockMilestones.get(study.id) ?? buildDemoMilestones(study.id, study.code)
         const { currentPhase, currentStatus } = deriveCurrentPhaseStatus(milestones)
@@ -761,7 +762,7 @@ export function createMockApiClient(): ApiClient {
     },
     async getRisk(riskCode) {
       const risk = mockRisks.find(item => item.risk.riskCode === riskCode)
-      if (!risk) throw new Error('风险不存在')
+      if (!risk) throw new Error('?????')
       return structuredClone(risk)
     },
     async getRiskFormOptions(studyId) {
@@ -769,9 +770,9 @@ export function createMockApiClient(): ApiClient {
         studies: demoStudies.map(study => ({ id: study.id, studyCode: study.code,
           programCode: study.programCode ?? '', projectCode: study.projectCode ?? '' })),
         functions: studyId ? [
-          { id: 1, code: 'PM', name: '项目管理' },
-          { id: 2, code: 'RA', name: '注册' },
-          { id: 3, code: 'CLINICAL', name: '临床运营' },
+          { id: 1, code: 'PM', name: '????' },
+          { id: 2, code: 'RA', name: '??' },
+          { id: 3, code: 'CLINICAL', name: '????' },
         ] : [],
         owners: studyId ? users.map((item, index) => ({ id: index + 1,
           email: item.username, displayName: item.displayName })) : [],
@@ -805,8 +806,8 @@ export function createMockApiClient(): ApiClient {
     },
     async updateRisk(riskCode, input) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)
-      if (!detail) throw new Error('风险不存在')
-      if (detail.risk.version !== input.expectedVersion) throw new Error('风险已被其他用户修改，请刷新后重试')
+      if (!detail) throw new Error('?????')
+      if (detail.risk.version !== input.expectedVersion) throw new Error('?????????????????')
       const options = await this.getRiskFormOptions(input.studyId)
       const study = demoStudies.find(item => item.id === input.studyId)!
       const fn = options.functions.find(item => item.id === input.functionLineId)!
@@ -830,12 +831,12 @@ export function createMockApiClient(): ApiClient {
     },
     async deleteRisk(riskCode, expectedVersion) {
       const index = mockRisks.findIndex(item => item.risk.riskCode === riskCode)
-      if (index < 0 || mockRisks[index].risk.version !== expectedVersion) throw new Error('风险不存在或版本已变化')
+      if (index < 0 || mockRisks[index].risk.version !== expectedVersion) throw new Error('???????????')
       mockRisks.splice(index, 1)
     },
     async addRiskAction(riskCode, expectedRiskVersion, action) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
-      if (detail.risk.version !== expectedRiskVersion) throw new Error('风险版本已变化')
+      if (detail.risk.version !== expectedRiskVersion) throw new Error('???????')
       const options = await this.getRiskFormOptions(detail.risk.studyId)
       detail.actions.push({ id: nextRiskActionId++, description: action.description,
         ownerUserId: action.ownerUserId,
@@ -849,7 +850,7 @@ export function createMockApiClient(): ApiClient {
     async updateRiskAction(riskCode, actionId, expectedVersion, action) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
       const target = detail.actions.find(item => item.id === actionId)!
-      if (target.version !== expectedVersion) throw new Error('措施版本已变化')
+      if (target.version !== expectedVersion) throw new Error('???????')
       Object.assign(target, action, { version: target.version + 1 })
       detail.risk.version++
       return structuredClone(detail)
@@ -857,7 +858,7 @@ export function createMockApiClient(): ApiClient {
     async deleteRiskAction(riskCode, actionId, expectedVersion) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
       const index = detail.actions.findIndex(item => item.id === actionId && item.version === expectedVersion)
-      if (index < 0) throw new Error('措施不存在或版本已变化')
+      if (index < 0) throw new Error('???????????')
       detail.actions.splice(index, 1)
       detail.risk.actionCount = detail.actions.length
       detail.risk.version++
@@ -875,7 +876,7 @@ export function createMockApiClient(): ApiClient {
       for (const page of mockMonthlyPages.values()) {
         const line = page.functionLines.find((item) => item.reportId === reportId)
         if (line) {
-          if (!line.editable) throw new Error('无权在该功能线下填写月报')
+          if (!line.editable) throw new Error('????????????')
           line.entries.push({
             entryId: nextMonthlyEntryId++,
             entryDate: input.entryDate ?? new Date().toISOString().slice(0, 10),
@@ -887,7 +888,7 @@ export function createMockApiClient(): ApiClient {
           return structuredClone(page)
         }
       }
-      throw new Error('月报应填项不存在: ' + reportId)
+      throw new Error('????????: ' + reportId)
     },
     async updateMonthlyEntry(entryId, input) {
       await delay(150)
@@ -903,7 +904,7 @@ export function createMockApiClient(): ApiClient {
           }
         }
       }
-      throw new Error('月报进展明细不存在: ' + entryId)
+      throw new Error('?????????: ' + entryId)
     },
     async deleteMonthlyEntry(entryId) {
       await delay(120)
@@ -911,20 +912,20 @@ export function createMockApiClient(): ApiClient {
         for (const line of page.functionLines) {
           const index = line.entries.findIndex((item) => item.entryId === entryId)
           if (index >= 0) {
-            if (!line.editable) throw new Error('无权删除该功能线下的进展')
+            if (!line.editable) throw new Error('????????????')
             line.entries.splice(index, 1)
             return structuredClone(page)
           }
         }
       }
-      throw new Error('月报进展明细不存在: ' + entryId)
+      throw new Error('?????????: ' + entryId)
     },
     async getMonthlyReportHistory(studyId, functionLineId, month) {
       await delay(150)
       const page = getMockMonthlyPage(studyId, month)
       const line = page.functionLines.find((item) => item.functionLineId === functionLineId)
-      if (!line) throw new Error('功能线不存在')
-      // 推前 2 个月；minusMonths 逻辑正确处理跨年（如 2026-01 → 2025-12 / 2025-11）
+      if (!line) throw new Error('??????')
+      // ?? 2 ???minusMonths ?????????? 2026-01 ? 2025-12 / 2025-11?
       const [year, mon] = month.split('-').map(Number)
       const prev = (yy: number, mm: number): [number, number] =>
         mm === 1 ? [yy - 1, 12] : [yy, mm - 1]
@@ -938,7 +939,7 @@ export function createMockApiClient(): ApiClient {
         {
           entryId: 9000 + functionLineId * 10 + salt,
           entryDate: `${mo}-15`,
-          content: `（历史示例）${line.functionName} 在 ${mo} 的进展记录一。`,
+          content: `??????${line.functionName} ? ${mo} ???????`,
           updatedBy: author,
           updatedAt: `${mo}-15T10:00:00Z`,
           editable: false,
@@ -946,7 +947,7 @@ export function createMockApiClient(): ApiClient {
         {
           entryId: 9100 + functionLineId * 10 + salt,
           entryDate: `${mo}-22`,
-          content: `（历史示例）${line.functionName} 在 ${mo} 的进展记录二。`,
+          content: `??????${line.functionName} ? ${mo} ???????`,
           updatedBy: author,
           updatedAt: `${mo}-22T10:00:00Z`,
           editable: false,
@@ -984,6 +985,7 @@ export function createMockApiClient(): ApiClient {
           indication: study.indication,
           statusCode: study.status,
           statusLabel: study.statusLabel,
+          currentStatus: study.currentStatus ?? '',
           version: teamVersions.get(study.id) ?? 0,
         }))
       const assignments: TeamMatrixAssignment[] = []
@@ -1020,7 +1022,7 @@ export function createMockApiClient(): ApiClient {
       for (const study of input.studies) {
         const currentVersion = teamVersions.get(study.studyId) ?? 0
         if (currentVersion !== study.expectedVersion) {
-          throw new Error('团队矩阵已被其他用户修改，请刷新后重试')
+          throw new Error('???????????????????')
         }
         for (const role of study.roles) {
           teamAssignments.set(`${study.studyId}|${role.roleCode}`, [...role.userIds])
@@ -1067,12 +1069,12 @@ export function createMockApiClient(): ApiClient {
         .some((value) => value.toLowerCase().includes(query)))
     },
     async createProgram(input) {
-      if (programs.some((item) => item.code === input.code)) throw new Error('Program 编码已存在')
+      if (programs.some((item) => item.code === input.code)) throw new Error('Program ?????')
       const program: PipelineProgram = {
         id: nextProgramId++, code: input.code, productName: input.productName,
         moa: input.moa ?? null, sourceCode: input.sourceCode,
-        sourceLabel: input.sourceCode === 'SELF_DEVELOPED' ? '自研' : input.sourceCode === 'IN_LICENSE' ? '引进' : '合作',
-        originCode: input.originCode, originLabel: input.originCode === 'DOMESTIC' ? '国产' : '进口',
+        sourceLabel: input.sourceCode === 'SELF_DEVELOPED' ? '??' : input.sourceCode === 'IN_LICENSE' ? '??' : '??',
+        originCode: input.originCode, originLabel: input.originCode === 'DOMESTIC' ? '??' : '??',
         projectCount: 0, studyCount: 0, updatedAt: now(),
       }
       programs.push(program)
@@ -1080,14 +1082,14 @@ export function createMockApiClient(): ApiClient {
     },
     async updateProgram(id, input) {
       const program = programs.find((item) => item.id === id)
-      if (!program) throw new Error('Program 不存在')
+      if (!program) throw new Error('Program ???')
       Object.assign(program, input, { updatedAt: now() })
       return program
     },
     async deleteProgram(id) {
       const index = programs.findIndex((item) => item.id === id)
-      if (index < 0) throw new Error('Program 不存在')
-      if (programs[index].projectCount) throw new Error('Program 仍有关联 Project，不能删除')
+      if (index < 0) throw new Error('Program ???')
+      if (programs[index].projectCount) throw new Error('Program ???? Project?????')
       programs.splice(index, 1)
     },
     async listProjects(programId, keyword = '') {
@@ -1096,9 +1098,9 @@ export function createMockApiClient(): ApiClient {
         (!query || item.code.toLowerCase().includes(query)))
     },
     async createProject(input) {
-      if (projects.some((item) => item.code === input.code)) throw new Error('Project 编码已存在')
+      if (projects.some((item) => item.code === input.code)) throw new Error('Project ?????')
       const program = programs.find((item) => item.id === input.programId)
-      if (!program) throw new Error('Program 不存在')
+      if (!program) throw new Error('Program ???')
       const project: PipelineProject = {
         id: nextProjectId++, code: input.code, programId: input.programId,
         programCode: program.code, indication: input.indication, therapeuticAreaId: 99,
@@ -1112,21 +1114,21 @@ export function createMockApiClient(): ApiClient {
     },
     async updateProject(id, input) {
       const project = projects.find((item) => item.id === id)
-      if (!project) throw new Error('Project 不存在')
+      if (!project) throw new Error('Project ???')
       Object.assign(project, input, { updatedAt: now() })
       return project
     },
     async deleteProject(id) {
       const index = projects.findIndex((item) => item.id === id)
-      if (index < 0) throw new Error('Project 不存在')
-      if (projects[index].studyCount) throw new Error('Project 仍有关联 Study，不能删除')
+      if (index < 0) throw new Error('Project ???')
+      if (projects[index].studyCount) throw new Error('Project ???? Study?????')
       projects.splice(index, 1)
     },
     async createStudyConfig(input) {
       const project = projects.find((item) => item.id === input.projectId)
-      if (!project) throw new Error('Project 不存在')
+      if (!project) throw new Error('Project ???')
       demoStudies.push({ id: nextStudyId++, code: input.code,
-        indication: project.indication, phase: input.phase, status: 'ACTIVE', statusLabel: '进行中',
+        indication: project.indication, phase: input.phase, status: 'ACTIVE', statusLabel: '???',
         statusTone: 'positive', ownerName: '', startDate: null, updatedAt: now(),
         programCode: project.programCode, projectCode: project.code,
         therapeuticAreaCode: project.therapeuticAreaCode, therapeuticAreaName: project.therapeuticAreaName,
@@ -1139,7 +1141,7 @@ export function createMockApiClient(): ApiClient {
     async updateStudyConfig(id, input) {
       const study = demoStudies.find((item) => item.id === id)
       const project = projects.find((item) => item.id === input.projectId)
-      if (!study || !project) throw new Error('Study 或 Project 不存在')
+      if (!study || !project) throw new Error('Study ? Project ???')
       study.phase = input.phaseStatusCode
       study.projectCode = project.code
       study.programCode = project.programCode
@@ -1150,7 +1152,7 @@ export function createMockApiClient(): ApiClient {
     },
     async deleteStudyConfig(id) {
       const index = demoStudies.findIndex((item) => item.id === id)
-      if (index < 0) throw new Error('Study 不存在')
+      if (index < 0) throw new Error('Study ???')
       demoStudies.splice(index, 1)
     },
     async listUsers(keyword = '', roleCode = '') {
@@ -1161,9 +1163,9 @@ export function createMockApiClient(): ApiClient {
         roles: user.roles,
         roleDescriptions: user.roles.map(r => {
           switch (r) {
-            case 'ADMIN': return '系统管理员'
-            case 'USER': return '项目负责人'
-            case 'VIEWER': return '只读成员'
+            case 'ADMIN': return '?????'
+            case 'USER': return '?????'
+            case 'VIEWER': return '????'
             default: return r
           }
         }),
@@ -1184,7 +1186,7 @@ export function createMockApiClient(): ApiClient {
     },
     async createUser(input: CreateUserInput) {
       if (users.some(u => u.username === input.username)) {
-        throw new Error('用户名已存在')
+        throw new Error('??????')
       }
       users.push({
         username: input.username,
@@ -1193,17 +1195,36 @@ export function createMockApiClient(): ApiClient {
         roles: input.roleCodes,
         permissions: [],
         dataScope: 'ALL',
-        password: input.password,
+        password: 'Hd123456',
       })
+    },
+    async changePassword(input: ChangePasswordInput) {
+      const account = users.find(item => item.username === currentUser?.username)
+      if (!account) throw new Error('?????')
+      if (account.password !== input.currentPassword) {
+        throw new Error('???????')
+      }
+      if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,128}$/.test(input.newPassword)) {
+        throw new Error('????? 8 ??????????????????')
+      }
+      if (input.currentPassword === input.newPassword) {
+        throw new Error('????????????')
+      }
+      account.password = input.newPassword
+    },
+    async resetPassword(id: number) {
+      const index = id - 1
+      if (index < 0 || index >= users.length) throw new Error('?????')
+      users[index].password = 'Hd123456'
     },
     async updateUser(id: number, input: UpdateUserInput) {
       const index = id - 1
-      if (index < 0 || index >= users.length) throw new Error('用户不存在')
+      if (index < 0 || index >= users.length) throw new Error('?????')
       users[index].displayName = input.displayName
     },
     async deleteUser(id: number) {
       const index = id - 1
-      if (index < 0 || index >= users.length) throw new Error('用户不存在')
+      if (index < 0 || index >= users.length) throw new Error('?????')
       users.splice(index, 1)
     },
     async assignRoles(_id: number, _input: AssignRolesInput) {
@@ -1232,7 +1253,7 @@ export function createMockApiClient(): ApiClient {
     },
     async createRole(input) {
       if (roles.some((role) => role.roleCode === input.roleCode)) {
-        throw new Error('角色编码已存在且不可复用')
+        throw new Error('????????????')
       }
       const role: PlatformRole = {
         id: nextRoleId++,
@@ -1250,7 +1271,7 @@ export function createMockApiClient(): ApiClient {
     },
     async updateRole(roleId, input) {
       const role = roles.find((item) => item.id === roleId)
-      if (!role) throw new Error('角色不存在')
+      if (!role) throw new Error('?????')
       role.roleDescription = input.roleDescription
       role.dataScopeMode = input.dataScopeMode
       role.status = input.status ?? role.status
@@ -1260,21 +1281,21 @@ export function createMockApiClient(): ApiClient {
     },
     async deleteRole(roleId) {
       const index = roles.findIndex((role) => role.id === roleId)
-      if (index < 0) throw new Error('角色不存在')
-      if (roles[index].systemRole) throw new Error('系统角色不可删除')
-      if (roles[index].assignedUserCount) throw new Error('角色仍关联用户，不能删除')
+      if (index < 0) throw new Error('?????')
+      if (roles[index].systemRole) throw new Error('????????')
+      if (roles[index].assignedUserCount) throw new Error('????????????')
       roles.splice(index, 1)
     },
     async getMilestones(studyId) {
       await delay(200)
       const data = mockMilestones.get(studyId)
-      if (!data) throw new Error('Study 不存在或暂无里程碑数据')
+      if (!data) throw new Error('Study ???????????')
       return structuredClone(data)
     },
     async updateMilestone(studyId, milestoneCode, input) {
       await delay(200)
       const page = mockMilestones.get(studyId)
-      if (!page) throw new Error('Study 不存在')
+      if (!page) throw new Error('Study ???')
       for (const group of page.groups) {
         const node = group.nodes.find(n => n.milestoneCode === milestoneCode)
         if (node) {
@@ -1290,25 +1311,25 @@ export function createMockApiClient(): ApiClient {
           return structuredClone(page)
         }
       }
-      throw new Error('里程碑节点不存在: ' + milestoneCode)
+      throw new Error('????????: ' + milestoneCode)
     },
     async getStageProjection(studyId) {
       await delay(100)
       const page = mockMilestones.get(studyId)
-      if (!page) throw new Error('Study 不存在')
+      if (!page) throw new Error('Study ???')
       for (const group of page.groups) {
         for (const node of group.nodes) {
           if (node.status === 'IN_PROGRESS') {
             return { currentStageCode: group.stageCode, currentStageName: group.stageName,
               currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
-              statusText: '进行中' }
+              statusText: '???' }
           }
         }
       }
       // Check if all completed
       const allCompleted = page.groups.every(g => g.nodes.every(n => n.status === 'COMPLETED'))
       if (allCompleted) {
-        return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '已完成' }
+        return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '???' }
       }
       // Find first not-started
       for (const group of page.groups) {
@@ -1316,7 +1337,7 @@ export function createMockApiClient(): ApiClient {
           if (node.status === 'NOT_STARTED') {
             return { currentStageCode: group.stageCode, currentStageName: group.stageName,
               currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
-              statusText: '未开始' }
+              statusText: '???' }
           }
         }
       }

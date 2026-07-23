@@ -152,7 +152,7 @@ class PlatformIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"username":"test.user@example.com","displayName":"测试用户",
-                                 "password":"Test-Password-123!","roleCodes":["USER","VIEWER"]}
+                                 "roleCodes":["USER","VIEWER"]}
                                 """))
                 .andExpect(status().isCreated());
 

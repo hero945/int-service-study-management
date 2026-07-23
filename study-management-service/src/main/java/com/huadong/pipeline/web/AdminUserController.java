@@ -61,6 +61,13 @@ public class AdminUserController {
     userApi.assignRoles(id, request, principal.getName());
   }
 
+  @PostMapping("/{id}/password-reset")
+  @PreAuthorize("hasAuthority('account.update')")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  void resetPassword(@PathVariable @Min(1) long id, Principal principal) {
+    userApi.resetPassword(id, principal.getName());
+  }
+
   @DeleteMapping("/{id}")
   @PreAuthorize("hasAuthority('account.delete')")
   @ResponseStatus(HttpStatus.NO_CONTENT)

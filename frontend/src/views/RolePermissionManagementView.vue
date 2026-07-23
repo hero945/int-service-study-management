@@ -25,7 +25,22 @@ const dialogOpen = ref(false)
 const editingRole = ref<PlatformRole>()
 const formError = ref('')
 const form = ref<RoleInput>(emptyForm())
+const collapsedModules = ref<Set<string>>(new Set())
 let noticeTimer: ReturnType<typeof setTimeout> | undefined
+
+const MODULE_LABELS: Record<string, string> = {
+  pipeline: '管线总览',
+  study: '研究 Study',
+  milestone: '里程碑',
+  risk: '风险管理',
+  team: '团队矩阵',
+  config: '管线配置',
+  monthly: '月报',
+  report: '报告导出',
+  account: '账号管理',
+  role: '角色权限',
+  setting: '系统设置',
+}
 
 const userPermissions = computed(() => session.currentUser.value?.permissions ?? [])
 const canCreate = computed(() => userPermissions.value.includes('role.create'))
@@ -40,6 +55,21 @@ const permissionGroups = computed(() => {
   }
   return [...groups.entries()]
 })
+
+function moduleLabel(moduleCode: string) {
+  return MODULE_LABELS[moduleCode] ?? moduleCode
+}
+
+function isModuleExpanded(moduleCode: string) {
+  return !collapsedModules.value.has(moduleCode)
+}
+
+function toggleModuleExpand(moduleCode: string) {
+  const next = new Set(collapsedModules.value)
+  if (next.has(moduleCode)) next.delete(moduleCode)
+  else next.add(moduleCode)
+  collapsedModules.value = next
+}
 
 function emptyForm(): RoleInput {
   return {
@@ -266,9 +296,29 @@ onUnmounted(hideNotice)
           <section class="permission-editor">
             <div class="permission-editor__title"><strong>权限分配</strong><span>已选择 {{ form.permissionCodes.length }} 项</span></div>
             <div v-for="[moduleCode, group] in permissionGroups" :key="moduleCode" class="permission-group">
-              <label class="permission-group__heading"><input type="checkbox" :checked="groupSelected(group)" @change="toggleGroup(group, ($event.target as HTMLInputElement).checked)"><strong>{{ moduleCode }}</strong><span>{{ group.length }} 项</span></label>
-              <div class="permission-options">
-                <label v-for="permission in group" :key="permission.permissionCode"><input v-model="form.permissionCodes" type="checkbox" :value="permission.permissionCode"><span><strong>{{ permission.permissionName }}</strong><small class="mono">{{ permission.permissionCode }}</small></span></label>
+              <div class="permission-group__heading">
+                <button
+                  class="permission-group__toggle"
+                  type="button"
+                  :aria-expanded="isModuleExpanded(moduleCode)"
+                  :aria-label="(isModuleExpanded(moduleCode) ? '收起' : '展开') + moduleLabel(moduleCode)"
+                  @click="toggleModuleExpand(moduleCode)"
+                >{{ isModuleExpanded(moduleCode) ? '▾' : '▸' }}</button>
+                <label>
+                  <input
+                    type="checkbox"
+                    :checked="groupSelected(group)"
+                    @change="toggleGroup(group, ($event.target as HTMLInputElement).checked)"
+                  >
+                  <strong>{{ moduleLabel(moduleCode) }}</strong>
+                </label>
+                <span>{{ group.length }} 项</span>
+              </div>
+              <div v-show="isModuleExpanded(moduleCode)" class="permission-options">
+                <label v-for="permission in group" :key="permission.permissionCode">
+                  <input v-model="form.permissionCodes" type="checkbox" :value="permission.permissionCode">
+                  <span><strong>{{ permission.permissionName }}</strong></span>
+                </label>
               </div>
             </div>
           </section>

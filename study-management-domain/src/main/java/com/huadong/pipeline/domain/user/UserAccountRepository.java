@@ -27,5 +27,7 @@ public interface UserAccountRepository {
 
   void assignRoles(long userId, List<String> roleCodes, String operator);
 
+  void updatePasswordHash(String username, String passwordHash, String operator);
+
   Map<Long, Long> countStudyAssignments(List<Long> userIds);
 }

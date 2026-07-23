@@ -1,10 +1,14 @@
 package com.huadong.pipeline.manager;
 
 import com.huadong.pipeline.common.BusinessException;
+import com.huadong.pipeline.domain.milestone.CurrentMilestoneStatus;
+import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
+import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilestone;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.team.TeamMatrixRepository;
 import com.huadong.pipeline.domain.team.TeamMatrixRepository.MatrixPage;
 import com.huadong.pipeline.domain.team.TeamMatrixRepository.TeamMember;
+import com.huadong.pipeline.domain.team.TeamMatrixRepository.TeamStudy;
 import com.huadong.pipeline.domain.user.DataScope;
 import com.huadong.pipeline.domain.user.UserAccount;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
@@ -14,6 +18,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,17 +26,52 @@ import org.springframework.transaction.annotation.Transactional;
 public class TeamMatrixManager {
   private final TeamMatrixRepository teams;
   private final UserAccountRepository users;
+  private final StudyMilestonePort studyMilestones;
 
-  public TeamMatrixManager(TeamMatrixRepository teams, UserAccountRepository users) {
+  public TeamMatrixManager(
+      TeamMatrixRepository teams,
+      UserAccountRepository users,
+      StudyMilestonePort studyMilestones) {
     this.teams = teams;
     this.users = users;
+    this.studyMilestones = studyMilestones;
   }
 
   public MatrixPage list(
       String username, String studyQuery, String roleQuery, int page, int pageSize) {
     UserAccount user = currentUser(username);
-    return teams.findMatrix(
+    MatrixPage matrix = teams.findMatrix(
         accessScope(user), normalizeQuery(studyQuery), normalizeQuery(roleQuery), page, pageSize);
+    return withCurrentStatus(matrix);
+  }
+
+  private MatrixPage withCurrentStatus(MatrixPage matrix) {
+    List<Long> studyIds = matrix.studies().stream().map(TeamStudy::studyId).toList();
+    Map<Long, List<PersistedMilestone>> milestonesByStudy =
+        studyMilestones.findByStudyIds(studyIds).stream()
+            .collect(Collectors.groupingBy(PersistedMilestone::studyId));
+    List<TeamStudy> studies = matrix.studies().stream()
+        .map(study -> {
+          String currentStatus = CurrentMilestoneStatus.derive(
+              milestonesByStudy.getOrDefault(study.studyId(), List.of())).status();
+          return new TeamStudy(
+              study.studyId(),
+              study.studyCode(),
+              study.indication(),
+              study.statusCode(),
+              study.statusLabel(),
+              currentStatus,
+              study.version());
+        })
+        .toList();
+    return new MatrixPage(
+        studies,
+        matrix.roles(),
+        matrix.assignments(),
+        matrix.totalStudies(),
+        matrix.totalRoles(),
+        matrix.page(),
+        matrix.pageSize());
   }
 
   @Transactional

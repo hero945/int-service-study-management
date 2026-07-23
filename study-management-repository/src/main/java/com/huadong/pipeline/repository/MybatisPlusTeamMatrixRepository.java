@@ -31,7 +31,7 @@ public class MybatisPlusTeamMatrixRepository implements TeamMatrixRepository {
     var studies = studyRows.stream()
         .map(row -> new TeamStudy(
             row.studyId(), row.studyCode(), row.indication(),
-            row.statusCode(), row.statusLabel(), row.teamVersion()))
+            row.statusCode(), row.statusLabel(), "", row.teamVersion()))
         .toList();
     var roles = mapper.findRoles(roleQuery).stream().map(this::role).toList();
     if (studies.isEmpty()) {
