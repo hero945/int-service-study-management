@@ -265,6 +265,49 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
     return jdbc.query(sql, (rs, row) -> history(rs), args.toArray());
   }
 
+  @Override
+  public List<ExportProgressEntry> findProgressEntries(
+      List<Long> studyIds, LocalDate startDate, LocalDate endDate) {
+    if (studyIds == null || studyIds.isEmpty()) {
+      return List.of();
+    }
+    StringJoiner placeholders = new StringJoiner(", ");
+    List<Object> args = new ArrayList<>();
+    for (Long studyId : studyIds) {
+      placeholders.add("?");
+      args.add(studyId);
+    }
+    args.add(Date.valueOf(startDate));
+    args.add(Date.valueOf(endDate));
+    String sql = """
+        SELECT r.study_id,
+          COALESCE(r.study_code_snapshot, '') AS study_code,
+          COALESCE(r.program_code_snapshot, '') AS program_code,
+          COALESCE(r.therapeutic_area_name_snapshot, '') AS ta_name,
+          e.entry_date,
+          r.function_line_code_snapshot AS function_code,
+          r.function_line_name_snapshot AS function_name,
+          e.progress_content
+        FROM hd_plt_monthly_report_entry e
+        JOIN hd_plt_monthly_report r ON r.id = e.monthly_report_id
+        WHERE r.study_id IN (""" + placeholders + """
+        )
+          AND e.entry_date >= ? AND e.entry_date <= ?
+          AND e.sys_deleted = 0 AND r.sys_deleted = 0
+          AND TRIM(e.progress_content) <> ''
+        ORDER BY e.entry_date, r.study_code_snapshot, r.function_line_code_snapshot, e.sequence_no
+        """;
+    return jdbc.query(sql, (rs, row) -> new ExportProgressEntry(
+        rs.getLong("study_id"),
+        rs.getString("study_code"),
+        rs.getString("program_code"),
+        rs.getString("ta_name"),
+        rs.getDate("entry_date").toLocalDate(),
+        rs.getString("function_code"),
+        rs.getString("function_name"),
+        rs.getString("progress_content")), args.toArray());
+  }
+
   // ──────────── helpers ────────────
 
   private void audit(long operatorUserId, String operatorEmail, long entryId,

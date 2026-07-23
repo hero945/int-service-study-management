@@ -979,13 +979,233 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   flex-shrink: 0;
 }
 .role-dialog > .form-error { margin: 0 22px 14px; }
-.report-layout { display: grid; grid-template-columns: minmax(320px, 520px) 1fr; gap: 18px; margin: 18px 22px; }
+.report-layout { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 18px; margin: 18px 22px; align-items: start; }
 .report-layout .data-card, .report-layout .state-panel { margin: 0; }
 .report-card { padding: 24px; }
 .report-card h2 { margin: 0 0 8px; font-size: 18px; }
 .report-card p { margin: 0 0 24px; color: var(--muted); font-size: 12.5px; }
 .report-card label { display: grid; gap: 7px; margin-bottom: 16px; color: var(--muted); font-size: 11px; }
 .report-card input, .report-card select { height: 36px; border: 1px solid #e2e5ea; border-radius: 8px; padding: 0 10px; background: #fff; }
+
+.export-controls { position: sticky; top: 18px; }
+.export-fieldset {
+  margin: 0 0 18px;
+  padding: 14px 14px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.export-fieldset legend {
+  padding: 0 6px;
+  color: #3a414d;
+  font-size: 12px;
+  font-weight: 650;
+}
+.export-date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.export-date-row label { margin-bottom: 0; }
+.export-hint { margin: 8px 0 0; color: var(--subtle); font-size: 11px; line-height: 1.5; }
+.export-radio {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px !important;
+  color: #2f3640 !important;
+  font-size: 12.5px !important;
+}
+.export-radio input { width: auto; height: auto; margin: 0; }
+.export-checkboxes {
+  margin: 0 0 14px 24px;
+  padding: 10px;
+  border: 1px solid #edf0f3;
+  border-radius: 8px;
+  background: #fafbfc;
+  max-height: 180px;
+  overflow: auto;
+  display: grid;
+  gap: 8px;
+}
+.export-check {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin: 0 !important;
+  color: #3a414d !important;
+  font-size: 12px !important;
+}
+.export-check input { width: auto; height: auto; margin: 0; }
+.export-check-meta { color: var(--muted); }
+.export-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.export-preview-panel {
+  min-height: 480px;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #eef1f5;
+  padding: 16px;
+}
+
+.export-sheet {
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 28px rgba(26, 29, 35, .08);
+  color: #1a1d23;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.export-masthead {
+  background: #1a365d;
+  color: #fff;
+  padding: 22px 28px 18px;
+}
+.export-masthead h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: .2px;
+}
+.export-meta {
+  padding: 14px 28px 10px;
+  border-bottom: 1px solid var(--line);
+  color: #5b6472;
+  font-size: 12px;
+}
+.export-meta strong { color: #1a1d23; font-weight: 600; }
+.export-meta-right { float: right; }
+.export-body { padding: 8px 28px 28px; }
+.export-sec { margin-top: 22px; }
+.export-sec-h {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+.export-sec-num {
+  color: #7aa2d8;
+  font: 700 18px/1 "IBM Plex Mono", monospace;
+}
+.export-sec-h h2 { margin: 0; font-size: 15px; }
+.export-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border: 1px solid var(--line);
+}
+.export-metrics--4 { grid-template-columns: repeat(4, 1fr); }
+.export-metric {
+  padding: 12px 10px;
+  text-align: center;
+  border-right: 1px solid var(--line);
+}
+.export-metric:last-child { border-right: 0; }
+.export-metric .lbl { color: #5b6472; font-size: 11px; }
+.export-metric .val {
+  font: 700 22px/1.2 "IBM Plex Mono", monospace;
+  margin-top: 4px;
+}
+.export-metric-note { margin-top: 10px; color: #5b6472; font-size: 12px; }
+.export-ta-bar {
+  margin: 14px 0 0;
+  padding: 7px 10px;
+  background: #eef2f7;
+  color: #2a3650;
+  font-weight: 600;
+  font-size: 12px;
+}
+.export-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.export-table th, .export-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.export-table th {
+  color: #5b6472;
+  font-weight: 600;
+  background: #fbfcfd;
+}
+.export-empty { color: #9aa2ad; }
+.st-active { color: #0f766e; text-decoration: underline; text-underline-offset: 2px; }
+.st-done { color: #177245; text-decoration: underline; text-underline-offset: 2px; }
+.st-prep { color: #8a929e; text-decoration: underline; text-underline-offset: 2px; }
+.st-delay { color: #c0362c; text-decoration: underline; text-underline-offset: 2px; }
+.export-prog {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 0 14px;
+  margin: 0 0 16px;
+}
+.export-prog-date {
+  font: 600 12px/1.4 "IBM Plex Mono", monospace;
+  color: #5b6472;
+  padding-top: 2px;
+}
+.export-prog-study { font: 650 13px/1.4 "IBM Plex Mono", monospace; }
+.export-prog-meta { color: #5b6472; font-size: 11.5px; margin: 2px 0 6px; }
+.export-prog-line { margin: 6px 0 0; }
+.export-pill {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  background: #f1f3f6;
+  color: #3b424e;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-right: 8px;
+}
+.export-risk {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.export-risk-idx {
+  font: 700 12px "IBM Plex Mono", monospace;
+  color: #5b6472;
+}
+.export-risk-code { font-weight: 650; }
+.export-risk-desc { margin-top: 3px; }
+.export-risk-meta { margin-top: 4px; color: #6e7681; font-size: 11.5px; }
+.export-risk-score { font: 700 20px/1 "IBM Plex Mono", monospace; }
+.score-high { color: #c0362c; }
+.score-med { color: #a85e0c; }
+.score-low { color: #596273; }
+.export-foot {
+  padding: 16px 28px 22px;
+  text-align: center;
+  color: #9aa2ad;
+  font-size: 11px;
+  border-top: 1px solid var(--line);
+}
+
+@media print {
+  aside, .topbar, .export-controls, .page-content > *:not(.report-layout) { display: none !important; }
+  .report-layout {
+    display: block !important;
+    margin: 0 !important;
+  }
+  .export-preview-panel {
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+  .export-sheet { box-shadow: none !important; border: 0 !important; }
+}
 .sr-only {
   position: absolute;
   width: 1px;

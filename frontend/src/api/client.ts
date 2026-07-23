@@ -27,6 +27,9 @@ import type {
   MonthlyEntryUpdateInput,
   MonthlyReportPage,
   FunctionLineHistory,
+  MonthlyExportFormat,
+  MonthlyExportQuery,
+  MonthlyExportReport,
   StageProjection,
   ProgramInput,
   ProgramUpdateInput,
@@ -71,6 +74,8 @@ export interface ApiClient {
   updateMonthlyEntry(entryId: number, input: MonthlyEntryUpdateInput): Promise<MonthlyReportPage>
   deleteMonthlyEntry(entryId: number): Promise<MonthlyReportPage>
   getMonthlyReportHistory(studyId: number, functionLineId: number, month: string): Promise<FunctionLineHistory>
+  previewMonthlyExport(query: MonthlyExportQuery): Promise<MonthlyExportReport>
+  downloadMonthlyExport(query: MonthlyExportQuery, format: MonthlyExportFormat): Promise<void>
   listTeamMatrix(query?: TeamMatrixQuery): Promise<TeamMatrixPage>
   replaceTeamAssignments(input: TeamMatrixBatchInput): Promise<TeamMatrixBatchResult>
   listPipelineConfig(): Promise<PipelineConfigRow[]>
@@ -117,6 +122,20 @@ let unauthorizedHandler: UnauthorizedHandler | undefined
 
 export function setUnauthorizedHandler(handler: UnauthorizedHandler | undefined) {
   unauthorizedHandler = handler
+}
+
+function toExportParams(query: MonthlyExportQuery): string {
+  const parameters = new URLSearchParams()
+  parameters.set('startDate', query.startDate)
+  parameters.set('endDate', query.endDate)
+  parameters.set('scopeType', query.scopeType)
+  for (const id of query.taIds ?? []) {
+    parameters.append('taIds', String(id))
+  }
+  for (const id of query.programIds ?? []) {
+    parameters.append('programIds', String(id))
+  }
+  return parameters.toString()
 }
 
 export function createHttpApiClient(): ApiClient {
@@ -258,6 +277,42 @@ export function createHttpApiClient(): ApiClient {
     getMonthlyReportHistory: (studyId, functionLineId, month) =>
       request<FunctionLineHistory>(
         `/api/v1/studies/${studyId}/monthly-reports/history?functionLineId=${functionLineId}&month=${encodeURIComponent(month)}`),
+    previewMonthlyExport: (query) =>
+      request<MonthlyExportReport>(`/api/v1/reports/monthly/preview?${toExportParams(query)}`),
+    async downloadMonthlyExport(query, format) {
+      const response = await fetch(
+        `/api/v1/reports/monthly/export?${toExportParams(query)}&format=${encodeURIComponent(format)}`,
+      )
+      if (!response.ok) {
+        const text = await response.text()
+        let message = `请求失败（${response.status}）`
+        let code: string | undefined
+        try {
+          const data = text ? JSON.parse(text) : undefined
+          message = data?.message ?? message
+          code = data?.code
+        } catch {
+          /* ignore non-json */
+        }
+        if (response.status === 401) unauthorizedHandler?.()
+        throw new ApiError(message, response.status, code)
+      }
+      const blob = await response.blob()
+      const disposition = response.headers.get('Content-Disposition') ?? ''
+      const utfMatch = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
+      const plainMatch = /filename="?([^";]+)"?/i.exec(disposition)
+      const filename = decodeURIComponent(
+        utfMatch?.[1] ?? plainMatch?.[1] ?? `研发管线月报.${format}`,
+      )
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = filename
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      URL.revokeObjectURL(url)
+    },
     listTeamMatrix: (query = {}) => {
       const parameters = new URLSearchParams()
       parameters.set('page', String(query.page ?? 1))
