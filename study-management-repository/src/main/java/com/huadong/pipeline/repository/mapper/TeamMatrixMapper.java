@@ -161,6 +161,24 @@ public interface TeamMatrixMapper {
   List<Long> findAssignedUserIds(
       @Param("studyId") long studyId, @Param("roleCode") String roleCode);
 
+  @Select("""
+      <script>
+      SELECT ta.study_id, '' AS role_code, u.id AS user_id, u.email,
+             u.display_name, u.status_code
+      FROM hd_plt_team_assignment ta
+      JOIN hd_plt_team_role tr ON tr.id = ta.team_role_id AND tr.sys_deleted = 0
+      JOIN hd_plt_user u ON u.id = ta.user_id AND u.sys_deleted = 0
+      WHERE ta.sys_deleted = 0 AND tr.role_code = #{roleCode}
+        AND ta.study_id IN
+        <foreach collection="studyIds" item="id" open="(" separator="," close=")">
+          #{id}
+        </foreach>
+      ORDER BY ta.study_id, u.display_name, u.id
+      </script>
+      """)
+  List<TeamMemberRow> findPlPmMembers(
+      @Param("studyIds") Set<Long> studyIds, @Param("roleCode") String roleCode);
+
   @Update("""
       UPDATE hd_plt_team_assignment ta
       SET ta.sys_deleted = 1, ta.sys_update_by = #{operator},

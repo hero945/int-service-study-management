@@ -39,7 +39,15 @@ public interface StudyApi {
       String statusTone,
       String ownerName,
       LocalDate startDate,
-      LocalDateTime updatedAt) {
+      LocalDateTime updatedAt,
+      String therapeuticAreaCode,
+      String therapeuticAreaName,
+      String programCode,
+      String projectCode,
+      String plName,
+      String pmName,
+      String currentPhase,
+      String currentStatus) {
   }
 
   record StatusMetricResponse(String status, String label, String tone, long count) {

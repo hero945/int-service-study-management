@@ -29,7 +29,7 @@ public interface RiskRepository {
                           StudyAccessScope scope, Operator operator);
 
   record RiskQuery(String query, String functionCode, String status, String level,
-                   String sortBy, String sortOrder, int page, int pageSize) {}
+                   Long studyId, String sortBy, String sortOrder, int page, int pageSize) {}
   record RiskPage(List<RiskSummary> data, Stats stats, int page, int pageSize,
                   long totalItems) {}
   record Stats(long total, long open, long high, long medium) {}

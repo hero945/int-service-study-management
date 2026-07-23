@@ -179,6 +179,7 @@ export function createHttpApiClient(): ApiClient {
       if (query.functionCode) parameters.set('functionCode', query.functionCode)
       if (query.status) parameters.set('status', query.status)
       if (query.level) parameters.set('level', query.level)
+      if (query.studyId) parameters.set('studyId', String(query.studyId))
       return request<RiskPage>(`/api/v1/risk-management/risks?${parameters}`)
     },
     getRisk: (riskCode) => request<RiskDetail>(

@@ -128,6 +128,46 @@ class RiskManagementIntegrationTest {
   }
 
   @Test
+  void filtersRisksByStudyId() throws Exception {
+    String operator = "risk.scoped@example.com";
+    long ownerId = seedUser(operator, "风险范围用户");
+    long studyA = seedStudy("RISK-STUDY-A");
+    long studyB = seedStudyWith("RISK-STUDY-B", "B");
+    assignToStudy(studyA, ownerId);
+    assignToStudy(studyB, ownerId);
+    long functionLineId = jdbc.queryForObject(
+        "SELECT id FROM hd_plt_function_line WHERE function_code = 'PM'", Long.class);
+
+    String created = mvc.perform(post("/api/v1/risk-management/risks")
+            .with(user(operator).authorities(authority("risk.create")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"studyId":%d,"functionLineId":%d,"ownerUserId":%d,
+                 "description":"仅属于A研究的risk","registeredDate":"2026-07-22",
+                 "assessment":{"impact":3,"likelihood":2,"detectability":2,
+                   "reason":"初始评估"},"actions":[]}
+                """.formatted(studyA, functionLineId, ownerId)))
+        .andExpect(status().isCreated())
+        .andReturn().getResponse().getContentAsString();
+    String riskCode = new com.fasterxml.jackson.databind.ObjectMapper()
+        .readTree(created).get("risk").get("riskCode").asText();
+
+    mvc.perform(get("/api/v1/risk-management/risks")
+            .param("studyId", String.valueOf(studyA))
+            .with(user(operator).authorities(authority("risk.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].riskCode").value(riskCode));
+
+    mvc.perform(get("/api/v1/risk-management/risks")
+            .param("studyId", String.valueOf(studyB))
+            .with(user(operator).authorities(authority("risk.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.length()").value(0));
+  }
+
+  @Test
   void closesReopensAndRejectsAStaleVersion() throws Exception {
     String operator = "risk.editor@example.com";
     long ownerId = seedUser(operator, "风险编辑人");
@@ -243,6 +283,43 @@ class RiskManagementIntegrationTest {
         JOIN hd_plt_therapeutic_area ta ON ta.id = pr.therapeutic_area_id
         WHERE p.program_code = 'PROGRAM-RISK' AND pr.project_code = 'PROJECT-RISK'
         """, studyCode);
+    return jdbc.queryForObject(
+        "SELECT id FROM hd_plt_study WHERE study_code = ?", Long.class, studyCode);
+  }
+
+  private long seedStudyWith(String studyCode, String suffix) {
+    jdbc.update("""
+        INSERT INTO hd_plt_therapeutic_area(
+            area_code, area_name, status_code, sys_create_by, sys_update_by)
+        VALUES (?, '肿瘤', 'ACTIVE', 'seed', 'seed')
+        """, "TA-" + suffix);
+    jdbc.update("""
+        INSERT INTO hd_plt_program(
+            program_code, product_name, status_code, sys_create_by, sys_update_by)
+        VALUES (?, ?, 'ACTIVE', 'seed', 'seed')
+        """, "PROGRAM-" + suffix, "HD-" + suffix);
+    jdbc.update("""
+        INSERT INTO hd_plt_project(
+            project_code, program_id, indication_description, therapeutic_area_id,
+            sys_create_by, sys_update_by)
+        SELECT ?, p.id, '实体瘤', ta.id, 'seed', 'seed'
+        FROM hd_plt_program p CROSS JOIN hd_plt_therapeutic_area ta
+        WHERE p.program_code = ? AND ta.area_code = ?
+        """, "PROJECT-" + suffix, "PROGRAM-" + suffix, "TA-" + suffix);
+    jdbc.update("""
+        INSERT INTO hd_plt_study(
+            study_code, phase_status_code, program_id, program_code_snapshot,
+            product_name_snapshot, project_id, project_code_snapshot,
+            therapeutic_area_id, therapeutic_area_code_snapshot,
+            therapeutic_area_name_snapshot, indication_description_snapshot,
+            sys_create_by, sys_update_by)
+        SELECT ?, 'PHASE_1', p.id, p.program_code, p.product_name,
+            pr.id, pr.project_code, ta.id, ta.area_code, ta.area_name,
+            pr.indication_description, 'seed', 'seed'
+        FROM hd_plt_program p JOIN hd_plt_project pr ON pr.program_id = p.id
+        JOIN hd_plt_therapeutic_area ta ON ta.id = pr.therapeutic_area_id
+        WHERE p.program_code = ? AND pr.project_code = ?
+        """, studyCode, "PROGRAM-" + suffix, "PROJECT-" + suffix);
     return jdbc.queryForObject(
         "SELECT id FROM hd_plt_study WHERE study_code = ?", Long.class, studyCode);
   }

@@ -170,7 +170,7 @@ public class RiskManager {
     String status = optionalEnum(query.status(), RISK_STATUSES, "风险状态");
     String level = optionalEnum(query.level(), Set.of("LOW", "MEDIUM", "HIGH"), "风险等级");
     return new RiskQuery(trim(query.query()), trim(query.functionCode()), status, level,
-        trim(query.sortBy()), trim(query.sortOrder()), page, pageSize);
+        query.studyId(), trim(query.sortBy()), trim(query.sortOrder()), page, pageSize);
   }
 
   private UserAccount currentUser(String username) {

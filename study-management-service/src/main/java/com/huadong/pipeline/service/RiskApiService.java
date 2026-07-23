@@ -14,9 +14,10 @@ public class RiskApiService implements RiskApi {
 
   @Override
   public PageResponse list(String username, String query, String functionCode, String status,
-                           String level, String sortBy, String sortOrder, int page, int pageSize) {
+                           String level, Long studyId, String sortBy, String sortOrder,
+                           int page, int pageSize) {
     var result = manager.list(username, new RiskRepository.RiskQuery(
-        query, functionCode, status, level, sortBy, sortOrder, page, pageSize));
+        query, functionCode, status, level, studyId, sortBy, sortOrder, page, pageSize));
     int pages = Math.max(1, (int) Math.ceil((double) result.totalItems() / result.pageSize()));
     return new PageResponse(result.data().stream().map(this::summary).toList(),
         new StatsResponse(result.stats().total(), result.stats().open(),

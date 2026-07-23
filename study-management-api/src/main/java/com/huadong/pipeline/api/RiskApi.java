@@ -12,7 +12,8 @@ import java.util.List;
 
 public interface RiskApi {
   PageResponse list(String username, String query, String functionCode, String status,
-                    String level, String sortBy, String sortOrder, int page, int pageSize);
+                    String level, Long studyId, String sortBy, String sortOrder,
+                    int page, int pageSize);
   DetailResponse detail(String username, String riskCode);
   FormOptionsResponse formOptions(String username, Long studyId);
   DetailResponse create(@Valid CreateRequest request, String username);

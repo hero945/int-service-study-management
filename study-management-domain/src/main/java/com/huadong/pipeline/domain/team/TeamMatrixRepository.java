@@ -17,6 +17,9 @@ public interface TeamMatrixRepository {
 
   List<Long> findAssignedUserIds(long studyId, String roleCode);
 
+  /** Study id -> concatenated member display names for the given role code across the study set. */
+  Map<Long, String> findRoleMemberNames(Set<Long> studyIds, String roleCode);
+
   void replaceAssignments(
       long studyId, TeamRole role, List<TeamMember> members, String operator);
 

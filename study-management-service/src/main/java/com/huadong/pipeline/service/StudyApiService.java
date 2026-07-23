@@ -39,7 +39,15 @@ public class StudyApiService implements StudyApi {
             study.status().tone(),
             study.ownerName(),
             study.startDate(),
-            study.updatedAt()))
+            study.updatedAt(),
+            study.therapeuticAreaCode(),
+            study.therapeuticAreaName(),
+            study.programCode(),
+            study.projectCode(),
+            study.plName(),
+            study.pmName(),
+            study.currentPhase(),
+            study.currentStatus()))
         .toList();
   }
 

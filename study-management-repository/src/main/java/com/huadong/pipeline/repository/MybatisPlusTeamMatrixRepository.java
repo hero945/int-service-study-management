@@ -95,6 +95,20 @@ public class MybatisPlusTeamMatrixRepository implements TeamMatrixRepository {
   }
 
   @Override
+  public Map<Long, String> findRoleMemberNames(Set<Long> studyIds, String roleCode) {
+    if (studyIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, List<String>> grouped = new LinkedHashMap<>();
+    for (TeamMemberRow row : mapper.findPlPmMembers(studyIds, roleCode)) {
+      grouped.computeIfAbsent(row.studyId(), ignored -> new ArrayList<>()).add(row.displayName());
+    }
+    Map<Long, String> result = new LinkedHashMap<>();
+    grouped.forEach((studyId, names) -> result.put(studyId, String.join("、", names)));
+    return result;
+  }
+
+  @Override
   public void replaceAssignments(
       long studyId, TeamRole role, List<TeamMember> members, String operator) {
     mapper.softDeleteRoleAssignments(studyId, role.id(), operator);

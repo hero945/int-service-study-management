@@ -43,9 +43,17 @@ export interface Study {
   updatedAt: string
   therapeuticArea?: string
   therapeuticAreaEn?: string
+  therapeuticAreaCode?: string
+  therapeuticAreaName?: string
   product?: string
   program?: string
+  programCode?: string
   project?: string
+  projectCode?: string
+  plName?: string
+  pmName?: string
+  currentPhase?: string
+  currentStatus?: string
   moa?: string
   source?: string
   origin?: string
@@ -118,6 +126,7 @@ export interface RiskQuery {
   functionCode?: string
   status?: RiskStatus | ''
   level?: RiskLevel | ''
+  studyId?: number
   sortBy?: 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate'
   sortOrder?: 'asc' | 'desc'
   page?: number

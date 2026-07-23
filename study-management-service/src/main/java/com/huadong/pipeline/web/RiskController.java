@@ -32,13 +32,14 @@ public class RiskController {
       @RequestParam(defaultValue = "") String functionCode,
       @RequestParam(defaultValue = "") String status,
       @RequestParam(defaultValue = "") String level,
+      @RequestParam(required = false) Long studyId,
       @RequestParam(defaultValue = "updatedAt") String sortBy,
       @RequestParam(defaultValue = "desc") String sortOrder,
       @RequestParam(defaultValue = "1") @Min(1) int page,
       @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize,
       Principal principal) {
     return api.list(principal.getName(), query, functionCode, status, level,
-        sortBy, sortOrder, page, pageSize);
+        studyId, sortBy, sortOrder, page, pageSize);
   }
 
   @GetMapping("/risks/{riskCode}")

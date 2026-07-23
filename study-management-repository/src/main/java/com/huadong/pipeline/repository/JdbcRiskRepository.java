@@ -46,6 +46,10 @@ public class JdbcRiskRepository implements RiskRepository {
       filtered.append(" AND r.current_level_code = ?");
       args.add(query.level());
     }
+    if (query.studyId() != null) {
+      filtered.append(" AND r.study_id = ?");
+      args.add(query.studyId());
+    }
     long total = jdbc.queryForObject(
         "SELECT COUNT(DISTINCT r.id) " + filtered, Long.class, args.toArray());
     String sort = switch (query.sortBy()) {

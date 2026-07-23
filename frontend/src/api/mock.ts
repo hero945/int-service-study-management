@@ -217,6 +217,16 @@ function delay(ms: number) { return new Promise(r => setTimeout(r, ms)) }
 const mockMilestones = new Map<number, MilestonePage>()
 
 function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage {
+  const notStarted = (code: string, name: string): MilestoneNode => ({
+    milestoneCode: code,
+    milestoneName: name,
+    planV1Date: null,
+    planV2Date: null,
+    actualStartDate: null,
+    actualEndDate: null,
+    status: 'NOT_STARTED',
+    deviationNote: null,
+  })
   const now = new Date()
   const yyyy = now.getFullYear()
   const mm = String(now.getMonth() + 1).padStart(2, '0')
@@ -257,7 +267,20 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         { milestoneCode: 'Protocol-1', milestoneName: '方案讨论会', planV1Date: d(90), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Protocol-2', milestoneName: '方案定稿', planV1Date: d(150), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
       ] as MilestoneNode[]},
-      { stageCode: 'SSU', stageName: 'SSU', nodes: [] },
+      { stageCode: 'SSU', stageName: 'SSU', nodes: [
+        notStarted('SSU-0', '组长单位立项递交'),
+        notStarted('SSU-1', '组长单位立项获批'),
+        notStarted('SSU-2', '组长单位伦理递交'),
+        notStarted('SSU-3', '组长单位伦理获批'),
+        notStarted('SSU-4', '组长单位合同签署'),
+        notStarted('SSU-5', '首家中心启动'),
+        notStarted('SSU-6', '组长单位启动'),
+        notStarted('SSU-7', '所有中心启动'),
+        notStarted('SSU-8', '人遗递交'),
+        notStarted('SSU-9', '人遗批准'),
+        notStarted('SSU-10', 'CDE 平台登记'),
+        notStarted('SSU-11', 'ClinicalTrial 登记'),
+      ] as MilestoneNode[]},
       { stageCode: 'Enrollment', stageName: 'Enrollment', nodes: [
         { milestoneCode: 'Enrollment-0', milestoneName: 'FPI', planV1Date: d(360), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Enrollment-1', milestoneName: 'LPI', planV1Date: d(720), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
@@ -277,8 +300,25 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         { milestoneCode: 'Data_Report-6', milestoneName: 'CSR定稿', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Data_Report-7', milestoneName: '中心关闭', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
       ] as MilestoneNode[]},
-      { stageCode: 'PreNDA_BLA', stageName: 'PreNDA/BLA', nodes: [] },
-      { stageCode: 'NDA_BLA', stageName: 'NDA/BLA', nodes: [] },
+      { stageCode: 'PreNDA_BLA', stageName: 'PreNDA/BLA', nodes: [
+        notStarted('PreNDA_BLA-0', 'PreNDA 递交'),
+        notStarted('PreNDA_BLA-1', 'PreNDA 反馈-临床医学'),
+        notStarted('PreNDA_BLA-2', 'PreNDA 反馈-数统'),
+        notStarted('PreNDA_BLA-3', 'PreNDA 反馈-临床药理'),
+        notStarted('PreNDA_BLA-4', 'PreNDA 反馈-非临床'),
+        notStarted('PreNDA_BLA-5', 'PreNDA 反馈-药学'),
+      ] as MilestoneNode[]},
+      { stageCode: 'NDA_BLA', stageName: 'NDA/BLA', nodes: [
+        notStarted('NDA_BLA-0', 'NDA/BLA 递交'),
+        notStarted('NDA_BLA-1', 'NDA/BLA 形审发补'),
+        notStarted('NDA_BLA-2', 'NDA/BLA 形审补正'),
+        notStarted('NDA_BLA-3', 'NDA/BLA 受理'),
+        notStarted('NDA_BLA-4', '临床核查'),
+        notStarted('NDA_BLA-5', '药学核查'),
+        notStarted('NDA_BLA-6', 'NDA/BLA 发补'),
+        notStarted('NDA_BLA-7', 'NDA/BLA 补正'),
+        notStarted('NDA_BLA-8', 'NDA/BLA 获批'),
+      ] as MilestoneNode[]},
     ],
   }
 }
@@ -326,7 +366,35 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
   // Also for study ID 1 and 2
   mockMilestones.set(1, buildDemoMilestones(1, 'HDM1005-101'))
   mockMilestones.set(2, buildDemoMilestones(2, 'HDM1005-201'))
+
 })()
+
+function nodeSortOrder(node: MilestoneNode, index: number): number {
+  const order = (node as MilestoneNode & { sortOrder?: number }).sortOrder
+  return typeof order === 'number' ? order : index
+}
+
+function deriveCurrentPhaseStatus(page: MilestonePage): { currentPhase: string; currentStatus: string } {
+  const groups = [...page.groups].sort((a, b) => {
+    const order = ['PreIND', 'IND', 'Pre3', 'Protocol', 'SSU', 'Enrollment', 'IA', 'Data_Report', 'PreNDA_BLA', 'NDA_BLA']
+    return order.indexOf(b.stageCode) - order.indexOf(a.stageCode)
+  })
+  const currentGroup = groups.find(group =>
+    group.nodes.some(node => node.actualStartDate != null || node.actualEndDate != null))
+  if (!currentGroup) {
+    return { currentPhase: '', currentStatus: '' }
+  }
+  const nodes = currentGroup.nodes
+    .map((node, index) => ({ node, order: nodeSortOrder(node, index) }))
+    .sort((a, b) => b.order - a.order)
+    .map((item) => item.node)
+  const currentNode = nodes.find(node => node.actualStartDate != null || node.actualEndDate != null)
+  return {
+    currentPhase: currentGroup.stageName,
+    currentStatus: currentNode?.milestoneName ?? '',
+  }
+}
+
 
 // ── Mock 月报填写数据 ──
 // 功能线 code/name 取自 V8__team_matrix.sql 种子；可编辑性模拟"当前用户被分配到该功能线"：
@@ -535,7 +603,24 @@ export function createMockApiClient(): ApiClient {
       }
     },
     async listStudies() {
-      return demoStudies
+      const nameOf = (userId: number) => users[userId - 1]?.displayName ?? ''
+      const roleNames = (studyId: number, roleCode: string) =>
+        (teamAssignments.get(`${studyId}|${roleCode}`) ?? []).map(nameOf).filter(Boolean).join('、')
+      return demoStudies.map((study) => {
+        const milestones = mockMilestones.get(study.id) ?? buildDemoMilestones(study.id, study.code)
+        const { currentPhase, currentStatus } = deriveCurrentPhaseStatus(milestones)
+        return {
+          ...study,
+          therapeuticAreaCode: study.therapeuticAreaCode ?? study.therapeuticAreaEn ?? study.therapeuticArea,
+          therapeuticAreaName: study.therapeuticAreaName ?? study.therapeuticArea,
+          programCode: study.programCode ?? study.program,
+          projectCode: study.projectCode ?? study.project ?? study.product,
+          plName: roleNames(study.id, 'PL'),
+          pmName: roleNames(study.id, 'PM'),
+          currentPhase,
+          currentStatus,
+        }
+      })
     },
     async listRisks(query = {}) {
       const keyword = query.query?.trim().toLowerCase() ?? ''
