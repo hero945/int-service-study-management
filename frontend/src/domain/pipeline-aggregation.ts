@@ -120,16 +120,34 @@ export function furthestPhaseOf(studies: CellStudy[]): PipelinePhase | undefined
 }
 
 /**
+ * 去掉子节点文案里拼上的主节点英文名（如 "IA 数据冻结" → "数据冻结"）。
+ * 主节点名仍放在上方灰色 caption，不进 pill。
+ */
+export function displaySubNodeLabel(
+  subStatusLabel: string,
+  mainStageLabel: string | null | undefined,
+): string {
+  const label = subStatusLabel.trim()
+  const prefix = mainStageLabel?.trim()
+  if (!prefix || !label) return label
+  if (label === prefix) return label
+  if (label.startsWith(`${prefix} `)) {
+    const rest = label.slice(prefix.length + 1).trim()
+    return rest || label
+  }
+  return label
+}
+
+/**
  * 单元格取数与状态（对齐参考样式：早于当前阶段=已完成 / 等于=当前进度 / 晚于=—）。
  *
  * 以 project 推进到的最靠后阶段（furthestPhaseOf）作为"当前阶段"基准：
- *   - 目标列 < 当前阶段 → "已完成"（绿）：项目已越过该阶段
- *   - 目标列 = 当前阶段 → 该研究的里程碑【子状态】作为主文案，【主状态】作为灰色副文本
- *   - 目标列 > 当前阶段 → "—"（灰）：尚未到达
+ *   - 目标列 < 当前阶段 → "已完成"（绿），上方灰色 caption = 列阶段名 targetPhase
+ *   - 目标列 = 当前阶段 → pill = 里程碑【子节点名】（去掉主节点英文前缀）；上方灰色 = 【主节点名】
+ *   - 目标列 > 当前阶段 → "—"（灰）
  *
- * 关键：主文案永远是里程碑子状态（节点名，如 "LPI 入组"），不出现"进行中"；
- *       灰色副文本才是主状态（stage 名，如 "Enrollment"）；完成态（currentPhaseCompleted）
- *       才显示"已完成"（绿）且不带副文本。
+ * 约定：上方灰色 = 主节点名或列阶段名；pill = 子节点名或「已完成」。
+ *       禁止把主节点拼进 pill 文案。
  */
 export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase): ProjectCell {
   const currentPhase = furthestPhaseOf(studies)
@@ -139,9 +157,9 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
   const targetIndex = PHASE_TAGS.indexOf(targetPhase)
   const currentIndex = PHASE_TAGS.indexOf(currentPhase)
 
-  // 早于当前阶段 → 已完成
+  // 早于当前阶段 → 已完成，上方显示列阶段名
   if (targetIndex < currentIndex) {
-    return { label: '已完成', tone: 'green', clickable: true }
+    return { label: '已完成', tone: 'green', clickable: true, subText: targetPhase }
   }
   // 晚于当前阶段 → 尚未到达
   if (targetIndex > currentIndex) {
@@ -152,22 +170,28 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
   if (!study) {
     return { label: '—', tone: 'empty', clickable: false }
   }
-  // 当前阶段已完成（里程碑末节点 actual_end 非空）→ 绿底"已完成"，不带副文本
+  // 当前阶段已完成 → 绿底「已完成」，上方显示列阶段名
   if (study.currentPhaseCompleted || study.globallyCompleted) {
-    return { label: '已完成', tone: 'green', clickable: true, studyId: study.id }
+    return {
+      label: '已完成',
+      tone: 'green',
+      clickable: true,
+      studyId: study.id,
+      subText: targetPhase,
+    }
   }
-  // 否则主文案=里程碑子状态（节点名），副文本=主状态（stage 名，灰色）
-  const subStatus = study.subStatusLabel
+  // 进行中：pill = 仅子节点名（去主节点英文前缀）；上方灰色 = 主节点名
+  const subStatus = study.subStatusLabel?.trim()
   if (subStatus) {
     return {
-      label: subStatus,
+      label: displaySubNodeLabel(subStatus, study.mainStageLabel),
       tone: 'blue',
       clickable: true,
       studyId: study.id,
       subText: study.mainStageLabel ?? undefined,
     }
   }
-  // 无里程碑子状态（数据缺口）时回退到主状态/stage 名，避免出现"进行中"
+  // 无子节点时回退主节点/statusLabel，且不重复设 caption
   const fallback = study.mainStageLabel ?? study.statusLabel
   return {
     label: fallback,

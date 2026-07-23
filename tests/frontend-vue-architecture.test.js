@@ -155,3 +155,38 @@ test('expired sessions redirect browser pages while API authentication errors st
   assert.match(security, /response\.sendRedirect\(loginRedirect\(request\)\)/);
   assert.match(security, /"code", "UNAUTHENTICATED"/);
 });
+
+test('pipeline overview keeps sticky id columns and stacked project/study drawers', () => {
+  const mainCss = read('frontend/src/styles/main.css');
+  const overview = read('frontend/src/views/PipelineOverviewView.vue');
+  const studyList = read('frontend/src/views/StudyListView.vue');
+  const projectDrawerPath = path.join(root, 'frontend/src/components/ProjectStudiesDrawer.vue');
+
+  assert.match(mainCss, /\.study-row--clickable\s*\{[^}]*cursor:\s*pointer/s);
+  assert.match(mainCss, /\.pipeline-table[^{]*th:nth-child\(1\)[\s\S]*?position:\s*sticky/s);
+  assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(1\)[\s\S]*?left:\s*0/s);
+  assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(2\)[\s\S]*?left:\s*130px/s);
+  assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(3\)[\s\S]*?left:\s*290px/s);
+  assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*position:\s*sticky[^}]*left:\s*0/s);
+  assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*min-width:\s*510px/s);
+  assert.match(mainCss, /\.pipeline-table[^{]*th:nth-child\(3\)[\s\S]*?border-right:\s*1px/s);
+  assert.match(mainCss, /\.status-chip\s*\{[^}]*width:\s*118px/s);
+  assert.match(mainCss, /\.status-chip--green\s*\{[^}]*background:\s*#e5f4eb/s);
+  assert.match(mainCss, /\.status-chip--blue\s*\{[^}]*border-color:\s*#b7cff5/s);
+  assert.match(mainCss, /\.pipeline-id-cell\s*\{[^}]*cursor:\s*pointer/s);
+  assert.match(mainCss, /\.cell-clickable\s*\{[^}]*cursor:\s*pointer/s);
+
+  assert.ok(fs.existsSync(projectDrawerPath));
+  assert.match(overview, /ProjectStudiesDrawer/);
+  assert.match(overview, /StudyDetailDrawer/);
+  assert.match(overview, /pipeline-id-cell/);
+  assert.match(overview, /area-row-sticky/);
+  assert.match(overview, /colspan="3"/);
+  assert.match(overview, /pipeline-stage-wrap/);
+  assert.match(overview, /cell-stage-caption/);
+  assert.match(overview, /openProjectDrawer/);
+  assert.match(overview, /toStudy/);
+
+  assert.match(studyList, /study-row--clickable/);
+  assert.match(studyList, /StudyDetailDrawer/);
+});

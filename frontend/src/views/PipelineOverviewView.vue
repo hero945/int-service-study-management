@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
-import type { OverviewProject, PipelineOverview } from '../api/types'
+import type { OverviewProject, OverviewStudy, PipelineOverview, Study } from '../api/types'
 import {
   PHASE_TAGS,
   originLabel,
@@ -11,6 +11,8 @@ import {
 } from '../domain/pipeline-status'
 import { furthestPhaseOf, getProjectCell } from '../domain/pipeline-aggregation'
 import PageState from '../components/PageState.vue'
+import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
+import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 
 // 后端已按 TA 聚合的 project，附带 TA 信息便于筛选
 interface ProjectRow extends OverviewProject {
@@ -30,6 +32,12 @@ const therapeuticArea = ref('全部')
 const program = ref('全部')
 const phaseFilter = ref<'全部' | PipelinePhase>('全部')
 const statusFilter = ref('')
+
+const projectDrawerOpen = ref(false)
+const selectedProject = ref<OverviewProject | null>(null)
+const selectedAreaName = ref('')
+const studyDrawerOpen = ref(false)
+const selectedStudy = ref<Study | null>(null)
 
 const allProjects = computed<ProjectRow[]>(() =>
   (overview.value?.areas ?? []).flatMap((area) =>
@@ -118,6 +126,49 @@ function clearFilters() {
 }
 function openStudy(studyId?: number) {
   if (studyId != null) router.push(`/milestones/${studyId}`)
+}
+
+function toStudy(o: OverviewStudy, p: OverviewProject): Study {
+  return {
+    id: o.id,
+    code: o.code,
+    indication: p.indication || '',
+    phase: o.phase,
+    status: o.status,
+    statusLabel: o.statusLabel,
+    statusTone: o.statusTone,
+    ownerName: '',
+    startDate: o.startDate,
+    updatedAt: o.updatedAt,
+    programCode: p.programCode,
+    projectCode: p.code,
+    productName: p.productName,
+    currentPhase: o.mainStageLabel ?? undefined,
+    currentStatus: o.subStatusLabel ?? undefined,
+  }
+}
+
+function openProjectDrawer(project: OverviewProject, areaName: string) {
+  selectedProject.value = project
+  selectedAreaName.value = areaName
+  projectDrawerOpen.value = true
+}
+
+function closeProjectDrawer() {
+  projectDrawerOpen.value = false
+  studyDrawerOpen.value = false
+  selectedStudy.value = null
+}
+
+function selectStudy(study: OverviewStudy) {
+  if (!selectedProject.value) return
+  selectedStudy.value = toStudy(study, selectedProject.value)
+  studyDrawerOpen.value = true
+}
+
+function closeStudyDrawer() {
+  studyDrawerOpen.value = false
+  selectedStudy.value = null
 }
 
 onMounted(async () => {
@@ -210,57 +261,99 @@ onMounted(async () => {
           </thead>
           <tbody v-for="area in areaGroups" :key="area.therapeuticAreaName">
             <tr class="area-row">
-              <td :colspan="10">
+              <td colspan="3" class="area-row-sticky">
                 <span class="area-dot"></span>{{ area.therapeuticAreaName }}
                 <small>{{ area.projects.length }} 个项目</small>
               </td>
+              <td v-for="phase in phases" :key="`area-${phase}`" class="area-row-fill"></td>
             </tr>
             <tr v-for="project in area.projects" :key="project.code">
-              <td>
+              <td
+                class="pipeline-id-cell"
+                @click="openProjectDrawer(project, area.therapeuticAreaName)"
+              >
                 <strong>{{ project.productName || project.code }}</strong>
                 <small>{{ sourceLabel(project.sourceCode) }} · {{ originLabel(project.originCode) }}</small>
               </td>
-              <td>
+              <td
+                class="pipeline-id-cell"
+                @click="openProjectDrawer(project, area.therapeuticAreaName)"
+              >
                 <strong class="mono">{{ project.programCode }}</strong>
                 <small>{{ project.moa }}</small>
               </td>
-              <td>
+              <td
+                class="pipeline-id-cell"
+                @click="openProjectDrawer(project, area.therapeuticAreaName)"
+              >
                 <strong>{{ project.code }}</strong>
                 <small>{{ project.indication }}</small>
               </td>
               <td
                 v-for="phase in phases"
                 :key="phase"
+                class="pipeline-stage-td"
                 :class="{ 'cell-clickable': cell(project, phase).clickable }"
                 @click="cell(project, phase).clickable && openStudy(cell(project, phase).studyId)"
               >
-                <span
-                  class="status-chip"
-                  :class="`status-chip--${cell(project, phase).tone}`"
-                  :title="cell(project, phase).explanation"
+                <div
+                  v-if="cell(project, phase).tone !== 'empty'"
+                  class="pipeline-stage-wrap"
                 >
-                  {{ cell(project, phase).label }}
-                </span>
-                <small
-                  v-if="cell(project, phase).subText"
-                  class="cell-sub"
-                >{{ cell(project, phase).subText }}</small>
+                  <span
+                    v-if="cell(project, phase).subText"
+                    class="cell-stage-caption"
+                  >{{ cell(project, phase).subText }}</span>
+                  <span
+                    class="status-chip"
+                    :class="`status-chip--${cell(project, phase).tone}`"
+                    :title="cell(project, phase).explanation"
+                  >{{ cell(project, phase).label }}</span>
+                </div>
+                <span
+                  v-else
+                  class="status-chip status-chip--empty"
+                >{{ cell(project, phase).label }}</span>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </PageState>
+
+    <ProjectStudiesDrawer
+      :open="projectDrawerOpen"
+      :project="selectedProject"
+      :area-name="selectedAreaName"
+      @close="closeProjectDrawer"
+      @select-study="selectStudy"
+    />
+    <StudyDetailDrawer
+      :open="studyDrawerOpen"
+      :study="selectedStudy"
+      @close="closeStudyDrawer"
+    />
   </section>
 </template>
 
 <style scoped>
-.cell-sub {
+.pipeline-stage-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 3px;
+  min-height: 44px;
+}
+.cell-stage-caption {
   display: block;
-  margin-top: 2px;
-  font-size: 11px;
+  font-size: 9px;
+  font-weight: 700;
   line-height: 1.2;
-  color: var(--text-muted, #8a93a6);
-  font-weight: 500;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  color: #9aa2ad;
+  font-family: "IBM Plex Mono", "Cascadia Mono", monospace;
+  white-space: nowrap;
 }
 </style>
