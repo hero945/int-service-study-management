@@ -12,7 +12,7 @@ public record OverviewStudy(
     StudyStatus status,
     LocalDate startDate,
     LocalDateTime updatedAt,
-    /** 当前里程碑阶段编码 (e.g. "PRE_IND") */
+    /** 当前里程碑阶段编码 (e.g. "PreIND") */
     String mainStageCode,
     /** 当前里程碑阶段标签 (e.g. "PreIND") */
     String mainStageLabel,

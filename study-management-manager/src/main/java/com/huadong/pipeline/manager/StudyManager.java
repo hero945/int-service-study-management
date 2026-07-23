@@ -14,24 +14,18 @@ import com.huadong.pipeline.domain.study.OverviewStudy;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
-import com.huadong.pipeline.domain.config.ProjectRepository;
-import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilestone;
-import com.huadong.pipeline.domain.config.PipelineConfigRepository;
+import com.huadong.pipeline.domain.config.ProjectRepository;
 import com.huadong.pipeline.domain.team.TeamMatrixRepository;
 import com.huadong.pipeline.domain.user.DataScope;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,12 +35,10 @@ public class StudyManager {
   private final StudyRepository studies;
   private final UserAccountRepository users;
   private final ProjectRepository projects;
-  private final PipelineConfigRepository configs;
-  private final TeamMatrixRepository team;
-  private final StudyMilestonePort milestones;
   private final PipelineOverviewRepository overviewProjects;
   private final StudyMilestonePort studyMilestones;
   private final MilestoneManager milestoneManager;
+  private final TeamMatrixRepository team;
 
   public StudyManager(
       StudyRepository studies,
@@ -55,25 +47,18 @@ public class StudyManager {
       PipelineOverviewRepository overviewProjects,
       StudyMilestonePort studyMilestones,
       MilestoneManager milestoneManager,
-      PipelineConfigRepository configs,
-      TeamMatrixRepository team,
-      StudyMilestonePort milestones) {
+      TeamMatrixRepository team) {
     this.studies = studies;
     this.users = users;
     this.projects = projects;
     this.overviewProjects = overviewProjects;
     this.studyMilestones = studyMilestones;
     this.milestoneManager = milestoneManager;
-    this.configs = configs;
     this.team = team;
-    this.milestones = milestones;
   }
 
   public List<StudyView> list(String username) {
     List<Study> all = studies.findAll(accessScope(username));
-    Map<String, String> taNameByCode = configs.findTherapeuticAreas().stream()
-        .collect(Collectors.toMap(
-            area -> area.code(), area -> area.name(), (a, b) -> a, LinkedHashMap::new));
     Set<Long> studyIds = all.stream().map(Study::id).collect(Collectors.toSet());
     Map<Long, String> plNames = team.findRoleMemberNames(studyIds, "PL");
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIds, "PM");
@@ -88,34 +73,20 @@ public class StudyManager {
               study.status(),
               study.ownerName(),
               study.startDate(),
-              study.updatedAt(),
-              study.therapeuticAreaCode(),
-              taNameByCode.getOrDefault(study.therapeuticAreaCode(), study.therapeuticAreaCode()),
-              study.programCode(),
-              study.projectCode(),
               plNames.getOrDefault(study.id(), ""),
               pmNames.getOrDefault(study.id(), ""),
               derived.phase(),
-              derived.status());
+              derived.status(),
+              study.updatedAt(),
+              study.therapeuticAreaCode(),
+              study.therapeuticAreaName(),
+              study.programCode(),
+              study.projectCode(),
+              study.productName(),
+              study.moa(),
+              study.sourceCode(),
+              study.originCode());
         })
-    return studies.findAll(accessScope(username)).stream()
-        .map(study -> new StudyView(
-            study.id(),
-            study.code(),
-            study.indication(),
-            study.phase(),
-            study.status(),
-            study.ownerName(),
-            study.startDate(),
-            study.updatedAt(),
-            study.therapeuticAreaCode(),
-            study.therapeuticAreaName(),
-            study.programCode(),
-            study.projectCode(),
-            study.productName(),
-            study.moa(),
-            study.sourceCode(),
-            study.originCode()))
         .toList();
   }
 
@@ -126,11 +97,10 @@ public class StudyManager {
    * (reverse sortOrder) with an actual date. Labels come from MilestoneDefinition.ALL.
    */
   private CurrentPhaseStatus deriveCurrentPhaseStatus(long studyId) {
-    return deriveCurrentPhaseStatus(milestones.findByStudyId(studyId));
+    return deriveCurrentPhaseStatus(studyMilestones.findByStudyId(studyId));
   }
 
-  private static CurrentPhaseStatus deriveCurrentPhaseStatus(
-      List<StudyMilestonePort.PersistedMilestone> persisted) {
+  private static CurrentPhaseStatus deriveCurrentPhaseStatus(List<PersistedMilestone> persisted) {
     MilestoneDefinition.StageGroup currentGroup = MilestoneDefinition.ALL.stream()
         .sorted((a, b) -> Integer.compare(b.sortOrder(), a.sortOrder()))
         .filter(group -> groupHasActualData(persisted, group))
@@ -149,14 +119,13 @@ public class StudyManager {
   }
 
   private static boolean groupHasActualData(
-      List<StudyMilestonePort.PersistedMilestone> persisted,
+      List<PersistedMilestone> persisted,
       MilestoneDefinition.StageGroup group) {
     return group.nodes().stream()
         .anyMatch(node -> hasMilestoneData(persisted, node.code()));
   }
 
-  private static boolean hasMilestoneData(
-      List<StudyMilestonePort.PersistedMilestone> persisted, String milestoneCode) {
+  private static boolean hasMilestoneData(List<PersistedMilestone> persisted, String milestoneCode) {
     return persisted.stream()
         .filter(m -> m.milestoneCode().equals(milestoneCode))
         .anyMatch(m -> m.actualStartDate() != null || m.actualEndDate() != null);
@@ -165,6 +134,7 @@ public class StudyManager {
   private record CurrentPhaseStatus(String phase, String status) {
   }
 
+  @Transactional(readOnly = true)
   public PipelineOverview overview(String username) {
     var accessScope = accessScope(username);
     var projects = overviewProjects.findOverviewProjects(accessScope);
@@ -204,7 +174,8 @@ public class StudyManager {
           if (milestones == null || milestones.isEmpty()) {
             return study; // no milestone data → keep date-based status from repository
           }
-          MilestoneManager.MilestoneOverviewStatus derived = milestoneManager.computeOverviewStatus(milestones);
+          MilestoneManager.MilestoneOverviewStatus derived =
+              milestoneManager.computeOverviewStatus(milestones);
           if (derived == null) {
             return study;
           }

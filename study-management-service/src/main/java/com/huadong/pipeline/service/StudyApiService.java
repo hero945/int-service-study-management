@@ -66,15 +66,10 @@ public class StudyApiService implements StudyApi {
             study.status().tone(),
             study.ownerName(),
             study.startDate(),
-            study.updatedAt(),
-            study.therapeuticAreaCode(),
-            study.therapeuticAreaName(),
-            study.programCode(),
-            study.projectCode(),
             study.plName(),
             study.pmName(),
             study.currentPhase(),
-            study.currentStatus()),
+            study.currentStatus(),
             study.updatedAt(),
             study.therapeuticAreaCode(),
             study.therapeuticAreaName(),
@@ -83,7 +78,7 @@ public class StudyApiService implements StudyApi {
             study.productName(),
             study.moa(),
             study.sourceCode(),
-            study.originCode())
+            study.originCode()))
         .toList();
   }
 

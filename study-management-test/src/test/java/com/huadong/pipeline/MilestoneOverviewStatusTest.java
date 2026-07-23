@@ -25,14 +25,16 @@ class MilestoneOverviewStatusTest {
 
   @Test
   void preindAndIndCompletedWhenTheirLastNodesHaveActualEnd() {
-    // PreIND: 3 nodes (0,1,2), all completed → preindCompleted=true
-    // IND: 3 nodes (0,1,2), node-2 has actual_end → indCompleted=true
-    // Global last = IND-2 with actual_end → globallyCompleted=true
+    // PreIND has 6 nodes (0..5), IND has 5 nodes (0..4) in MilestoneDefinition.
     LocalDate s = LocalDate.of(2026, 1, 1);
     LocalDate e = LocalDate.of(2026, 2, 1);
     var rows = new ArrayList<PersistedMilestone>();
-    for (int i = 0; i <= 2; i++) rows.add(m("PRE_IND", "PRE_IND-" + i, s, e));
-    for (int i = 0; i <= 2; i++) rows.add(m("IND", "IND-" + i, s, e));
+    for (int i = 0; i <= 5; i++) {
+      rows.add(m("PreIND", "PreIND-" + i, s, e));
+    }
+    for (int i = 0; i <= 4; i++) {
+      rows.add(m("IND", "IND-" + i, s, e));
+    }
 
     var result = manager.computeOverviewStatus(rows);
     assertThat(result).isNotNull();
@@ -50,7 +52,9 @@ class MilestoneOverviewStatusTest {
     LocalDate s = LocalDate.of(2026, 1, 1);
     LocalDate e = LocalDate.of(2026, 2, 1);
     var rows = new ArrayList<PersistedMilestone>();
-    for (int i = 0; i <= 2; i++) rows.add(m("PRE_IND", "PRE_IND-" + i, s, e));
+    for (int i = 0; i <= 5; i++) {
+      rows.add(m("PreIND", "PreIND-" + i, s, e));
+    }
     rows.add(m("IND", "IND-0", s, null));   // IND in progress
 
     var result = manager.computeOverviewStatus(rows);
@@ -64,11 +68,11 @@ class MilestoneOverviewStatusTest {
 
   @Test
   void activeWhenNodeInProgress() {
-    var rows = List.of(m("PRE_IND", "PRE_IND-0", LocalDate.of(2026, 1, 1), null));
+    var rows = List.of(m("PreIND", "PreIND-0", LocalDate.of(2026, 1, 1), null));
     var result = manager.computeOverviewStatus(rows);
     assertThat(result.status().name()).isEqualTo("ACTIVE");
     assertThat(result.statusLabel()).isEqualTo("进行中");
-    assertThat(result.mainStageCode()).isEqualTo("PRE_IND");
+    assertThat(result.mainStageCode()).isEqualTo("PreIND");
     assertThat(result.mainStageLabel()).isEqualTo("PreIND");
     assertThat(result.subStatusLabel()).isEqualTo("PreIND 递交");
     assertThat(result.preindCompleted()).isFalse();
@@ -78,11 +82,11 @@ class MilestoneOverviewStatusTest {
 
   @Test
   void plannedWhenNotStarted() {
-    var rows = List.of(m("PRE_IND", "PRE_IND-0", null, null));
+    var rows = List.of(m("PreIND", "PreIND-0", null, null));
     var result = manager.computeOverviewStatus(rows);
     assertThat(result.status().name()).isEqualTo("PLANNED");
     assertThat(result.statusLabel()).isEqualTo("计划中");
-    assertThat(result.mainStageCode()).isEqualTo("PRE_IND");
+    assertThat(result.mainStageCode()).isEqualTo("PreIND");
     assertThat(result.mainStageLabel()).isEqualTo("PreIND");
     assertThat(result.subStatusLabel()).isEqualTo("未开始");
     assertThat(result.preindCompleted()).isFalse();
@@ -93,12 +97,16 @@ class MilestoneOverviewStatusTest {
 
   @Test
   void currentPhaseCompletedWhenFrontierIsLastNodeOfItsStageWithActualEnd() {
-    // PreIND 0..2 + IND 0..4 all done → frontier = IND-4 (last IND node, actual_end)
+    // PreIND 0..5 + IND 0..4 all done → frontier = IND-4 (last IND node, actual_end)
     LocalDate s = LocalDate.of(2026, 1, 1);
     LocalDate e = LocalDate.of(2026, 2, 1);
     var rows = new ArrayList<PersistedMilestone>();
-    for (int i = 0; i <= 2; i++) rows.add(m("PRE_IND", "PRE_IND-" + i, s, e));
-    for (int i = 0; i <= 4; i++) rows.add(m("IND", "IND-" + i, s, e));
+    for (int i = 0; i <= 5; i++) {
+      rows.add(m("PreIND", "PreIND-" + i, s, e));
+    }
+    for (int i = 0; i <= 4; i++) {
+      rows.add(m("IND", "IND-" + i, s, e));
+    }
 
     var result = manager.computeOverviewStatus(rows);
     assertThat(result).isNotNull();
@@ -113,8 +121,12 @@ class MilestoneOverviewStatusTest {
     LocalDate s = LocalDate.of(2026, 1, 1);
     LocalDate e = LocalDate.of(2026, 2, 1);
     var rows = new ArrayList<PersistedMilestone>();
-    for (int i = 0; i <= 2; i++) rows.add(m("PRE_IND", "PRE_IND-" + i, s, e));
-    for (int i = 0; i <= 3; i++) rows.add(m("IND", "IND-" + i, s, e));
+    for (int i = 0; i <= 5; i++) {
+      rows.add(m("PreIND", "PreIND-" + i, s, e));
+    }
+    for (int i = 0; i <= 3; i++) {
+      rows.add(m("IND", "IND-" + i, s, e));
+    }
 
     var result = manager.computeOverviewStatus(rows);
     assertThat(result).isNotNull();

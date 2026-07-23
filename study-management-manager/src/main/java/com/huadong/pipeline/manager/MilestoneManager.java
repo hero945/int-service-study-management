@@ -224,8 +224,9 @@ public class MilestoneManager {
     String subStatus = frontier == null ? "NOT_STARTED" : frontier.status();
     String subStatusLabel = frontier == null ? "未开始" : frontier.milestoneLabel();
 
-    // Per-stage completion: check if the LAST node of each target stage has actual_end
-    boolean preindCompleted = isStageLastNodeCompleted(nodes, "PRE_IND");
+    // Per-stage completion: check if the LAST node of each target stage has actual_end.
+    // Stage codes must match MilestoneDefinition (PreIND / IND), not Study.phase_status_code.
+    boolean preindCompleted = isStageLastNodeCompleted(nodes, "PreIND");
     boolean indCompleted = isStageLastNodeCompleted(nodes, "IND");
 
     // Global completion: the absolute last milestone node in definition order has actual_end
@@ -370,7 +371,7 @@ public class MilestoneManager {
    * @param status           column status (StudyStatus) for coloring/labeling
    * @param statusLabel      status.label()
    * @param statusTone       status.tone()
-   * @param mainStageCode    主状态: current stage code (e.g. "PRE_IND")
+   * @param mainStageCode    主状态: current stage code (e.g. "PreIND")
    * @param mainStageLabel   主状态: current stage label (e.g. "PreIND")
    * @param subStatusLabel   子状态: reached node label (e.g. "LPI"), or "未开始"
    * @param preindCompleted  PreIND stage 最后节点 actual_end != null
