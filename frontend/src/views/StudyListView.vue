@@ -5,47 +5,23 @@ import { apiClient } from '../api/client'
 import type { Study } from '../api/types'
 import PageState from '../components/PageState.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
+import { session } from '../session'
+import { ALL_MILESTONE_SUB_STATUSES } from '../domain/milestone-filters'
 
 const router = useRouter()
+const canReadMonthly = computed(() =>
+  session.currentUser.value?.permissions.includes('monthly.read') ?? false,
+)
 
 const studies = ref<Study[]>([])
 const loading = ref(true)
 const error = ref('')
 
-// 筛选条件：固定枚举（阶段/状态来自里程碑定义）
-const filters = reactive({ ta: '', program: '', phase: '', status: '' })
+// 筛选：TA / Program 模糊 / 里程碑子状态（命中 currentStatus）
+const filters = reactive({ ta: '', program: '', status: '' })
 
 const TA_OPTIONS = ['肿瘤', '自身免疫', '代谢与心血管', '呼吸系统', '感染性疾病', '神经科学']
-// 阶段/状态文案与 MilestoneDefinition stage/node label 对齐（筛选命中 currentPhase/currentStatus）
-const PHASE_OPTIONS = ['PreIND', 'IND', 'Pre3', 'Protocol', 'SSU', 'Enrollment', 'IA', 'Data & Report', 'PreNDA/BLA', 'NDA/BLA']
-const STATUS_BY_PHASE: Record<string, string[]> = {
-  PreIND: ['PreIND 递交', 'PreIND 反馈-临床医学', 'PreIND 反馈-数统', 'PreIND 反馈-临床药理', 'PreIND 反馈-非临床', 'PreIND 反馈-药学'],
-  IND: ['IND 递交', 'IND 形审发补', 'IND 形审补正', 'IND 受理', 'IND 获批'],
-  Pre3: ['Pre3 递交', 'Pre3 反馈-临床医学', 'Pre3 反馈-数统', 'Pre3 反馈-临床药理', 'Pre3 反馈-非临床', 'Pre3 反馈-药学'],
-  Protocol: ['方案摘要定稿', '方案讨论会', '方案定稿'],
-  SSU: [
-    '组长单位立项递交', '组长单位立项获批', '组长单位伦理递交', '组长单位伦理获批',
-    '组长单位合同签署', '首家中心启动', '组长单位启动', '所有中心启动',
-    '人遗递交', '人遗批准', 'CDE 平台登记', 'ClinicalTrial 登记',
-  ],
-  Enrollment: ['FPI', 'LPI', 'LPO'],
-  IA: ['IA 数据冻结', 'IA 数据分析'],
-  'Data & Report': ['DBL', 'TLR初稿', 'TLR定稿', 'TFL初稿', 'TFL定稿', 'CSR初稿', 'CSR定稿', '中心关闭'],
-  'PreNDA/BLA': ['PreNDA 递交', 'PreNDA 反馈-临床医学', 'PreNDA 反馈-数统', 'PreNDA 反馈-临床药理', 'PreNDA 反馈-非临床', 'PreNDA 反馈-药学'],
-  'NDA/BLA': [
-    'NDA/BLA 递交', 'NDA/BLA 形审发补', 'NDA/BLA 形审补正', 'NDA/BLA 受理',
-    '临床核查', '药学核查', 'NDA/BLA 发补', 'NDA/BLA 补正', 'NDA/BLA 获批',
-  ],
-}
-
-function onPhaseChange() {
-  filters.status = ''
-}
-
-const statusOptions = computed(() => {
-  if (!filters.phase) return []
-  return STATUS_BY_PHASE[filters.phase] ?? []
-})
+const statusOptions = ALL_MILESTONE_SUB_STATUSES
 
 const filtered = computed(() => studies.value.filter((study) => {
   const ta = study.therapeuticAreaName || study.therapeuticArea || study.therapeuticAreaCode || ''
@@ -53,17 +29,14 @@ const filtered = computed(() => studies.value.filter((study) => {
   if (filters.program && !String(study.programCode || study.program || '')
     .toLowerCase()
     .includes(filters.program.toLowerCase())) return false
-  if (filters.phase && study.currentPhase !== filters.phase) return false
   if (filters.status && study.currentStatus !== filters.status) return false
   return true
 }))
 
-// PL/PM 合并为一列展示
 function plPm(study: Study): string {
   return [study.plName, study.pmName].filter(Boolean).join(' / ')
 }
 
-// drawer state
 const drawerOpen = ref(false)
 const selectedStudy = ref<Study | null>(null)
 
@@ -78,6 +51,10 @@ function closeDrawer() {
 
 function goMilestones(studyId: number) {
   router.push(`/milestones/${studyId}`)
+}
+
+function goMonthlyReport(studyId: number) {
+  router.push(`/studies/${studyId}/monthly-report`)
 }
 
 onMounted(async () => {
@@ -107,15 +84,8 @@ onMounted(async () => {
           <input v-model.trim="filters.program" type="text" class="filter-input" placeholder="输入编号搜索">
         </label>
         <label class="filter-field">
-          <span class="filter-field__label">阶段</span>
-          <select v-model="filters.phase" class="filter-select" @change="onPhaseChange">
-            <option value="">全部</option>
-            <option v-for="o in PHASE_OPTIONS" :key="o" :value="o">{{ o }}</option>
-          </select>
-        </label>
-        <label class="filter-field">
           <span class="filter-field__label">状态</span>
-          <select v-model="filters.status" class="filter-select" :disabled="!filters.phase">
+          <select v-model="filters.status" class="filter-select filter-select--status">
             <option value="">全部</option>
             <option v-for="o in statusOptions" :key="o" :value="o">{{ o }}</option>
           </select>
@@ -151,6 +121,7 @@ onMounted(async () => {
               <td>{{ study.updatedAt ? new Date(study.updatedAt).toLocaleDateString('zh-CN') : '—' }}</td>
               <td class="actions">
                 <button class="link-button" @click.stop="goMilestones(study.id)">里程碑</button>
+                <button v-if="canReadMonthly" class="link-button" @click.stop="goMonthlyReport(study.id)">月报</button>
               </td>
             </tr>
           </tbody>

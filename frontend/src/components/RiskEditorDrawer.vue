@@ -2,6 +2,7 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { ApiError, apiClient } from '../api/client'
 import type { RiskAction, RiskActionInput, RiskDetail, RiskFormOptions, RiskStatus } from '../api/types'
+import { riskBadge } from '../risk-badge'
 import { session } from '../session'
 
 const props = defineProps<{ open: boolean; riskCode?: string }>()
@@ -102,6 +103,7 @@ async function save() {
         assessment: includeAssessment.value ? assessmentInput() : undefined,
       })
     }
+    await riskBadge.refresh()
     emit('saved')
   } catch (reason) { error.value = reason instanceof ApiError && reason.code === 'RISK_VERSION_CONFLICT'
     ? '风险已被其他用户修改，请关闭后重新打开。' : message(reason, '风险保存失败') }
@@ -111,7 +113,11 @@ async function save() {
 async function removeRisk() {
   if (!detail.value || !window.confirm(`确定删除 ${detail.value.risk.riskCode}？该操作会保留审计记录。`)) return
   saving.value = true
-  try { await apiClient.deleteRisk(detail.value.risk.riskCode, detail.value.risk.version); emit('saved') }
+  try {
+    await apiClient.deleteRisk(detail.value.risk.riskCode, detail.value.risk.version)
+    await riskBadge.refresh()
+    emit('saved')
+  }
   catch (reason) { error.value = message(reason, '风险删除失败') }
   finally { saving.value = false }
 }

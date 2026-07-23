@@ -130,7 +130,7 @@ export function furthestPhaseOf(studies: CellStudy[]): PipelinePhase | undefined
 
 /**
  * 去掉子节点文案里拼上的主节点英文名（如 "IA 数据冻结" → "数据冻结"）。
- * 主节点名仍放在上方灰色 caption，不进 pill。
+ * 管线总览 pill 已与筛选框对齐、保留完整子状态文案；此函数供其它展示场景复用。
  */
 export function displaySubNodeLabel(
   subStatusLabel: string,
@@ -184,17 +184,166 @@ function withTip(
 }
 
 /**
+ * 监管列 → 里程碑主阶段 + 取数 Study 的 Phase。
+ * PreIND / IND ← Phase 1 study 的 PreIND / IND 里程碑；
+ * PRE-3 ← Phase 3-1 study 的 Pre3 里程碑。
+ */
+const REGULATORY_COLUMN_SOURCE: Partial<
+  Record<PipelinePhase, { stageCode: string; sourcePhase: PipelinePhase }>
+> = {
+  PreIND: { stageCode: 'PreIND', sourcePhase: 'Phase 1' },
+  IND: { stageCode: 'IND', sourcePhase: 'Phase 1' },
+  'PRE-3': { stageCode: 'Pre3', sourcePhase: 'Phase 3-1' },
+}
+
+/** 将 mainStage code/label 归一到可比较的排序索引（与 MilestoneDefinition 一致） */
+function milestoneStageRank(codeOrLabel: string | null | undefined): number {
+  if (!codeOrLabel) return -1
+  const aliases: Record<string, number> = {
+    PreIND: 0,
+    IND: 1,
+    Pre3: 2,
+    Protocol: 3,
+    SSU: 4,
+    Enrollment: 5,
+    IA: 6,
+    Data_Report: 7,
+    'Data & Report': 7,
+    PreNDA_BLA: 8,
+    'PreNDA/BLA': 8,
+    NDA_BLA: 9,
+    'NDA/BLA': 9,
+  }
+  return aliases[codeOrLabel.trim()] ?? -1
+}
+
+function findStudyByPhase(
+  studies: CellStudy[],
+  phase: PipelinePhase,
+): CellStudy | undefined {
+  let best: CellStudy | undefined
+  let bestUpdated = ''
+  for (const s of studies) {
+    if (normalizePhase(s.phase) !== phase) continue
+    const updated = s.updatedAt ?? ''
+    if (!best || updated > bestUpdated) {
+      best = s
+      bestUpdated = updated
+    }
+  }
+  return best
+}
+
+function completedRegulatoryCell(
+  study: CellStudy,
+  targetPhase: PipelinePhase,
+  stageLabel: string,
+): ProjectCell {
+  return withTip(
+    {
+      label: '已完成',
+      tone: 'green',
+      clickable: true,
+      studyId: study.id,
+      subText: targetPhase,
+    },
+    stageLabel,
+    '已完成',
+    study,
+  )
+}
+
+/**
+ * PreIND / IND / PRE-3 列：按约定 Phase 的 study 对应里程碑展示并链接该 study。
+ * 无对应 study 时返回 null，由调用方回退到阶段相对规则。
+ */
+function getRegulatoryMilestoneCell(
+  studies: CellStudy[],
+  targetPhase: PipelinePhase,
+): ProjectCell | null {
+  const cfg = REGULATORY_COLUMN_SOURCE[targetPhase]
+  if (!cfg) return null
+  const source = findStudyByPhase(studies, cfg.sourcePhase)
+  if (!source) return null
+  const { stageCode } = cfg
+
+  const targetRank = milestoneStageRank(stageCode)
+  const currentRank = milestoneStageRank(source.mainStageCode ?? source.mainStageLabel)
+
+  // 无里程碑 frontier：仅信 PreIND/IND 完成标记，否则空
+  if (currentRank < 0) {
+    if (stageCode === 'PreIND' && source.preindCompleted) {
+      return completedRegulatoryCell(source, targetPhase, stageCode)
+    }
+    if (stageCode === 'IND' && source.indCompleted) {
+      return completedRegulatoryCell(source, targetPhase, stageCode)
+    }
+    return { label: '—', tone: 'empty', clickable: false }
+  }
+
+  // 已越过该监管阶段 → 已完成
+  if (currentRank > targetRank) {
+    return completedRegulatoryCell(source, targetPhase, stageCode)
+  }
+
+  // 尚未到达该阶段
+  if (currentRank < targetRank) {
+    return { label: '—', tone: 'empty', clickable: false }
+  }
+
+  // 正在该阶段：完成标记 / 阶段末节点完成 → 已完成
+  const stageDone =
+    (stageCode === 'PreIND' && source.preindCompleted) ||
+    (stageCode === 'IND' && source.indCompleted) ||
+    source.currentPhaseCompleted ||
+    source.globallyCompleted
+  if (stageDone) {
+    return completedRegulatoryCell(source, targetPhase, stageCode)
+  }
+  const subStatus = source.subStatusLabel?.trim()
+  if (subStatus) {
+    const stage = source.mainStageLabel ?? stageCode
+    return withTip(
+      {
+        label: subStatus,
+        tone: 'blue',
+        clickable: true,
+        studyId: source.id,
+        subText: source.mainStageLabel ?? undefined,
+      },
+      stage,
+      subStatus,
+      source,
+    )
+  }
+  const fallback = source.mainStageLabel ?? source.statusLabel
+  return withTip(
+    {
+      label: fallback,
+      tone: 'blue',
+      clickable: true,
+      studyId: source.id,
+    },
+    source.mainStageLabel ?? stageCode,
+    fallback,
+    source,
+  )
+}
+
+/**
  * 单元格取数与状态（对齐参考样式：早于当前阶段=已完成 / 等于=当前进度 / 晚于=—）。
  *
- * 以 project 推进到的最靠后阶段（furthestPhaseOf）作为"当前阶段"基准：
+ * PreIND / IND：优先按 Phase 1 study 的 PreIND / IND 里程碑展示并链接该 study。
+ * PRE-3：优先按 Phase 3-1 study 的 Pre3 里程碑展示并链接该 study。
+ * 其余列以 project 最靠后阶段（furthestPhaseOf）为基准：
  *   - 目标列 < 当前阶段 → "已完成"（绿），上方灰色 caption = 列阶段名 targetPhase
- *   - 目标列 = 当前阶段 → pill = 里程碑【子节点名】（去掉主节点英文前缀）；上方灰色 = 【主节点名】
+ *   - 目标列 = 当前阶段 → pill = 里程碑子状态全文；上方灰色 = 主节点名
  *   - 目标列 > 当前阶段 → "—"（灰）
- *
- * 约定：上方灰色 = 主节点名或列阶段名；pill = 子节点名或「已完成」。
- *       禁止把主节点拼进 pill 文案。
  */
 export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase): ProjectCell {
+  const regulatory = getRegulatoryMilestoneCell(studies, targetPhase)
+  if (regulatory) return regulatory
+
   const currentPhase = furthestPhaseOf(studies)
   if (!currentPhase) {
     return { label: '—', tone: 'empty', clickable: false }
@@ -248,21 +397,20 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
       study,
     )
   }
-  // 进行中：pill = 仅子节点名（去主节点英文前缀）；上方灰色 = 主节点名
+  // 进行中：pill = 完整子状态（与筛选框一致）；上方灰色 = 主节点名
   const subStatus = study.subStatusLabel?.trim()
   if (subStatus) {
-    const label = displaySubNodeLabel(subStatus, study.mainStageLabel)
     const stage = study.mainStageLabel ?? targetPhase
     return withTip(
       {
-        label,
+        label: subStatus,
         tone: 'blue',
         clickable: true,
         studyId: study.id,
         subText: study.mainStageLabel ?? undefined,
       },
       stage,
-      label,
+      subStatus,
       study,
     )
   }

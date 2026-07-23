@@ -170,7 +170,7 @@ test('pipeline overview keeps sticky id columns and stacked project/study drawer
   assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*position:\s*sticky[^}]*left:\s*0/s);
   assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*min-width:\s*510px/s);
   assert.match(mainCss, /\.pipeline-table[^{]*th:nth-child\(3\)[\s\S]*?border-right:\s*1px/s);
-  assert.match(mainCss, /\.status-chip\s*\{[^}]*width:\s*118px/s);
+  assert.match(mainCss, /\.status-chip\s*\{[^}]*width:\s*128px/s);
   assert.match(mainCss, /\.status-chip--green\s*\{[^}]*background:\s*#e5f4eb/s);
   assert.match(mainCss, /\.status-chip--blue\s*\{[^}]*border-color:\s*#b7cff5/s);
   assert.match(mainCss, /\.pipeline-id-cell\s*\{[^}]*cursor:\s*pointer/s);

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { riskBadge } from '../risk-badge'
 import { session } from '../session'
 
 const route = useRoute()
@@ -19,10 +20,19 @@ const roleLabel = computed(() => {
   return roles.map((role) => roleLabels[role] ?? role).join('、') || '未分配角色'
 })
 
+onMounted(() => {
+  void riskBadge.refresh()
+})
+
 const navItems = computed(() => [
   { label: '管线总览', icon: '▦', to: '/pipeline' },
   { label: '研究 Study 列表', icon: '▤', to: '/studies' },
-  { label: '风险管理', icon: '⚠', to: '/risks', badge: '1' },
+  {
+    label: '风险管理',
+    icon: '⚠',
+    to: '/risks',
+    badge: riskBadge.openCount.value != null ? String(riskBadge.openCount.value) : undefined,
+  },
   ...(user.value?.permissions.includes('team.page.view')
     ? [{ label: '团队矩阵', icon: '◫', to: '/team' }]
     : []),
@@ -64,7 +74,7 @@ async function logout() {
         >
           <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
           <span>{{ item.label }}</span>
-          <span v-if="item.badge" class="nav-badge">{{ item.badge }}</span>
+          <span v-if="item.badge != null" class="nav-badge">{{ item.badge }}</span>
         </RouterLink>
       </nav>
 
