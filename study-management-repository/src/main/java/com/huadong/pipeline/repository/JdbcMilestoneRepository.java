@@ -49,6 +49,27 @@ public class JdbcMilestoneRepository implements StudyMilestonePort {
   }
 
   @Override
+  public List<PersistedMilestone> findByStudyIds(List<Long> studyIds) {
+    if (studyIds == null || studyIds.isEmpty()) {
+      return List.of();
+    }
+    String placeholders = studyIds.stream().map(id -> "?").collect(java.util.stream.Collectors.joining(","));
+    String sql = """
+        SELECT id, study_id, stage_code, milestone_code,
+          plan_v1_date, plan_v2_date, actual_start_date, actual_end_date, deviation_note
+        FROM hd_plt_study_milestone
+        WHERE study_id IN (%s) AND sys_deleted = 0
+        ORDER BY study_id, id
+        """.formatted(placeholders);
+    return jdbc.query(sql, (rs, row) -> new PersistedMilestone(
+        rs.getLong("id"), rs.getLong("study_id"),
+        rs.getString("stage_code"), rs.getString("milestone_code"),
+        localDate(rs.getDate("plan_v1_date")), localDate(rs.getDate("plan_v2_date")),
+        localDate(rs.getDate("actual_start_date")), localDate(rs.getDate("actual_end_date")),
+        rs.getString("deviation_note")), studyIds.toArray());
+  }
+
+  @Override
   public PersistedMilestone save(MilestoneSaveCommand command) {
     // Upsert a single milestone node. We deliberately avoid GeneratedKeyHolder here:
     // with INSERT ... ON DUPLICATE KEY UPDATE the MySQL driver returns the generated

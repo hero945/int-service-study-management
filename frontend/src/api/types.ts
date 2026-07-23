@@ -17,23 +17,52 @@ export interface CsrfToken {
   token: string
 }
 
-export interface StatusMetric {
+export interface OverviewStudy {
+  id: number
+  code: string
+  phase: string
   status: string
-  label: string
-  tone: 'neutral' | 'positive' | 'warning' | 'info'
-  count: number
+  statusLabel: string
+  statusTone: string
+  mainStageCode: string | null
+  mainStageLabel: string | null
+  subStatusLabel: string | null
+  preindCompleted: boolean
+  indCompleted: boolean
+  globallyCompleted: boolean
+  currentPhaseCompleted: boolean
+  startDate: string | null
+  updatedAt: string
+}
+
+export interface OverviewProject {
+  id: number
+  code: string
+  indication: string
+  programCode: string
+  productName: string
+  moa: string
+  sourceCode: string
+  originCode: string
+  studies: OverviewStudy[]
+}
+
+export interface OverviewArea {
+  therapeuticAreaCode: string
+  therapeuticAreaName: string
+  projects: OverviewProject[]
 }
 
 export interface PipelineOverview {
   title: string
-  total: number
-  statuses: StatusMetric[]
+  areas: OverviewArea[]
 }
 
 export interface Study {
   id: number
   code: string
   indication: string
+  /** 临床试验阶段编码（PRE_IND/IND/PHASE_1/PHASE_2/PRE_3/PHASE_3_1/PHASE_3_2），与后端 hd_plt_study.phase_status_code 一致 */
   phase: string
   status: string
   statusLabel: string
@@ -41,14 +70,14 @@ export interface Study {
   ownerName: string
   startDate: string | null
   updatedAt: string
-  therapeuticArea?: string
-  therapeuticAreaEn?: string
-  product?: string
-  program?: string
-  project?: string
+  therapeuticAreaCode?: string
+  therapeuticAreaName?: string
+  programCode?: string
+  projectCode?: string
+  productName?: string
   moa?: string
-  source?: string
-  origin?: string
+  sourceCode?: string
+  originCode?: string
 }
 
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'

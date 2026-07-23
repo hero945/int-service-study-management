@@ -107,7 +107,15 @@ class PlatformIntegrationTest {
                         .with(user(userDetailsService.loadUserByUsername("admin@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("临床研发管线"))
-                .andExpect(jsonPath("$.total").value(1));
+                .andExpect(jsonPath("$.areas", hasSize(1)))
+                .andExpect(jsonPath("$.areas[0].therapeuticAreaCode").value("ONCOLOGY"))
+                .andExpect(jsonPath("$.areas[0].therapeuticAreaName").value("肿瘤"))
+                .andExpect(jsonPath("$.areas[0].projects", hasSize(1)))
+                .andExpect(jsonPath("$.areas[0].projects[0].code").value("PROJECT-001"))
+                .andExpect(jsonPath("$.areas[0].projects[0].studies", hasSize(1)))
+                .andExpect(jsonPath("$.areas[0].projects[0].studies[0].code").value("HD-MVP-001"))
+                .andExpect(jsonPath("$.areas[0].projects[0].studies[0].phase").value("PHASE_1"))
+                .andExpect(jsonPath("$.areas[0].projects[0].studies[0].statusLabel").value("进行中"));
     }
 
     @Test

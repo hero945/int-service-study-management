@@ -3,17 +3,27 @@ package com.huadong.pipeline.manager;
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.study.DuplicateStudyCodeException;
+import com.huadong.pipeline.domain.study.OverviewArea;
+import com.huadong.pipeline.domain.study.OverviewProject;
+import com.huadong.pipeline.domain.study.PipelineOverview;
+import com.huadong.pipeline.domain.study.PipelineOverviewRepository;
 import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
+import com.huadong.pipeline.domain.study.OverviewStudy;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.config.ProjectRepository;
+import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
+import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilestone;
 import com.huadong.pipeline.domain.user.DataScope;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,12 +32,23 @@ public class StudyManager {
   private final StudyRepository studies;
   private final UserAccountRepository users;
   private final ProjectRepository projects;
+  private final PipelineOverviewRepository overviewProjects;
+  private final StudyMilestonePort studyMilestones;
+  private final MilestoneManager milestoneManager;
 
   public StudyManager(
-      StudyRepository studies, UserAccountRepository users, ProjectRepository projects) {
+      StudyRepository studies,
+      UserAccountRepository users,
+      ProjectRepository projects,
+      PipelineOverviewRepository overviewProjects,
+      StudyMilestonePort studyMilestones,
+      MilestoneManager milestoneManager) {
     this.studies = studies;
     this.users = users;
     this.projects = projects;
+    this.overviewProjects = overviewProjects;
+    this.studyMilestones = studyMilestones;
+    this.milestoneManager = milestoneManager;
   }
 
   public List<StudyView> list(String username) {
@@ -40,18 +61,75 @@ public class StudyManager {
             study.status(),
             study.ownerName(),
             study.startDate(),
-            study.updatedAt()))
+            study.updatedAt(),
+            study.therapeuticAreaCode(),
+            study.therapeuticAreaName(),
+            study.programCode(),
+            study.projectCode(),
+            study.productName(),
+            study.moa(),
+            study.sourceCode(),
+            study.originCode()))
         .toList();
   }
 
+  @Transactional(readOnly = true)
   public PipelineOverview overview(String username) {
     var accessScope = accessScope(username);
-    List<StatusMetric> metrics = Arrays.stream(StudyStatus.values())
-        .map(status -> new StatusMetric(
-            status,
-            studies.countByStatus(status, accessScope)))
+    var projects = overviewProjects.findOverviewProjects(accessScope);
+
+    // Batch-load milestones for every study in the overview (single IN query, no N+1).
+    List<Long> studyIds = projects.stream()
+        .flatMap(project -> project.studies().stream())
+        .map(OverviewStudy::id)
         .toList();
-    return new PipelineOverview("临床研发管线", studies.count(accessScope), metrics);
+    Map<Long, List<PersistedMilestone>> milestonesByStudy = studyMilestones.findByStudyIds(studyIds)
+        .stream()
+        .collect(Collectors.groupingBy(PersistedMilestone::studyId));
+
+    // Override each study's status with its milestone-derived status where milestones exist.
+    List<OverviewProject> enriched = projects.stream()
+        .map(project -> enrichProject(project, milestonesByStudy))
+        .toList();
+
+    Map<String, List<OverviewProject>> projectsByArea = new LinkedHashMap<>();
+    Map<String, String> areaNames = new LinkedHashMap<>();
+    for (var project : enriched) {
+      projectsByArea.computeIfAbsent(project.therapeuticAreaCode(), key -> new ArrayList<>())
+          .add(project);
+      areaNames.putIfAbsent(project.therapeuticAreaCode(), project.therapeuticAreaName());
+    }
+    var areas = projectsByArea.entrySet().stream()
+        .map(entry -> new OverviewArea(entry.getKey(), areaNames.get(entry.getKey()), entry.getValue()))
+        .toList();
+    return new PipelineOverview("临床研发管线", areas);
+  }
+
+  private OverviewProject enrichProject(
+      OverviewProject project, Map<Long, List<PersistedMilestone>> milestonesByStudy) {
+    List<OverviewStudy> enrichedStudies = project.studies().stream()
+        .map(study -> {
+          List<PersistedMilestone> milestones = milestonesByStudy.get(study.id());
+          if (milestones == null || milestones.isEmpty()) {
+            return study; // no milestone data → keep date-based status from repository
+          }
+          MilestoneManager.MilestoneOverviewStatus derived = milestoneManager.computeOverviewStatus(milestones);
+          if (derived == null) {
+            return study;
+          }
+          return new OverviewStudy(
+              study.id(), study.code(), study.phase(), derived.status(),
+              study.startDate(), study.updatedAt(),
+              derived.mainStageCode(), derived.mainStageLabel(),
+              derived.subStatusLabel(),
+              derived.preindCompleted(), derived.indCompleted(), derived.globallyCompleted(),
+              derived.currentPhaseCompleted());
+        })
+        .toList();
+    return new OverviewProject(
+        project.id(), project.code(), project.indication(), project.programCode(),
+        project.productName(), project.moa(), project.sourceCode(), project.originCode(),
+        project.therapeuticAreaCode(), project.therapeuticAreaName(), enrichedStudies);
   }
 
   private StudyAccessScope accessScope(String username) {
@@ -127,12 +205,6 @@ public class StudyManager {
       String description) {
   }
 
-  public record StatusMetric(StudyStatus status, long count) {
-  }
-
-  public record PipelineOverview(String title, long total, List<StatusMetric> statuses) {
-  }
-
   public record StudyView(
       long id,
       String code,
@@ -141,6 +213,14 @@ public class StudyManager {
       StudyStatus status,
       String ownerName,
       LocalDate startDate,
-      LocalDateTime updatedAt) {
+      LocalDateTime updatedAt,
+      String therapeuticAreaCode,
+      String therapeuticAreaName,
+      String programCode,
+      String projectCode,
+      String productName,
+      String moa,
+      String sourceCode,
+      String originCode) {
   }
 }

@@ -89,10 +89,6 @@ async function logout() {
           <p>{{ pageSubtitle }}</p>
         </div>
         <div class="topbar-actions">
-          <label class="search-field">
-            <span aria-hidden="true">⌕</span>
-            <input type="search" :placeholder="`搜索${pageTitle}`">
-          </label>
           <div class="topbar-user">
             <span class="avatar">{{ userInitials }}</span>
             <span><strong>{{ user?.displayName }}</strong><small>{{ roleLabel }}</small></span>

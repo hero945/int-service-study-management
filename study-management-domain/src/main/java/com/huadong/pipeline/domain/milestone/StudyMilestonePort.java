@@ -15,6 +15,9 @@ public interface StudyMilestonePort {
   /** Load persisted milestone rows for a study. */
   List<PersistedMilestone> findByStudyId(long studyId);
 
+  /** Batch load persisted milestone rows for many studies (single IN query, avoids N+1). */
+  List<PersistedMilestone> findByStudyIds(List<Long> studyIds);
+
   /** Look up study metadata for access validation. */
   Optional<StudyRef> findStudy(long studyId);
 

@@ -39,15 +39,55 @@ public interface StudyApi {
       String statusTone,
       String ownerName,
       LocalDate startDate,
+      LocalDateTime updatedAt,
+      String therapeuticAreaCode,
+      String therapeuticAreaName,
+      String programCode,
+      String projectCode,
+      String productName,
+      String moa,
+      String sourceCode,
+      String originCode) {
+  }
+
+  record OverviewStudyResponse(
+      long id,
+      String code,
+      String phase,
+      String status,
+      String statusLabel,
+      String statusTone,
+      String mainStageCode,
+      String mainStageLabel,
+      String subStatusLabel,
+      boolean preindCompleted,
+      boolean indCompleted,
+      boolean globallyCompleted,
+      boolean currentPhaseCompleted,
+      LocalDate startDate,
       LocalDateTime updatedAt) {
   }
 
-  record StatusMetricResponse(String status, String label, String tone, long count) {
+  record OverviewProjectResponse(
+      long id,
+      String code,
+      String indication,
+      String programCode,
+      String productName,
+      String moa,
+      String sourceCode,
+      String originCode,
+      List<OverviewStudyResponse> studies) {
+  }
+
+  record OverviewAreaResponse(
+      String therapeuticAreaCode,
+      String therapeuticAreaName,
+      List<OverviewProjectResponse> projects) {
   }
 
   record PipelineOverviewResponse(
       String title,
-      long total,
-      List<StatusMetricResponse> statuses) {
+      List<OverviewAreaResponse> areas) {
   }
 }
