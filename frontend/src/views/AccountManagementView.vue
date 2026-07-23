@@ -353,7 +353,7 @@ onUnmounted(() => {
                 <label
                   v-for="role in roles"
                   :key="role.roleCode"
-                  style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #2a303b;"
+                  style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--body);"
                 >
                   <input
                     type="checkbox"
@@ -395,7 +395,7 @@ onUnmounted(() => {
               <label
                 v-for="role in roles"
                 :key="role.roleCode"
-                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #2a303b; min-width: 140px;"
+                style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--body); min-width: 140px;"
               >
                 <input
                   type="checkbox"
@@ -431,7 +431,7 @@ onUnmounted(() => {
             <button type="button" @click="closeToggleConfirm" aria-label="关闭">&#x2715;</button>
           </header>
           <div style="padding: 18px 22px;">
-            <p style="margin: 0; color: #3b424e; font-size: 13px;">
+            <p style="margin: 0; color: var(--body); font-size: 13px;">
               确定要{{ toggleTargetEnabled ? '停用' : '启用' }}账号 <strong>{{ toggleTargetName }}</strong> 吗？
             </p>
           </div>
@@ -440,7 +440,7 @@ onUnmounted(() => {
             <button
               class="primary-button"
               type="button"
-              :style="toggleTargetEnabled ? 'background: #ef4444; border-color: #ef4444;' : ''"
+              :class="{ 'danger-confirm-button': toggleTargetEnabled }"
               :disabled="saving"
               @click="executeToggle"
             >{{ saving ? '处理中…' : (toggleTargetEnabled ? '确认停用' : '确认启用') }}</button>
@@ -457,22 +457,13 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
 }
-.link-button {
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
+.danger-confirm-button {
+  background: var(--danger);
+  border-color: var(--danger);
 }
-.link-button:hover {
-  text-decoration: underline;
-}
-.link-button--danger {
-  color: var(--red-text);
-}
-.link-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.danger-confirm-button:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  filter: brightness(0.92);
 }
 </style>

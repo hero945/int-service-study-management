@@ -10,8 +10,9 @@ Spring Boot 应用。
 - 自建账号、Argon2 密码散列、数据库 Session、CSRF 防护
 - 通过环境变量安全引导首个管理员
 - Vue 登录页、平台壳和登录后的浏览器路由
-- 管线总览、Study 列表、月报、风险、团队矩阵、管线配置、导出、账号管理和角色权限管理页面
+- 管线总览、Study 列表、Study 月报填报、风险、团队矩阵、里程碑、管线配置、月报导出、账号管理和角色权限管理
 - 管线总览、Study 列表及 Program/Project/Study 管线配置读取真实后端接口
+- 风险、团队矩阵、里程碑、Study 月报、月报导出均已贯通 API + 数据库
 - 管理员维护账号、用户角色、角色权限和在线业务配置
 - 25 表 `hd_plt_*` Flyway 基线、健康探针、Prometheus 指标
 - Session 过期时，页面访问和 Vue API 请求统一返回登录页；API 本身仍保持 `401` JSON 契约
@@ -142,14 +143,14 @@ Repository 实现；最终部署
 原纯 HTML 文件和 `support.js` 仍保留作为需求、样式与业务回归参考，不作为当前
 Vue 应用的运行依赖；新服务也不迁移原型中的 `localStorage` 数据。
 
-以下页面已经完成前端拆分，并可在 `dev:mock` 中查看；对应真实后端能力仍是预留接口：
+以下能力已在真实后端闭环（详见 PRD V1.1 §0.1）：风险、团队矩阵、里程碑、
+Study 月报填报、月报导出（日期范围 + 范围筛选 + html/csv/xlsx）。
 
-- 风险：`GET /api/v1/risk-management/risks`
-- 月报：`GET /api/v1/monthly-reports`
-- 团队矩阵：`GET /api/v1/team-assignments`
-- 管线配置：`GET /api/v1/clinical-pipeline/pipeline-config`、`/programs`、`/projects`、`/therapeutic-areas`，以及对应 CRUD 接口；Program、Project、Study 均以业务编号作为唯一展示标识
-- 团队矩阵：`GET /api/v1/team-matrix`、`PUT /api/v1/team-matrix/assignments`
-- 管线配置：`GET /api/v1/clinical-pipeline/pipeline-config`、`/programs`、`/projects`、`/therapeutic-areas`，以及对应 CRUD/重命名影响预览接口
+仍待补齐的主要产品项：
 
-除已落地的管线配置接口外，其余预留接口在真实后端模式下会显示加载失败状态。前端路由守卫
-只改善导航体验，最终页面权限、操作权限和数据范围必须由服务端执行。
+- 跨 Study 月报完成率列表（侧栏入口已去掉，路由骨架仍在）
+- 管线总览 TA 内拖拽排序
+- 改密、忘记密码、MFA、登录限流与失败锁定
+- 独立 PDF 引擎（当前可用浏览器打印）
+
+前端路由守卫只改善导航体验，最终页面权限、操作权限和数据范围必须由服务端执行。

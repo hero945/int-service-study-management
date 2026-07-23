@@ -373,8 +373,8 @@ onMounted(async () => {
   line-height: 1.2;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: #9aa2ad;
-  font-family: "IBM Plex Mono", "Cascadia Mono", monospace;
+  color: var(--caption);
+  font-family: var(--font-mono);
   white-space: nowrap;
 }
 </style>

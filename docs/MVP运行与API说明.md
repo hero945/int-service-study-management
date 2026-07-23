@@ -4,7 +4,8 @@
 
 本文记录当前可运行纵切片的接口和数据库基线。前端使用 Vue、TypeScript 和 Vite；
 Java 运行时、Repository、Spring Session 与 Flyway 已统一接入 `hd_plt_*` 目标表。
-风险管理已经形成数据库、API 与 Vue 页面贯通的纵切片；月报、里程碑和导出仍以页面骨架或演示数据为主。
+登录权限、管线/Study/配置、风险、团队矩阵、里程碑、Study 月报填报与月报导出
+均已贯通数据库、API 与 Vue 页面。跨 Study 月报完成率列表与改密/MFA 等仍属待补项。
 
 ## API 清单
 
@@ -40,6 +41,17 @@ Java 运行时、Repository、Spring Session 与 Flyway 已统一接入 `hd_plt_
 | `PATCH /api/v1/risk-management/risks/{riskCode}` | `risk.update` + CSRF | 更新风险、关闭或重开；状态变化必须填写原因 |
 | `DELETE /api/v1/risk-management/risks/{riskCode}` | `risk.delete` + CSRF | 按版本号软删除风险 |
 | `POST/PATCH/DELETE /api/v1/risk-management/risks/{riskCode}/actions...` | `risk.update` + CSRF | 新增、更新或软删除控制措施 |
+| `GET /api/v1/team-matrix` | `team.page.view` | 团队矩阵查询（Study × 角色分配） |
+| `PUT /api/v1/team-matrix/assignments` | `team.update` + CSRF | 批量替换团队分配 |
+| `GET /api/v1/studies/{studyId}/milestones` | `study.read` | Study 里程碑分组与节点 |
+| `PUT /api/v1/studies/{studyId}/milestones/{milestoneCode}` | `milestone.update` + CSRF | 更新单个里程碑节点 |
+| `GET /api/v1/studies/{studyId}/stage-projection` | `study.read` | 阶段投影（供管线总览） |
+| `GET /api/v1/studies/{studyId}/monthly-reports` | `monthly.read` | Study×月度填报页读模型 |
+| `POST /api/v1/monthly-reports/{reportId}/entries` | `monthly.create` + CSRF | 新增功能线进展明细 |
+| `PATCH/DELETE /api/v1/monthly-report-entries/{entryId}` | `monthly.update` + CSRF | 修改或删除进展明细 |
+| `GET /api/v1/studies/{studyId}/monthly-reports/history` | `monthly.read` | 功能线历史月份 |
+| `GET /api/v1/reports/monthly/preview` | `report.page.view` | 月报导出预览（起止日期 + ALL/TA/PROGRAM） |
+| `GET /api/v1/reports/monthly/export` | `report.export` | 下载 html / csv / xlsx |
 
 登录接口使用 `application/x-www-form-urlencoded`，其余写接口使用 JSON。失败响应的基础形式为：
 
@@ -94,7 +106,7 @@ schema账号。H2仅用于自动化测试，真实运行默认连接MySQL。
 - 尚未实现改密、忘记密码、MFA、登录限流和失败锁定。
 - 动态配置只保留最后修改人/时间，尚无不可覆盖的历史审计表。
 - 管线配置已支持 Program/Project/Study 新增、更新和受约束删除；三类实体以业务编号作为展示标识，不再维护名称字段；尚未实现分页、并发版本控制和合并工具。
-- 原型数据不迁移；风险模块已落库，月报、里程碑等模块后续按技术设计逐片实现。
+- 原型数据不迁移；风险、团队、里程碑、Study 月报与月报导出均已落库；跨 Study 月报完成率列表仍待补。
 
 ## Session 过期行为
 
