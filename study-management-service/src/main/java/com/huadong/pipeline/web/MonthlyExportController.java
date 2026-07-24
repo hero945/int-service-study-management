@@ -1,11 +1,13 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.MonthlyExportApi;
 import com.huadong.pipeline.common.BusinessException;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,11 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/reports/monthly")
 public class MonthlyExportController {
 
-  private final MonthlyExportApi api;
-
-  public MonthlyExportController(MonthlyExportApi api) {
-    this.api = api;
-  }
+  @Autowired
+  private MonthlyExportApi api;
 
   @GetMapping("/preview")
   @PreAuthorize("hasAuthority('report.page.view')")

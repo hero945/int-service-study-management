@@ -118,7 +118,7 @@ public final class MonthlyExportFileBuilder {
     appendMetric(html, "已完成", s.completed());
     html.append("</div><div class=\"metric-note\">有填报 Study ")
         .append(s.reportedStudyCount())
-        .append(" · Open 风险 ")
+        .append(" · 未关闭风险 ")
         .append(s.openRiskCount())
         .append("</div></section>");
 
@@ -177,7 +177,7 @@ public final class MonthlyExportFileBuilder {
         <section class="sec"><div class="sec-h"><span class="sec-num">04</span><h2>未关闭风险</h2></div>
         """);
     if (report.openRisks().isEmpty()) {
-      html.append("<p style=\"color:#9aa2ad\">当前范围内无 Open 风险。</p>");
+      html.append("<p style=\"color:#9aa2ad\">当前范围内无未关闭风险。</p>");
     } else {
       int i = 1;
       for (ExportRisk risk : report.openRisks()) {
@@ -338,7 +338,7 @@ public final class MonthlyExportFileBuilder {
           <sheet name="汇总" sheetId="1" r:id="rId1"/>
           <sheet name="管线快照" sheetId="2" r:id="rId2"/>
           <sheet name="月报进展" sheetId="3" r:id="rId3"/>
-          <sheet name="Open风险" sheetId="4" r:id="rId4"/>
+          <sheet name="未关闭风险" sheetId="4" r:id="rId4"/>
         </sheets>
       </workbook>
       """;
@@ -405,7 +405,7 @@ public final class MonthlyExportFileBuilder {
     rows.append(row(r++, List.of(cellS(sst.add("进行中")), cellN(s.inProgress()))));
     rows.append(row(r++, List.of(cellS(sst.add("已完成")), cellN(s.completed()))));
     rows.append(row(r++, List.of(cellS(sst.add("有填报Study数")), cellN(s.reportedStudyCount()))));
-    rows.append(row(r++, List.of(cellS(sst.add("Open风险数")), cellN(s.openRiskCount()))));
+    rows.append(row(r++, List.of(cellS(sst.add("未关闭风险数")), cellN(s.openRiskCount()))));
     rows.append(row(r++, List.of(cellS(sst.add("汇报开始")),
         cellS(sst.add(DATE.format(report.meta().startDate()))))));
     rows.append(row(r++, List.of(cellS(sst.add("汇报结束")),

@@ -1,5 +1,6 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.MilestoneApi;
 import com.huadong.pipeline.api.MilestoneApi.MilestoneUpdateRequest;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.MilestoneUpdateCommand;
@@ -11,16 +12,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class MilestoneApiService implements MilestoneApi {
 
-  private final MilestoneManager manager;
-
-  public MilestoneApiService(MilestoneManager manager) {
-    this.manager = manager;
-  }
+  @Autowired
+  private MilestoneManager manager;
 
   @Override
   public MilestonePageResponse getMilestones(long studyId, String username) {

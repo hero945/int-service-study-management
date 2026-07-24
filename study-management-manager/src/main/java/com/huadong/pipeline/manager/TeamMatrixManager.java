@@ -1,5 +1,6 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.milestone.CurrentMilestoneStatus;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
@@ -19,23 +20,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TeamMatrixManager {
-  private final TeamMatrixRepository teams;
-  private final UserAccountRepository users;
-  private final StudyMilestonePort studyMilestones;
-
-  public TeamMatrixManager(
-      TeamMatrixRepository teams,
-      UserAccountRepository users,
-      StudyMilestonePort studyMilestones) {
-    this.teams = teams;
-    this.users = users;
-    this.studyMilestones = studyMilestones;
-  }
+  @Autowired
+  private TeamMatrixRepository teams;
+  @Autowired
+  private UserAccountRepository users;
+  @Autowired
+  private StudyMilestonePort studyMilestones;
 
   public MatrixPage list(
       String username, String studyQuery, String roleQuery, int page, int pageSize) {

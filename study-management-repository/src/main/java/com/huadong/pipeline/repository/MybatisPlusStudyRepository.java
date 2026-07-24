@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,6 +13,7 @@ import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.repository.entity.StudyEntity;
 import com.huadong.pipeline.repository.mapper.StudyMapper;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
@@ -19,11 +21,8 @@ import org.springframework.stereotype.Repository;
 public class MybatisPlusStudyRepository implements StudyRepository {
   private static final long LIST_LIMIT = 500;
 
-  private final StudyMapper mapper;
-
-  public MybatisPlusStudyRepository(StudyMapper mapper) {
-    this.mapper = mapper;
-  }
+  @Autowired
+  private StudyMapper mapper;
 
   @Override
   public List<Study> findAll(StudyAccessScope accessScope) {

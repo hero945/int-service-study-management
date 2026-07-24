@@ -1,10 +1,12 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.UserApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.security.Principal;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,11 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/platform/users")
 public class AdminUserController {
-  private final UserApi userApi;
-
-  public AdminUserController(UserApi userApi) {
-    this.userApi = userApi;
-  }
+  @Autowired
+  private UserApi userApi;
 
   @GetMapping
   @PreAuthorize("hasAuthority('account.page.view')")

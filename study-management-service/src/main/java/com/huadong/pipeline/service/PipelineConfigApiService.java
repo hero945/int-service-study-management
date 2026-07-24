@@ -1,20 +1,19 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.PipelineConfigApi;
 import com.huadong.pipeline.domain.config.PipelineConfigRow;
 import com.huadong.pipeline.domain.config.Program;
 import com.huadong.pipeline.domain.config.Project;
 import com.huadong.pipeline.manager.PipelineConfigManager;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PipelineConfigApiService implements PipelineConfigApi {
-  private final PipelineConfigManager manager;
-
-  public PipelineConfigApiService(PipelineConfigManager manager) {
-    this.manager = manager;
-  }
+  @Autowired
+  private PipelineConfigManager manager;
 
   @Override
   public List<PipelineConfigRowResponse> listRows() {

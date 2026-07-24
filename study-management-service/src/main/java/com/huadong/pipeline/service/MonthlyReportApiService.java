@@ -1,5 +1,6 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.MonthlyReportApi;
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.manager.MonthlyReportManager;
@@ -12,16 +13,14 @@ import com.huadong.pipeline.manager.MonthlyReportManager.MonthlyPageResult;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class MonthlyReportApiService implements MonthlyReportApi {
 
-  private final MonthlyReportManager manager;
-
-  public MonthlyReportApiService(MonthlyReportManager manager) {
-    this.manager = manager;
-  }
+  @Autowired
+  private MonthlyReportManager manager;
 
   @Override
   public MonthlyReportPageResponse getMonthlyReports(long studyId, String month, String username) {

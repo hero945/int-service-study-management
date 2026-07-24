@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 /** Unit test for {@link MilestoneManager#computeOverviewStatus} — no Spring context needed. */
 class MilestoneOverviewStatusTest {
 
-  private final MilestoneManager manager = new MilestoneManager(null, null);
+  private final MilestoneManager manager = new MilestoneManager();
 
   private PersistedMilestone m(String stage, String code, LocalDate start, LocalDate end) {
     return new PersistedMilestone(1L, 1L, stage, code, null, null, start, end, null);

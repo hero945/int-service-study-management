@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huadong.pipeline.domain.setting.Setting;
@@ -8,17 +9,15 @@ import com.huadong.pipeline.repository.entity.SystemSettingEntity;
 import com.huadong.pipeline.repository.mapper.SystemSettingMapper;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MybatisPlusSettingRepository implements SettingRepository {
   private static final long LIST_LIMIT = 100;
 
-  private final SystemSettingMapper mapper;
-
-  public MybatisPlusSettingRepository(SystemSettingMapper mapper) {
-    this.mapper = mapper;
-  }
+  @Autowired
+  private SystemSettingMapper mapper;
 
   @Override
   public List<Setting> findAll() {

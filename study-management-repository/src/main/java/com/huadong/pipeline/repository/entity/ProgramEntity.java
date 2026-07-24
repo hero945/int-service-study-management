@@ -1,11 +1,16 @@
 package com.huadong.pipeline.repository.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.time.LocalDateTime;
 
 @TableName("hd_plt_program")
+@Getter
+@Setter
 public class ProgramEntity {
   @TableId(type = IdType.AUTO)
   private Long id;
@@ -20,28 +25,4 @@ public class ProgramEntity {
   private String sysUpdateBy;
   private LocalDateTime sysUpdateTime;
   private short sysDeleted;
-
-  public Long getId() { return id; }
-  public String getProgramCode() { return programCode; }
-  public void setProgramCode(String value) { programCode = value; }
-  public String getProductName() { return productName; }
-  public void setProductName(String value) { productName = value; }
-  public String getMoa() { return moa; }
-  public void setMoa(String value) { moa = value; }
-  public String getSourceCode() { return sourceCode; }
-  public void setSourceCode(String value) { sourceCode = value; }
-  public String getOriginCode() { return originCode; }
-  public void setOriginCode(String value) { originCode = value; }
-  public String getStatusCode() { return statusCode; }
-  public void setStatusCode(String value) { statusCode = value; }
-  public Integer getSortOrder() { return sortOrder; }
-  public void setSortOrder(Integer value) { sortOrder = value; }
-  public String getSysCreateBy() { return sysCreateBy; }
-  public void setSysCreateBy(String value) { sysCreateBy = value; }
-  public String getSysUpdateBy() { return sysUpdateBy; }
-  public void setSysUpdateBy(String value) { sysUpdateBy = value; }
-  public LocalDateTime getSysUpdateTime() { return sysUpdateTime; }
-  public void setSysUpdateTime(LocalDateTime value) { sysUpdateTime = value; }
-  public short getSysDeleted() { return sysDeleted; }
-  public void setSysDeleted(short value) { sysDeleted = value; }
 }

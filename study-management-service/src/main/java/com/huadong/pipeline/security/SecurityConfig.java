@@ -1,10 +1,14 @@
 package com.huadong.pipeline.security;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +21,9 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
+
   @Bean
   PasswordEncoder passwordEncoder() {
     return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
@@ -53,16 +59,22 @@ public class SecurityConfig {
             .authenticated())
         .formLogin(form -> form
             .loginProcessingUrl("/api/v1/platform/auth/login")
-            .successHandler((request, response, authentication) -> writeJson(
-                response,
-                mapper,
-                200,
-                Map.of("username", authentication.getName(), "message", "登录成功")))
-            .failureHandler((request, response, exception) -> writeJson(
-                response,
-                mapper,
-                401,
-                Map.of("code", "AUTHENTICATION_FAILED", "message", "账号或密码错误"))))
+            .successHandler((request, response, authentication) -> {
+              log.info("登录成功 username={}", authentication.getName());
+              writeJson(
+                  response,
+                  mapper,
+                  200,
+                  Map.of("username", authentication.getName(), "message", "登录成功"));
+            })
+            .failureHandler((request, response, exception) -> {
+              String username = request.getParameter("username");
+              log.warn(
+                  "登录失败 username={} reason={}",
+                  username == null || username.isBlank() ? "(blank)" : username,
+                  exception.getClass().getSimpleName());
+              writeApiError(response, mapper, 401, "AUTHENTICATION_FAILED", "账号或密码错误");
+            }))
         .logout(logout -> logout
             .logoutUrl("/api/v1/platform/auth/logout")
             .logoutSuccessHandler((request, response, authentication) -> writeJson(
@@ -78,17 +90,14 @@ public class SecurityConfig {
                 response.sendRedirect(loginRedirect(request));
                 return;
               }
-              writeJson(
-                  response,
-                  mapper,
-                  401,
-                  Map.of("code", "UNAUTHENTICATED", "message", "请先登录"));
+              writeApiError(response, mapper, 401, "UNAUTHENTICATED", "请先登录");
             })
-            .accessDeniedHandler((request, response, exception) -> writeJson(
+            .accessDeniedHandler((request, response, exception) -> writeApiError(
                 response,
                 mapper,
                 403,
-                Map.of("code", "ACCESS_DENIED", "message", "无权执行此操作"))))
+                "ACCESS_DENIED",
+                "无权执行此操作")))
         .headers(headers -> headers
             .contentSecurityPolicy(csp -> csp.policyDirectives(
                 "default-src 'self'; script-src 'self'; "
@@ -116,6 +125,20 @@ public class SecurityConfig {
       target += "?" + request.getQueryString();
     }
     return "/login?redirect=" + URLEncoder.encode(target, StandardCharsets.UTF_8);
+  }
+
+  private static void writeApiError(
+      HttpServletResponse response,
+      ObjectMapper mapper,
+      int status,
+      String code,
+      String message) throws java.io.IOException {
+    Map<String, Object> body = new LinkedHashMap<>();
+    body.put("code", code);
+    body.put("message", message);
+    body.put("details", Map.of());
+    body.put("timestamp", Instant.now().toString());
+    writeJson(response, mapper, status, body);
   }
 
   private static void writeJson(

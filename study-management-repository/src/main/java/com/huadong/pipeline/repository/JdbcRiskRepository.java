@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.risk.RiskLevel;
 import com.huadong.pipeline.domain.risk.RiskRepository;
@@ -13,17 +14,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcRiskRepository implements RiskRepository {
-  private final JdbcTemplate jdbc;
-
-  public JdbcRiskRepository(JdbcTemplate jdbc) {
-    this.jdbc = jdbc;
-  }
+  @Autowired
+  private JdbcTemplate jdbc;
 
   @Override
   public RiskPage findPage(StudyAccessScope scope, RiskQuery query) {

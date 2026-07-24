@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.team.TeamMatrixRepository;
 import com.huadong.pipeline.repository.mapper.TeamMatrixMapper;
@@ -11,15 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MybatisPlusTeamMatrixRepository implements TeamMatrixRepository {
-  private final TeamMatrixMapper mapper;
-
-  public MybatisPlusTeamMatrixRepository(TeamMatrixMapper mapper) {
-    this.mapper = mapper;
-  }
+  @Autowired
+  private TeamMatrixMapper mapper;
 
   @Override
   public MatrixPage findMatrix(

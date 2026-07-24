@@ -1,20 +1,19 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserManager {
-  private final UserAccountRepository users;
-
-  public UserManager(UserAccountRepository users) {
-    this.users = users;
-  }
+  @Autowired
+  private UserAccountRepository users;
 
   public Optional<AuthenticationUser> findForAuthentication(String username) {
     return users.findByUsername(username)

@@ -1,11 +1,13 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.UserApi;
 import com.huadong.pipeline.service.RoleSessionInvalidator;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,17 +23,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/platform")
 public class AuthController {
-  private final UserApi userApi;
-  private final UserDetailsService userDetailsService;
-  private final RoleSessionInvalidator sessions;
-
-  public AuthController(UserApi userApi
-          , RoleSessionInvalidator sessions
-          ,UserDetailsService userDetailsService) {
-    this.userApi = userApi;
-    this.userDetailsService = userDetailsService;
-    this.sessions = sessions;
-  }
+  @Autowired
+  private UserApi userApi;
+  @Autowired
+  private UserDetailsService userDetailsService;
+  @Autowired
+  private RoleSessionInvalidator sessions;
 
   @GetMapping("/auth/csrf")
   ResponseEntity<Map<String, String>> csrf(CsrfToken token) {

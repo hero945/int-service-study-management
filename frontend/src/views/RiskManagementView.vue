@@ -4,6 +4,7 @@ import { apiClient } from '../api/client'
 import type { RiskFormOptions, RiskLevel, RiskPage, RiskStatus, RiskSummary } from '../api/types'
 import PageState from '../components/PageState.vue'
 import RiskEditorDrawer from '../components/RiskEditorDrawer.vue'
+import { riskLevelLabel, riskLevelTone, riskStatusLabel } from '../domain/risk-labels'
 import { session } from '../session'
 
 const result = ref<RiskPage>()
@@ -47,8 +48,6 @@ function openRisk(risk: RiskSummary) { selectedRiskCode.value = risk.riskCode; d
 function closeDrawer() { drawerOpen.value = false; selectedRiskCode.value = undefined }
 async function saved() { closeDrawer(); await load() }
 function changePage(page: number) { filters.page = page; void load() }
-function levelLabel(level: RiskLevel) { return { LOW: '低风险', MEDIUM: '中风险', HIGH: '高危' }[level] }
-function levelTone(level: RiskLevel) { return level === 'HIGH' ? 'red' : level === 'MEDIUM' ? 'orange' : 'green' }
 
 onMounted(load)
 </script>
@@ -59,7 +58,7 @@ onMounted(load)
       <div class="toolbar-filters">
         <label class="inline-search"><span class="sr-only">搜索风险</span><input v-model="filters.query" type="search" placeholder="搜索编号 / 描述 / Owner / Program"></label>
         <label><span class="sr-only">功能线</span><select v-model="filters.functionCode" @change="applyFilters"><option value="">全部功能线</option><option v-for="item in functionOptions" :key="item.code" :value="item.code">{{ item.name }}</option></select></label>
-        <label><span class="sr-only">风险状态</span><select v-model="filters.status" @change="applyFilters"><option value="">全部状态</option><option value="OPEN">Open</option><option value="CLOSED">Closed</option></select></label>
+        <label><span class="sr-only">风险状态</span><select v-model="filters.status" @change="applyFilters"><option value="">全部状态</option><option value="OPEN">未关闭</option><option value="CLOSED">已关闭</option></select></label>
         <label><span class="sr-only">风险等级</span><select v-model="filters.level" @change="applyFilters"><option value="">全部等级</option><option value="HIGH">高危</option><option value="MEDIUM">中风险</option><option value="LOW">低风险</option></select></label>
         <button class="secondary-button" type="submit">搜索</button>
       </div>
@@ -68,7 +67,7 @@ onMounted(load)
 
     <div class="risk-stats" aria-label="风险统计">
       <button type="button" :class="{ active: !filters.status && !filters.level }" @click="quickFilter('total')"><span>风险总数</span><strong>{{ result?.stats.total ?? 0 }}</strong></button>
-      <button type="button" :class="{ active: filters.status === 'OPEN' }" @click="quickFilter('open')"><span>未关闭 Open</span><strong>{{ result?.stats.open ?? 0 }}</strong></button>
+      <button type="button" :class="{ active: filters.status === 'OPEN' }" @click="quickFilter('open')"><span>未关闭</span><strong>{{ result?.stats.open ?? 0 }}</strong></button>
       <button type="button" :class="{ active: filters.level === 'HIGH' }" @click="quickFilter('high')"><span>高危</span><strong class="risk-stat--red">{{ result?.stats.high ?? 0 }}</strong></button>
       <button type="button" :class="{ active: filters.level === 'MEDIUM' }" @click="quickFilter('medium')"><span>中风险</span><strong class="risk-stat--orange">{{ result?.stats.medium ?? 0 }}</strong></button>
     </div>
@@ -79,7 +78,7 @@ onMounted(load)
           <thead><tr><th>Risk ID</th><th>Study No.</th><th>Program / Project</th><th>功能线</th><th>风险描述</th><th>Owner</th><th>评分</th><th>等级</th><th>措施</th><th>Status</th></tr></thead>
           <tbody><tr v-for="risk in result?.data" :key="risk.riskCode" tabindex="0" @click="openRisk(risk)" @keydown.enter="openRisk(risk)">
             <td><button class="risk-link mono" type="button" @click.stop="openRisk(risk)">{{ risk.riskCode }}</button></td>
-            <td class="mono">{{ risk.studyCode }}</td><td><strong>{{ risk.programCode }}</strong><small>{{ risk.projectCode }}</small></td><td>{{ risk.functionName }}</td><td class="risk-description">{{ risk.description }}</td><td>{{ risk.ownerName }}</td><td><span class="risk-score mono">{{ risk.score }}</span></td><td><span class="status-chip" :class="`status-chip--${levelTone(risk.level)}`">{{ levelLabel(risk.level) }}</span></td><td><span v-if="risk.actionCount" class="status-chip status-chip--blue">含 {{ risk.actionCount }} 项</span><span v-else>—</span></td><td><span class="status-chip" :class="risk.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">{{ risk.status === 'OPEN' ? 'Open' : 'Closed' }}</span></td>
+            <td class="mono">{{ risk.studyCode }}</td><td><strong>{{ risk.programCode }}</strong><small>{{ risk.projectCode }}</small></td><td>{{ risk.functionName }}</td><td class="risk-description">{{ risk.description }}</td><td>{{ risk.ownerName }}</td><td><span class="risk-score mono">{{ risk.score }}</span></td><td><span class="status-chip" :class="`status-chip--${riskLevelTone(risk.level)}`">{{ riskLevelLabel(risk.level) }}</span></td><td><span v-if="risk.actionCount" class="status-chip status-chip--blue">含 {{ risk.actionCount }} 项</span><span v-else>—</span></td><td><span class="status-chip" :class="risk.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">{{ riskStatusLabel(risk.status) }}</span></td>
           </tr></tbody>
         </table>
       </div>

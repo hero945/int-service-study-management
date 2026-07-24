@@ -1,9 +1,11 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.SettingApi;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -15,11 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/platform/settings")
 public class SettingsController {
-  private final SettingApi settingApi;
-
-  public SettingsController(SettingApi settingApi) {
-    this.settingApi = settingApi;
-  }
+  @Autowired
+  private SettingApi settingApi;
 
   @GetMapping("/public")
   List<SettingApi.SettingResponse> publicSettings() {

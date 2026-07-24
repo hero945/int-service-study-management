@@ -153,7 +153,9 @@ test('expired sessions redirect browser pages while API authentication errors st
   assert.match(main, /router\.currentRoute\.value\.fullPath/);
   assert.match(security, /isBrowserPageRequest/);
   assert.match(security, /response\.sendRedirect\(loginRedirect\(request\)\)/);
-  assert.match(security, /"code", "UNAUTHENTICATED"/);
+  assert.match(security, /writeApiError\(response, mapper, 401, "UNAUTHENTICATED"/);
+  assert.match(security, /body\.put\("details"/);
+  assert.match(security, /body\.put\("timestamp"/);
 });
 
 test('pipeline overview keeps sticky id columns and stacked project/study drawers', () => {

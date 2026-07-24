@@ -33,7 +33,9 @@ const passwordForm = ref({
 })
 
 onMounted(() => {
-  void riskBadge.refresh()
+  if (user.value?.permissions.includes('risk.page.view')) {
+    void riskBadge.refresh()
+  }
   document.addEventListener('click', onDocumentClick)
 })
 
@@ -48,32 +50,40 @@ function onDocumentClick(event: MouseEvent) {
   }
 }
 
-const navItems = computed(() => [
-  { label: '管线总览', icon: '◆', to: '/pipeline' },
-  { label: '研究 Study 列表', icon: '◇', to: '/studies' },
-  {
-    label: '风险管理',
-    icon: '⚠',
-    to: '/risks',
-    badge: riskBadge.openCount.value != null ? String(riskBadge.openCount.value) : undefined,
-  },
-  ...(user.value?.permissions.includes('team.page.view')
-    ? [{ label: '团队矩阵', icon: '▦', to: '/team' }]
-    : []),
-  ...(user.value?.permissions.includes('config.page.view')
-    ? [{ label: '管线配置', icon: '⚙', to: '/config' }]
-    : []),
-  ...(user.value?.permissions.includes('report.page.view')
-    ? [{ label: '月报导出', icon: '⭳', to: '/reports' }]
-    : []),
-  ...(user.value?.permissions.includes('account.page.view')
-    ? [{ label: '账号管理', icon: '⚑', to: '/accounts' }]
-    : []),
-  ...(user.value?.permissions.includes('role.page.view')
-    ? [{ label: '角色权限管理', icon: '⌘', to: '/roles' }]
-    : []),
-])
-
+const navItems = computed(() => {
+  const permissions = user.value?.permissions ?? []
+  const items: Array<{ label: string; icon: string; to: string; badge?: string }> = []
+  if (permissions.includes('pipeline.page.view')) {
+    items.push({ label: '管线总览', icon: '◆', to: '/pipeline' })
+  }
+  if (permissions.includes('study.read')) {
+    items.push({ label: '研究 Study 列表', icon: '◇', to: '/studies' })
+  }
+  if (permissions.includes('risk.page.view')) {
+    items.push({
+      label: '风险管理',
+      icon: '⚠',
+      to: '/risks',
+      badge: riskBadge.openCount.value != null ? String(riskBadge.openCount.value) : undefined,
+    })
+  }
+  if (permissions.includes('team.page.view')) {
+    items.push({ label: '团队矩阵', icon: '▦', to: '/team' })
+  }
+  if (permissions.includes('config.page.view')) {
+    items.push({ label: '管线配置', icon: '⚙', to: '/config' })
+  }
+  if (permissions.includes('report.page.view')) {
+    items.push({ label: '月报导出', icon: '⭐', to: '/reports' })
+  }
+  if (permissions.includes('account.page.view')) {
+    items.push({ label: '账号管理', icon: '♑', to: '/accounts' })
+  }
+  if (permissions.includes('role.page.view')) {
+    items.push({ label: '角色权限管理', icon: '⌘', to: '/roles' })
+  }
+  return items
+})
 async function logout() {
   menuOpen.value = false
   await session.logout()

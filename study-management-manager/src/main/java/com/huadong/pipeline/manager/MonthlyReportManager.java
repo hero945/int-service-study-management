@@ -1,5 +1,6 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.monthly.MonthlyReportPort;
 import com.huadong.pipeline.domain.monthly.MonthlyReportPort.EntryWithReport;
@@ -22,19 +23,17 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MonthlyReportManager {
 
-  private final MonthlyReportPort reports;
-  private final UserAccountRepository users;
-
-  public MonthlyReportManager(MonthlyReportPort reports, UserAccountRepository users) {
-    this.reports = reports;
-    this.users = users;
-  }
+  @Autowired
+  private MonthlyReportPort reports;
+  @Autowired
+  private UserAccountRepository users;
 
   // ──────────── query ────────────
 

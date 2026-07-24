@@ -1,5 +1,6 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.MonthlyExportApi;
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.manager.MonthlyExportManager;
@@ -12,16 +13,14 @@ import com.huadong.pipeline.manager.MonthlyExportManager.ExportSnapshotRow;
 import com.huadong.pipeline.service.export.MonthlyExportFileBuilder;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class MonthlyExportApiService implements MonthlyExportApi {
 
-  private final MonthlyExportManager manager;
-
-  public MonthlyExportApiService(MonthlyExportManager manager) {
-    this.manager = manager;
-  }
+  @Autowired
+  private MonthlyExportManager manager;
 
   @Override
   public MonthlyExportReportResponse preview(MonthlyExportQuery query, String username) {

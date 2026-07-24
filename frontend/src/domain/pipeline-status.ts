@@ -1,48 +1,28 @@
 import type { Study } from '../api/types'
 
-export const PHASE_TAGS = [
-  'PreIND',
+/**
+ * 临床 phase 唯一契约 = DB/API `phase_status_code`
+ *（与后端 PipelineConfigManager.PHASES 顺序一致）。
+ * 创建下拉、总览列头/筛选/聚合列 key、导出与抽屉展示均直接使用 code。
+ */
+export const CLINICAL_PHASE_CODES = [
+  'PRE_IND',
   'IND',
-  'Phase 1',
-  'Phase 2',
-  'PRE-3',
-  'Phase 3-1',
-  'Phase 3-2',
+  'PHASE_1',
+  'PHASE_2',
+  'PRE_3',
+  'PHASE_3_1',
+  'PHASE_3_2',
 ] as const
 
-export type PipelinePhase = (typeof PHASE_TAGS)[number]
+export type PipelinePhase = (typeof CLINICAL_PHASE_CODES)[number]
 export type PipelineTone = 'blue' | 'green' | 'orange' | 'red' | 'empty'
 
-/**
- * phase code（后端/DB 契约，见 PipelineConfigManager.PHASES）→ 总览列 tag。
- * 这是阶段编码的单一真相源：后端契约固定返回 code，展示标签在此映射。
- */
-export const PHASE_CODE_TO_TAG: Record<string, PipelinePhase> = {
-  PRE_IND: 'PreIND',
-  IND: 'IND',
-  PHASE_1: 'Phase 1',
-  PHASE_2: 'Phase 2',
-  PRE_3: 'PRE-3',
-  PHASE_3_1: 'Phase 3-1',
-  PHASE_3_2: 'Phase 3-2',
-}
+const PHASE_CODE_SET: ReadonlySet<string> = new Set(CLINICAL_PHASE_CODES)
 
-/** 总览列 tag → phase code（由 PHASE_CODE_TO_TAG 派生） */
-export const PHASE_TAG_TO_CODE = Object.fromEntries(
-  Object.entries(PHASE_CODE_TO_TAG).map(([code, tag]) => [tag, code]),
-) as Record<PipelinePhase, string>
-
-/** 将后端返回的 phase code 归一为总览列 tag；未知 code 返回 undefined */
+/** 将后端返回的 phase code 归一为总览列 key；未知 code 返回 undefined */
 export function normalizePhase(phase: string): PipelinePhase | undefined {
-  return PHASE_CODE_TO_TAG[phase]
-}
-
-/**
- * 临床阶段展示文案（与管线总览 PHASE_TAGS 同源：Arabic 数字 Phase 1 / Phase 2…）。
- * 筛选下拉、配置页、总览列共用此映射，避免 Phase I / Phase 1 两套文案。
- */
-export function phaseDisplayLabel(code: string): string {
-  return PHASE_CODE_TO_TAG[code] ?? code
+  return PHASE_CODE_SET.has(phase) ? (phase as PipelinePhase) : undefined
 }
 
 const STATUS_TONE: Record<string, PipelineTone> = {

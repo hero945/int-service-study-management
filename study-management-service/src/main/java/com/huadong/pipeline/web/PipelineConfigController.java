@@ -1,9 +1,11 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.PipelineConfigApi;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,11 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/clinical-pipeline")
 public class PipelineConfigController {
-  private final PipelineConfigApi api;
-
-  public PipelineConfigController(PipelineConfigApi api) {
-    this.api = api;
-  }
+  @Autowired
+  private PipelineConfigApi api;
 
   @GetMapping("/pipeline-config")
   @PreAuthorize("hasAuthority('config.page.view')")

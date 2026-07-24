@@ -1,28 +1,26 @@
 package com.huadong.pipeline.service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.huadong.pipeline.api.UserApi;
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.manager.UserManager;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 public class UserApiService implements UserApi {
   static final String DEFAULT_PASSWORD = "Hd123456";
 
-  private final UserManager manager;
-  private final PasswordEncoder passwordEncoder;
-  private final RoleSessionInvalidator sessions;
-
-  public UserApiService(
-      UserManager manager,
-      PasswordEncoder passwordEncoder,
-      RoleSessionInvalidator sessions) {
-    this.manager = manager;
-    this.passwordEncoder = passwordEncoder;
-    this.sessions = sessions;
-  }
+  @Autowired
+  private UserManager manager;
+  @Autowired
+  private PasswordEncoder passwordEncoder;
+  @Autowired
+  private RoleSessionInvalidator sessions;
 
   @Override
   public CurrentUserResponse getCurrentUser(String username) {
@@ -57,21 +55,36 @@ public class UserApiService implements UserApi {
         passwordEncoder.encode(DEFAULT_PASSWORD),
         request.displayName(),
         request.roleCodes());
+    log.info(
+        "账号创建 action=create username={} roleCodes={}",
+        request.username(),
+        request.roleCodes());
   }
 
   @Override
   public void update(long id, UpdateUserRequest request, String operator) {
     manager.update(id, request.displayName(), request.enabled(), operator);
+    log.info(
+        "账号更新 operator={} targetUserId={} enabled={}",
+        operator,
+        id,
+        request.enabled());
   }
 
   @Override
   public void delete(long id, String operator) {
     manager.softDelete(id, operator);
+    log.info("账号删除 operator={} targetUserId={}", operator, id);
   }
 
   @Override
   public void assignRoles(long id, AssignRolesRequest request, String operator) {
     manager.assignRoles(id, request.roleCodes(), operator);
+    log.info(
+        "账号角色分配 operator={} targetUserId={} roleCodes={}",
+        operator,
+        id,
+        request.roleCodes());
   }
 
   @Override
@@ -85,6 +98,7 @@ public class UserApiService implements UserApi {
       throw new BusinessException("PASSWORD_UNCHANGED", "新密码不能与当前密码相同");
     }
     manager.updatePasswordHash(username, passwordEncoder.encode(request.newPassword()));
+    log.info("账号修改密码 username={}", username);
   }
 
   @Override
@@ -93,5 +107,6 @@ public class UserApiService implements UserApi {
         .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
     manager.updatePasswordHash(user.username(), passwordEncoder.encode(DEFAULT_PASSWORD));
     sessions.invalidate(List.of(user.username()));
+    log.info("账号重置密码 operator={} targetUserId={}", operator, id);
   }
 }

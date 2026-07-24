@@ -1,17 +1,16 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.StudyApi;
 import com.huadong.pipeline.manager.StudyManager;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class StudyApiService implements StudyApi {
-  private final StudyManager manager;
-
-  public StudyApiService(StudyManager manager) {
-    this.manager = manager;
-  }
+  @Autowired
+  private StudyManager manager;
 
   @Override
   public PipelineOverviewResponse overview(String username) {

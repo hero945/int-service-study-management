@@ -1,5 +1,7 @@
 package com.huadong.pipeline.manager;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.config.PipelineConfigRepository;
 import com.huadong.pipeline.domain.config.Program;
@@ -29,10 +31,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class MonthlyExportManager {
 
   public static final String SCOPE_ALL = "ALL";
@@ -43,30 +47,20 @@ public class MonthlyExportManager {
   public static final String STATUS_IN_PROGRESS = "进行中";
   public static final String STATUS_COMPLETED = "已完成";
 
-  private final StudyRepository studies;
-  private final UserAccountRepository users;
-  private final MonthlyReportPort monthlyReports;
-  private final RiskRepository risks;
-  private final PipelineConfigRepository configuration;
-  private final ProgramRepository programs;
-  private final StudyMilestonePort milestones;
-
-  public MonthlyExportManager(
-      StudyRepository studies,
-      UserAccountRepository users,
-      MonthlyReportPort monthlyReports,
-      RiskRepository risks,
-      PipelineConfigRepository configuration,
-      ProgramRepository programs,
-      StudyMilestonePort milestones) {
-    this.studies = studies;
-    this.users = users;
-    this.monthlyReports = monthlyReports;
-    this.risks = risks;
-    this.configuration = configuration;
-    this.programs = programs;
-    this.milestones = milestones;
-  }
+  @Autowired
+  private StudyRepository studies;
+  @Autowired
+  private UserAccountRepository users;
+  @Autowired
+  private MonthlyReportPort monthlyReports;
+  @Autowired
+  private RiskRepository risks;
+  @Autowired
+  private PipelineConfigRepository configuration;
+  @Autowired
+  private ProgramRepository programs;
+  @Autowired
+  private StudyMilestonePort milestones;
 
   @Transactional(readOnly = true)
   public ExportReport build(ExportQuery query, String username) {
@@ -158,7 +152,7 @@ public class MonthlyExportManager {
             risk.ownerName()))
         .toList();
 
-    return new ExportReport(
+    ExportReport report = new ExportReport(
         new ExportMeta(
             query.startDate(),
             query.endDate(),
@@ -169,6 +163,15 @@ public class MonthlyExportManager {
         snapshotGroups,
         progress,
         riskRows);
+    log.info(
+        "月报导出 operator={} scopeType={} scopeLabels={} start={} end={} studyCount={} result=success",
+        username,
+        resolved.scopeType(),
+        resolved.scopeLabels(),
+        query.startDate(),
+        query.endDate(),
+        summary.total());
+    return report;
   }
 
   /**

@@ -32,19 +32,31 @@ export const router = createRouter({
           path: 'pipeline',
           name: 'pipeline',
           component: PipelineOverviewView,
-          meta: { title: '管线总览', subtitle: '按治疗领域和项目查看研发阶段' },
+          meta: {
+            title: '管线总览',
+            subtitle: '按治疗领域和项目查看研发阶段',
+            requiredPermission: 'pipeline.page.view',
+          },
         },
         {
           path: 'studies',
           name: 'studies',
           component: StudyListView,
-          meta: { title: '研究 Study 列表', subtitle: '研究项目主数据与当前状态' },
+          meta: {
+            title: '研究 Study 列表',
+            subtitle: '研究项目主数据与当前状态',
+            requiredPermission: 'study.read',
+          },
         },
         {
           path: 'monthly',
           name: 'monthly',
           component: MonthlyReportView,
-          meta: { title: '研究月度汇报', subtitle: '按部门维护研究月度进展' },
+          meta: {
+            title: '研究月度汇报',
+            subtitle: '按部门维护研究月度进展',
+            requiredPermission: 'monthly.read',
+          },
         },
         {
           path: 'risks',
@@ -131,16 +143,42 @@ export const router = createRouter({
   ],
 })
 
+const HOME_CANDIDATES = [
+  'pipeline',
+  'studies',
+  'risks',
+  'team',
+  'config',
+  'reports',
+  'accounts',
+  'roles',
+] as const
+
+function firstAllowedHome(permissions: string[]): string {
+  for (const name of HOME_CANDIDATES) {
+    const route = router.resolve({ name })
+    const required = route.meta.requiredPermission
+    if (typeof required !== 'string' || permissions.includes(required)) {
+      return name
+    }
+  }
+  return 'login'
+}
+
 router.beforeEach(async (to) => {
   const user = await session.restore()
   if (to.meta.public) {
-    return user ? { name: 'pipeline' } : true
+    return user ? { name: firstAllowedHome(user.permissions) } : true
   }
   if (!user) return { name: 'login', query: { redirect: to.fullPath } }
   const requiredPermission = to.meta.requiredPermission
   if (
     typeof requiredPermission === 'string' &&
     !user.permissions.includes(requiredPermission)
-  ) return { name: 'pipeline' }
+  ) {
+    const fallback = firstAllowedHome(user.permissions)
+    if (fallback === to.name) return { name: 'login' }
+    return { name: fallback }
+  }
   return true
 })

@@ -1,5 +1,6 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.study.DuplicateStudyCodeException;
@@ -27,35 +28,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StudyManager {
-  private final StudyRepository studies;
-  private final UserAccountRepository users;
-  private final ProjectRepository projects;
-  private final PipelineOverviewRepository overviewProjects;
-  private final StudyMilestonePort studyMilestones;
-  private final MilestoneManager milestoneManager;
-  private final TeamMatrixRepository team;
-
-  public StudyManager(
-      StudyRepository studies,
-      UserAccountRepository users,
-      ProjectRepository projects,
-      PipelineOverviewRepository overviewProjects,
-      StudyMilestonePort studyMilestones,
-      MilestoneManager milestoneManager,
-      TeamMatrixRepository team) {
-    this.studies = studies;
-    this.users = users;
-    this.projects = projects;
-    this.overviewProjects = overviewProjects;
-    this.studyMilestones = studyMilestones;
-    this.milestoneManager = milestoneManager;
-    this.team = team;
-  }
+  @Autowired
+  private StudyRepository studies;
+  @Autowired
+  private UserAccountRepository users;
+  @Autowired
+  private ProjectRepository projects;
+  @Autowired
+  private PipelineOverviewRepository overviewProjects;
+  @Autowired
+  private StudyMilestonePort studyMilestones;
+  @Autowired
+  private MilestoneManager milestoneManager;
+  @Autowired
+  private TeamMatrixRepository team;
 
   public List<StudyView> list(String username) {
     List<Study> all = studies.findAll(accessScope(username));

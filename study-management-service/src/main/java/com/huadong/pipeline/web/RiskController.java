@@ -1,10 +1,12 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.RiskApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.security.Principal;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -23,8 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/risk-management")
 public class RiskController {
-  private final RiskApi api;
-  public RiskController(RiskApi api) { this.api = api; }
+  @Autowired
+  private RiskApi api;
 
   @GetMapping("/risks")
   @PreAuthorize("hasAuthority('risk.read')")

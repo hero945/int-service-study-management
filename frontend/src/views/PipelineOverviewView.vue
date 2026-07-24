@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { OverviewProject, OverviewStudy, PipelineOverview, Study } from '../api/types'
 import {
-  PHASE_TAGS,
+  CLINICAL_PHASE_CODES,
   originLabel,
   sourceLabel,
   type PipelinePhase,
@@ -40,7 +40,7 @@ interface HoverTip {
 const TA_OPTIONS = ['肿瘤', '自身免疫', '代谢与心血管', '呼吸系统', '感染性疾病', '神经科学']
 
 const router = useRouter()
-const phases = PHASE_TAGS
+const phases = CLINICAL_PHASE_CODES
 const overview = ref<PipelineOverview>()
 const loading = ref(true)
 const errorMessage = ref('')

@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.study.OverviewProject;
 import com.huadong.pipeline.domain.study.OverviewStudy;
@@ -11,15 +12,13 @@ import com.huadong.pipeline.repository.mapper.PipelineOverviewMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MybatisPlusPipelineOverviewRepository implements PipelineOverviewRepository {
-  private final PipelineOverviewMapper mapper;
-
-  public MybatisPlusPipelineOverviewRepository(PipelineOverviewMapper mapper) {
-    this.mapper = mapper;
-  }
+  @Autowired
+  private PipelineOverviewMapper mapper;
 
   @Override
   public List<OverviewProject> findOverviewProjects(StudyAccessScope scope) {

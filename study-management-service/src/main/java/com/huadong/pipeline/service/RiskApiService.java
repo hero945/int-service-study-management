@@ -1,16 +1,17 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.RiskApi;
 import com.huadong.pipeline.domain.risk.RiskRepository;
 import com.huadong.pipeline.manager.RiskManager;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RiskApiService implements RiskApi {
-  private final RiskManager manager;
-
-  public RiskApiService(RiskManager manager) { this.manager = manager; }
+  @Autowired
+  private RiskManager manager;
 
   @Override
   public PageResponse list(String username, String query, String functionCode, String status,

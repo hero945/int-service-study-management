@@ -7,7 +7,6 @@ import type {
 } from '../api/types'
 import PageState from '../components/PageState.vue'
 import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
-import { phaseDisplayLabel } from '../domain/pipeline-status'
 import { session } from '../session'
 
 const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
@@ -289,10 +288,6 @@ async function remove(kind: 'program' | 'project' | 'study', id: number, label: 
   }
 }
 
-function phaseLabel(code: string) {
-  return phaseDisplayLabel(code)
-}
-
 function messageOf(reason: unknown, fallback: string) {
   if (reason instanceof ApiError && reason.status === 409 && reason.details) {
     const counts = Object.entries(reason.details).filter(([, value]) => value !== '0')
@@ -340,7 +335,7 @@ onUnmounted(() => {
         </tr></thead><tbody><tr v-for="row in pagedStudyRows" :key="row.studyId">
           <td>{{ row.sourceLabel }}</td><td>{{ row.originLabel }}</td><td>{{ row.productName }}</td><td class="mono">{{ row.programCode }}</td>
           <td>{{ row.moa || '—' }}</td><td class="mono">{{ row.projectCode }}</td><td>{{ row.therapeuticAreaName }}</td><td>{{ row.indication }}</td>
-          <td class="mono">{{ row.studyCode }}</td><td><span class="status-chip status-chip--blue">{{ phaseLabel(row.phaseStatusCode) }}</span></td>
+          <td class="mono">{{ row.studyCode }}</td><td><span class="status-chip status-chip--blue">{{ row.phaseStatusCode }}</span></td>
           <td class="row-actions"><button v-if="canUpdate" type="button" @click="openStudy(row)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('study', row.studyId, row.studyCode)">删除</button></td>
         </tr></tbody></table></div>
         <nav class="study-pagination" aria-label="Study 分页">

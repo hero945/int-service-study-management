@@ -11,6 +11,11 @@
   <artifactId>study-management-repository</artifactId>
   <dependencies>
     <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.huadong</groupId>
       <artifactId>study-management-domain</artifactId>
       <version>${project.version}</version>

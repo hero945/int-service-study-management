@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.huadong.pipeline.domain.role.Permission;
 import com.huadong.pipeline.domain.role.Role;
@@ -17,17 +18,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MybatisPlusRoleRepository implements RoleRepository {
-  private final RoleMapper roleMapper;
-  private final PermissionMapper permissionMapper;
-
-  public MybatisPlusRoleRepository(RoleMapper roleMapper, PermissionMapper permissionMapper) {
-    this.roleMapper = roleMapper;
-    this.permissionMapper = permissionMapper;
-  }
+  @Autowired
+  private RoleMapper roleMapper;
+  @Autowired
+  private PermissionMapper permissionMapper;
 
   @Override
   public RolePage findPage(int page, int pageSize, String keyword, RoleStatus status) {

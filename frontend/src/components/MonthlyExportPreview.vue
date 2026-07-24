@@ -56,7 +56,7 @@ function groupTitle(taCode: string, taName: string) {
           <div class="export-metric"><div class="lbl">已完成</div><div class="val">{{ report.summary.completed }}</div></div>
         </div>
         <div class="export-metric-note">
-          有填报 Study {{ report.summary.reportedStudyCount }} · Open 风险 {{ report.summary.openRiskCount }}
+          有填报 Study {{ report.summary.reportedStudyCount }} · 未关闭风险 {{ report.summary.openRiskCount }}
         </div>
       </section>
 
@@ -108,7 +108,7 @@ function groupTitle(taCode: string, taName: string) {
 
       <section class="export-sec">
         <div class="export-sec-h"><span class="export-sec-num">04</span><h2>未关闭风险</h2></div>
-        <p v-if="!report.openRisks.length" class="export-empty">当前范围内无 Open 风险。</p>
+        <p v-if="!report.openRisks.length" class="export-empty">当前范围内无未关闭风险。</p>
         <div v-for="(risk, index) in report.openRisks" :key="risk.riskCode" class="export-risk">
           <div class="export-risk-idx">{{ String(index + 1).padStart(2, '0') }}</div>
           <div>

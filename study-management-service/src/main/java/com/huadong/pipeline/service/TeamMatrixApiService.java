@@ -1,16 +1,15 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.TeamMatrixApi;
 import com.huadong.pipeline.manager.TeamMatrixManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TeamMatrixApiService implements TeamMatrixApi {
-  private final TeamMatrixManager manager;
-
-  public TeamMatrixApiService(TeamMatrixManager manager) {
-    this.manager = manager;
-  }
+  @Autowired
+  private TeamMatrixManager manager;
 
   @Override
   public MatrixResponse list(

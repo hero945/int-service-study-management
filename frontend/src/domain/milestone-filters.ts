@@ -1,8 +1,6 @@
 import {
-  PHASE_TAGS,
-  PHASE_TAG_TO_CODE,
+  CLINICAL_PHASE_CODES,
   normalizePhase,
-  phaseDisplayLabel,
   type PipelinePhase,
 } from './pipeline-status'
 
@@ -71,12 +69,12 @@ export const STUDY_MILESTONE_PHASE_OPTIONS = Object.keys(MILESTONE_STATUS_BY_STA
 export const ALL_MILESTONE_SUB_STATUSES = Object.values(MILESTONE_STATUS_BY_STAGE).flat()
 
 /**
- * 管线总览 Phase 枚举：用来选定表格列（不做行过滤）。
- * 标签与 PHASE_TAGS / phaseDisplayLabel 同源（Phase 1 体系）。
+ * 管线总览临床 phase 枚举：用来选定表格列（不做行过滤）。
+ * 展示与 value 均为 DB code，与 CLINICAL_PHASE_CODES 一致。
  */
-export const PIPELINE_PHASE_STATUS_OPTIONS = PHASE_TAGS.map((tag) => ({
-  code: PHASE_TAG_TO_CODE[tag],
-  label: phaseDisplayLabel(PHASE_TAG_TO_CODE[tag]),
+export const PIPELINE_PHASE_STATUS_OPTIONS = CLINICAL_PHASE_CODES.map((code) => ({
+  code,
+  label: code,
 }))
 
 /** PreIND / IND / PRE-3 对应的里程碑主阶段 key（状态下拉用） */

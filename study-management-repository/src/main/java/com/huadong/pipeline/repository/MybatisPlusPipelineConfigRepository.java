@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.huadong.pipeline.domain.config.PipelineConfigRepository;
 import com.huadong.pipeline.domain.config.PipelineConfigRow;
@@ -10,17 +11,15 @@ import com.huadong.pipeline.repository.mapper.PipelineConfigMapper;
 import com.huadong.pipeline.repository.mapper.StudyMapper;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MybatisPlusPipelineConfigRepository implements PipelineConfigRepository {
-  private final PipelineConfigMapper mapper;
-  private final StudyMapper studyMapper;
-
-  public MybatisPlusPipelineConfigRepository(PipelineConfigMapper mapper, StudyMapper studyMapper) {
-    this.mapper = mapper;
-    this.studyMapper = studyMapper;
-  }
+  @Autowired
+  private PipelineConfigMapper mapper;
+  @Autowired
+  private StudyMapper studyMapper;
 
   @Override
   public List<PipelineConfigRow> findAll() {

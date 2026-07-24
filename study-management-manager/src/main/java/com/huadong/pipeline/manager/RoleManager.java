@@ -1,5 +1,6 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.role.Permission;
 import com.huadong.pipeline.domain.role.Role;
@@ -13,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,11 +23,8 @@ public class RoleManager {
   private static final Set<String> ROLE_ADMIN_PERMISSIONS = Set.of(
       "role.page.view", "role.create", "role.update", "role.delete");
 
-  private final RoleRepository roles;
-
-  public RoleManager(RoleRepository roles) {
-    this.roles = roles;
-  }
+  @Autowired
+  private RoleRepository roles;
 
   public RolePage list(int page, int pageSize, String keyword, RoleStatus status) {
     return roles.findPage(page, pageSize, keyword, status);

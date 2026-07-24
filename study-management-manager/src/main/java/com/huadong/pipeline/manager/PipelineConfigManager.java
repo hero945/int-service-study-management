@@ -1,5 +1,7 @@
 package com.huadong.pipeline.manager;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.config.PipelineConfigRepository;
 import com.huadong.pipeline.domain.config.PipelineConfigRow;
@@ -11,10 +13,12 @@ import com.huadong.pipeline.domain.config.TherapeuticArea;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 public class PipelineConfigManager {
   private static final Set<String> SOURCES =
       Set.of("SELF_DEVELOPED", "IN_LICENSE", "COOPERATION");
@@ -22,18 +26,12 @@ public class PipelineConfigManager {
   private static final Set<String> PHASES = Set.of(
       "PRE_IND", "IND", "PHASE_1", "PHASE_2", "PRE_3", "PHASE_3_1", "PHASE_3_2");
 
-  private final ProgramRepository programs;
-  private final ProjectRepository projects;
-  private final PipelineConfigRepository configuration;
-
-  public PipelineConfigManager(
-      ProgramRepository programs,
-      ProjectRepository projects,
-      PipelineConfigRepository configuration) {
-    this.programs = programs;
-    this.projects = projects;
-    this.configuration = configuration;
-  }
+  @Autowired
+  private ProgramRepository programs;
+  @Autowired
+  private ProjectRepository projects;
+  @Autowired
+  private PipelineConfigRepository configuration;
 
   public List<PipelineConfigRow> listRows() {
     return configuration.findAll();
@@ -61,8 +59,11 @@ public class PipelineConfigManager {
       throw new BusinessException("PRODUCT_NAME_EXISTS", "Product 已关联其他 Program");
     }
     validateProgramEnums(command.sourceCode(), command.originCode());
-    return programs.create(code, command.productName().trim(),
+    Program created = programs.create(code, command.productName().trim(),
         trimToNull(command.moa()), command.sourceCode(), command.originCode(), username);
+    log.info("配置写入 operator={} entity=Program action=create id={} code={}",
+        username, created.id(), created.code());
+    return created;
   }
 
   @Transactional
@@ -78,6 +79,7 @@ public class PipelineConfigManager {
       throw new BusinessException("PRODUCT_NAME_EXISTS", "Product 已关联其他 Program");
     }
     programs.update(id, productName, moa, source, origin, username);
+    log.info("配置写入 operator={} entity=Program action=update id={}", username, id);
     return requireProgram(id);
   }
 
@@ -90,6 +92,7 @@ public class PipelineConfigManager {
           "studyCount", String.valueOf(program.studyCount())));
     }
     programs.softDelete(id, username);
+    log.info("配置删除 operator={} entity=Program id={} code={}", username, id, program.code());
   }
 
   @Transactional
@@ -100,8 +103,11 @@ public class PipelineConfigManager {
       throw new BusinessException("PROJECT_CODE_EXISTS", "Project 编码已存在");
     }
     try {
-      return projects.create(code, command.programId(),
+      Project created = projects.create(code, command.programId(),
           command.indication().trim(), command.therapeuticAreaCode().trim().toUpperCase(), username);
+      log.info("配置写入 operator={} entity=Project action=create id={} code={}",
+          username, created.id(), created.code());
+      return created;
     } catch (IllegalArgumentException ex) {
       throw new BusinessException("INVALID_THERAPEUTIC_AREA", "治疗领域不存在或已停用");
     }
@@ -118,6 +124,7 @@ public class PipelineConfigManager {
     } catch (IllegalArgumentException ex) {
       throw new BusinessException("INVALID_THERAPEUTIC_AREA", "治疗领域不存在或已停用");
     }
+    log.info("配置写入 operator={} entity=Project action=update id={}", username, id);
     return requireProject(id);
   }
 
@@ -129,6 +136,7 @@ public class PipelineConfigManager {
           Map.of("studyCount", String.valueOf(project.studyCount())));
     }
     projects.softDelete(id, username);
+    log.info("配置删除 operator={} entity=Project id={} code={}", username, id, project.code());
   }
 
   @Transactional
@@ -138,6 +146,9 @@ public class PipelineConfigManager {
     requireProject(projectId);
     String phase = normalizePhase(phaseStatusCode);
     configuration.updateStudy(id, projectId, phase, username);
+    log.info(
+        "配置写入 operator={} entity=Study action=update id={} projectId={} phase={}",
+        username, id, projectId, phase);
     return requireStudy(id);
   }
 
@@ -153,6 +164,7 @@ public class PipelineConfigManager {
           "riskCount", String.valueOf(references.risk())));
     }
     configuration.softDeleteStudy(id, username);
+    log.info("配置删除 operator={} entity=Study id={}", username, id);
   }
 
   private Program requireProgram(long id) {

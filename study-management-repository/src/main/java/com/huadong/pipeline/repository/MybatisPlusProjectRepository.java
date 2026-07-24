@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.huadong.pipeline.domain.config.Project;
 import com.huadong.pipeline.domain.config.ProjectRepository;
@@ -9,17 +10,15 @@ import com.huadong.pipeline.repository.mapper.ProjectMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MybatisPlusProjectRepository implements ProjectRepository {
-  private final ProjectMapper mapper;
-  private final PipelineConfigMapper configMapper;
-
-  public MybatisPlusProjectRepository(ProjectMapper mapper, PipelineConfigMapper configMapper) {
-    this.mapper = mapper;
-    this.configMapper = configMapper;
-  }
+  @Autowired
+  private ProjectMapper mapper;
+  @Autowired
+  private PipelineConfigMapper configMapper;
 
   @Override
   public List<Project> findAll(Long programId, String keyword) {

@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huadong.pipeline.domain.user.UserAccount;
@@ -17,17 +18,15 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class MybatisPlusUserAccountRepository implements UserAccountRepository {
   private static final long LIST_LIMIT = 500;
 
-  private final UserAccountMapper mapper;
-
-  public MybatisPlusUserAccountRepository(UserAccountMapper mapper) {
-    this.mapper = mapper;
-  }
+  @Autowired
+  private UserAccountMapper mapper;
 
   @Override
   public Optional<UserAccount> findByUsername(String username) {

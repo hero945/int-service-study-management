@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.huadong.pipeline.domain.monthly.MonthlyReportPort;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.sql.Date;
@@ -10,17 +11,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.StringJoiner;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcMonthlyReportRepository implements MonthlyReportPort {
 
-  private final JdbcTemplate jdbc;
-
-  public JdbcMonthlyReportRepository(JdbcTemplate jdbc) {
-    this.jdbc = jdbc;
-  }
+  @Autowired
+  private JdbcTemplate jdbc;
 
   // ──────────── query ────────────
 

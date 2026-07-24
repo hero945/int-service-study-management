@@ -1,8 +1,9 @@
 package com.huadong.pipeline.security;
 
+import lombok.extern.slf4j.Slf4j;
+
 import com.huadong.pipeline.manager.UserManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -11,21 +12,15 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 
 @Component
+@Slf4j
 public class AdminBootstrap implements ApplicationRunner {
-  private static final Logger log = LoggerFactory.getLogger(AdminBootstrap.class);
 
-  private final BootstrapProperties properties;
-  private final UserManager users;
-  private final PasswordEncoder encoder;
-
-  public AdminBootstrap(
-      BootstrapProperties properties,
-      UserManager users,
-      PasswordEncoder encoder) {
-    this.properties = properties;
-    this.users = users;
-    this.encoder = encoder;
-  }
+  @Autowired
+  private BootstrapProperties properties;
+  @Autowired
+  private UserManager users;
+  @Autowired
+  private PasswordEncoder encoder;
 
   @Override
   public void run(ApplicationArguments args) {

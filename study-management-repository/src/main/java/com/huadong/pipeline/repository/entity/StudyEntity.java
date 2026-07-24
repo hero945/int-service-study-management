@@ -1,5 +1,8 @@
 package com.huadong.pipeline.repository.entity;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -7,6 +10,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @TableName("hd_plt_study")
+@Getter
+@Setter
 public class StudyEntity {
   @TableId(type = IdType.AUTO)
   private Long id;
@@ -33,53 +38,4 @@ public class StudyEntity {
   private String sysUpdateBy;
   private LocalDateTime sysUpdateTime;
   private short sysDeleted;
-
-  public Long getId() { return id; }
-  public void setId(Long value) { id = value; }
-  public String getStudyCode() { return studyCode; }
-  public void setStudyCode(String value) { studyCode = value; }
-  public String getPhaseStatusCode() { return phaseStatusCode; }
-  public void setPhaseStatusCode(String value) { phaseStatusCode = value; }
-  public LocalDate getPlannedStartDate() { return plannedStartDate; }
-  public void setPlannedStartDate(LocalDate value) { plannedStartDate = value; }
-  public LocalDate getPlannedEndDate() { return plannedEndDate; }
-  public void setPlannedEndDate(LocalDate value) { plannedEndDate = value; }
-  public LocalDate getActualStartDate() { return actualStartDate; }
-  public void setActualStartDate(LocalDate value) { actualStartDate = value; }
-  public LocalDate getActualEndDate() { return actualEndDate; }
-  public void setActualEndDate(LocalDate value) { actualEndDate = value; }
-  public String getStudyDescription() { return studyDescription; }
-  public void setStudyDescription(String value) { studyDescription = value; }
-  public Long getProgramId() { return programId; }
-  public void setProgramId(Long value) { programId = value; }
-  public String getProgramCodeSnapshot() { return programCodeSnapshot; }
-  public void setProgramCodeSnapshot(String value) { programCodeSnapshot = value; }
-  public String getProductNameSnapshot() { return productNameSnapshot; }
-  public void setProductNameSnapshot(String value) { productNameSnapshot = value; }
-  public String getMoaSnapshot() { return moaSnapshot; }
-  public void setMoaSnapshot(String value) { moaSnapshot = value; }
-  public String getSourceCodeSnapshot() { return sourceCodeSnapshot; }
-  public void setSourceCodeSnapshot(String value) { sourceCodeSnapshot = value; }
-  public String getOriginCodeSnapshot() { return originCodeSnapshot; }
-  public void setOriginCodeSnapshot(String value) { originCodeSnapshot = value; }
-  public Long getProjectId() { return projectId; }
-  public void setProjectId(Long value) { projectId = value; }
-  public String getProjectCodeSnapshot() { return projectCodeSnapshot; }
-  public void setProjectCodeSnapshot(String value) { projectCodeSnapshot = value; }
-  public Long getTherapeuticAreaId() { return therapeuticAreaId; }
-  public void setTherapeuticAreaId(Long value) { therapeuticAreaId = value; }
-  public String getTherapeuticAreaCodeSnapshot() { return therapeuticAreaCodeSnapshot; }
-  public void setTherapeuticAreaCodeSnapshot(String value) { therapeuticAreaCodeSnapshot = value; }
-  public String getTherapeuticAreaNameSnapshot() { return therapeuticAreaNameSnapshot; }
-  public void setTherapeuticAreaNameSnapshot(String value) { therapeuticAreaNameSnapshot = value; }
-  public String getIndicationDescriptionSnapshot() { return indicationDescriptionSnapshot; }
-  public void setIndicationDescriptionSnapshot(String value) { indicationDescriptionSnapshot = value; }
-  public String getSysCreateBy() { return sysCreateBy; }
-  public void setSysCreateBy(String value) { sysCreateBy = value; }
-  public String getSysUpdateBy() { return sysUpdateBy; }
-  public void setSysUpdateBy(String value) { sysUpdateBy = value; }
-  public LocalDateTime getSysUpdateTime() { return sysUpdateTime; }
-  public void setSysUpdateTime(LocalDateTime value) { sysUpdateTime = value; }
-  public short getSysDeleted() { return sysDeleted; }
-  public void setSysDeleted(short value) { sysDeleted = value; }
 }

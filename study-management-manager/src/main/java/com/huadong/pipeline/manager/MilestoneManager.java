@@ -1,5 +1,6 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition;
@@ -20,19 +21,17 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MilestoneManager {
 
-  private final StudyMilestonePort milestones;
-  private final UserAccountRepository users;
-
-  public MilestoneManager(StudyMilestonePort milestones, UserAccountRepository users) {
-    this.milestones = milestones;
-    this.users = users;
-  }
+  @Autowired
+  private StudyMilestonePort milestones;
+  @Autowired
+  private UserAccountRepository users;
 
   // ──────────── query ────────────
 

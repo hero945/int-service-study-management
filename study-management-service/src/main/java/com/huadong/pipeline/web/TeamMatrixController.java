@@ -1,10 +1,12 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.TeamMatrixApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.security.Principal;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,11 +21,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1")
 public class TeamMatrixController {
-  private final TeamMatrixApi teamMatrixApi;
-
-  public TeamMatrixController(TeamMatrixApi teamMatrixApi) {
-    this.teamMatrixApi = teamMatrixApi;
-  }
+  @Autowired
+  private TeamMatrixApi teamMatrixApi;
 
   @GetMapping("/team-matrix")
   @PreAuthorize("hasAuthority('team.page.view')")

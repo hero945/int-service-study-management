@@ -61,23 +61,23 @@ describe('getProjectCell', () => {
       updatedAt: '2026-06-15T00:00:00',
     })]
     // 无 Phase 1 → 监管列空；无本列 Study → 普通列也空
-    expect(getProjectCell(studies, 'PreIND')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, 'Phase 2')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PRE_IND')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PHASE_1')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PHASE_2')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
   it('ordinary columns without an own-phase study stay empty even if a later phase exists', () => {
     const studies = [ms({ phase: 'PHASE_2', statusLabel: '进行中', statusTone: 'positive' })]
-    expect(getProjectCell(studies, 'PreIND')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PRE_IND')).toMatchObject({ label: '—', tone: 'empty' })
     expect(getProjectCell(studies, 'IND')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PHASE_1')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
   it('marks phases without a matching study as — (empty/gray)', () => {
     const studies = [ms({ phase: 'PHASE_2', statusLabel: '进行中' })]
-    expect(getProjectCell(studies, 'PRE-3')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, 'Phase 3-1')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, 'Phase 3-2')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PRE_3')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PHASE_3_1')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PHASE_3_2')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
   it('own-phase column shows full sub-status matching filter options', () => {
@@ -86,7 +86,7 @@ describe('getProjectCell', () => {
       mainStageLabel: 'Protocol',
       subStatusLabel: '方案摘要定稿',
     })]
-    const cell = getProjectCell(studies, 'Phase 2')
+    const cell = getProjectCell(studies, 'PHASE_2')
     expect(cell).toMatchObject({ label: '方案摘要定稿', tone: 'blue', subText: 'Protocol' })
   })
 
@@ -96,7 +96,7 @@ describe('getProjectCell', () => {
       mainStageLabel: 'Pre3',
       subStatusLabel: 'Pre3 反馈-数统',
     })]
-    expect(getProjectCell(studies, 'Phase 2')).toMatchObject({
+    expect(getProjectCell(studies, 'PHASE_2')).toMatchObject({
       label: 'Pre3 反馈-数统',
       subText: 'Pre3',
       tone: 'blue',
@@ -117,8 +117,8 @@ describe('getProjectCell', () => {
       subStatusLabel: 'LPO',
       currentPhaseCompleted: true,
     })]
-    expect(getProjectCell(studies, 'Phase 2')).toMatchObject({
-      label: '已完成', tone: 'green', subText: 'Phase 2',
+    expect(getProjectCell(studies, 'PHASE_2')).toMatchObject({
+      label: '已完成', tone: 'green', subText: 'PHASE_2',
     })
   })
 
@@ -128,11 +128,11 @@ describe('getProjectCell', () => {
       mainStageLabel: 'PreIND',
       subStatusLabel: 'PreIND 反馈-药学',
     })]
-    expect(getProjectCell(studies, 'PreIND')).toMatchObject({
+    expect(getProjectCell(studies, 'PRE_IND')).toMatchObject({
       label: 'PreIND 反馈-药学', subText: 'PreIND', tone: 'blue',
     })
     expect(getProjectCell(studies, 'IND')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PHASE_1')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
   it('each ordinary column follows its own study milestone; later phases do not force earlier 已完成', () => {
@@ -156,24 +156,24 @@ describe('getProjectCell', () => {
       ms({ phase: 'PHASE_3_2', mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交' }),
     ]
     // 监管列不变：PreIND/IND ← Phase 1；PRE-3 ← Phase 3-1（已过 Pre3）
-    expect(getProjectCell(studies, 'PreIND')).toMatchObject({
-      label: '已完成', tone: 'green', subText: 'PreIND', studyId: 11,
+    expect(getProjectCell(studies, 'PRE_IND')).toMatchObject({
+      label: '已完成', tone: 'green', subText: 'PRE_IND', studyId: 11,
     })
     expect(getProjectCell(studies, 'IND')).toMatchObject({
       label: '已完成', tone: 'green', studyId: 11,
     })
-    expect(getProjectCell(studies, 'PRE-3')).toMatchObject({
+    expect(getProjectCell(studies, 'PRE_3')).toMatchObject({
       label: '已完成', tone: 'green', studyId: 31,
     })
     // 普通列：Phase 3-1 仍进行中（DBL），不因存在 Phase 3-2 而变「已完成」
-    expect(getProjectCell(studies, 'Phase 3-1')).toMatchObject({
+    expect(getProjectCell(studies, 'PHASE_3_1')).toMatchObject({
       label: 'DBL', tone: 'blue', subText: 'Data & Report', studyId: 31,
     })
-    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({
+    expect(getProjectCell(studies, 'PHASE_1')).toMatchObject({
       label: 'LPI', tone: 'blue', subText: 'Enrollment', studyId: 11,
     })
-    expect(getProjectCell(studies, 'Phase 2')).toMatchObject({ label: '—', tone: 'empty' })
-    const cell = getProjectCell(studies, 'Phase 3-2')
+    expect(getProjectCell(studies, 'PHASE_2')).toMatchObject({ label: '—', tone: 'empty' })
+    const cell = getProjectCell(studies, 'PHASE_3_2')
     expect(cell).toMatchObject({ label: 'NDA/BLA 递交', subText: 'NDA/BLA', tone: 'blue' })
   })
 
@@ -182,7 +182,7 @@ describe('getProjectCell', () => {
       ms({ phase: 'PHASE_1', statusLabel: '旧', updatedAt: '2026-01-01T00:00:00' }),
       ms({ phase: 'PHASE_1', statusLabel: '新', updatedAt: '2026-07-01T00:00:00' }),
     ]
-    expect(getProjectCell(studies, 'Phase 1').label).toBe('新')
+    expect(getProjectCell(studies, 'PHASE_1').label).toBe('新')
   })
 
   it('PreIND/IND follow Phase 1 milestones; PRE-3 does not use Phase 1', () => {
@@ -204,7 +204,7 @@ describe('getProjectCell', () => {
         subStatusLabel: 'FPI',
       }),
     ]
-    expect(getProjectCell(studies, 'PreIND')).toMatchObject({
+    expect(getProjectCell(studies, 'PRE_IND')).toMatchObject({
       label: 'PreIND 反馈-药学',
       subText: 'PreIND',
       tone: 'blue',
@@ -212,7 +212,7 @@ describe('getProjectCell', () => {
     })
     expect(getProjectCell(studies, 'IND')).toMatchObject({ label: '—', tone: 'empty' })
     // 无 Phase 3-1 / PRE_3 Study → PRE-3 为空
-    expect(getProjectCell(studies, 'PRE-3')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'PRE_3')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
   it('PRE-3 follows Phase 3-1 study Pre3 milestones and links that study', () => {
@@ -233,14 +233,14 @@ describe('getProjectCell', () => {
       }),
       phase31,
     ]
-    expect(getProjectCell(studies, 'PRE-3')).toMatchObject({
+    expect(getProjectCell(studies, 'PRE_3')).toMatchObject({
       label: 'Pre3 反馈-数统',
       subText: 'Pre3',
       tone: 'blue',
       studyId: 77,
     })
     // Phase 1 已过 Pre3 不应用来填 PRE-3
-    expect(getProjectCell(studies, 'PreIND').studyId).toBe(11)
+    expect(getProjectCell(studies, 'PRE_IND').studyId).toBe(11)
   })
 
   it('Phase 1 at Pre3 completes PreIND/IND but PRE-3 stays empty without Phase 3-1', () => {
@@ -253,14 +253,14 @@ describe('getProjectCell', () => {
       preindCompleted: true,
       indCompleted: true,
     })
-    expect(getProjectCell([phase1], 'PreIND')).toMatchObject({
+    expect(getProjectCell([phase1], 'PRE_IND')).toMatchObject({
       label: '已完成', tone: 'green', studyId: 7,
     })
     expect(getProjectCell([phase1], 'IND')).toMatchObject({
       label: '已完成', tone: 'green', studyId: 7,
     })
     // 无 Phase 3-1 / PRE_3 Study → PRE-3 为空
-    expect(getProjectCell([phase1], 'PRE-3')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell([phase1], 'PRE_3')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
   it('Phase 3-1 past Pre3 marks PRE-3 completed and linked to Phase 3-1', () => {
@@ -271,7 +271,7 @@ describe('getProjectCell', () => {
       mainStageLabel: 'Protocol',
       subStatusLabel: '方案定稿',
     })
-    expect(getProjectCell([phase31], 'PRE-3')).toMatchObject({
+    expect(getProjectCell([phase31], 'PRE_3')).toMatchObject({
       label: '已完成', tone: 'green', studyId: 9,
     })
   })
@@ -283,6 +283,6 @@ describe('furthestPhaseOf', () => {
       ms({ phase: 'PHASE_1' }),
       ms({ phase: 'PHASE_3_1' }),
     ]
-    expect(furthestPhaseOf(studies)).toBe('Phase 3-1')
+    expect(furthestPhaseOf(studies)).toBe('PHASE_3_1')
   })
 })

@@ -1,5 +1,6 @@
 package com.huadong.pipeline.repository;
 
+
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.sql.Date;
@@ -7,17 +8,15 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcMilestoneRepository implements StudyMilestonePort {
 
-  private final JdbcTemplate jdbc;
-
-  public JdbcMilestoneRepository(JdbcTemplate jdbc) {
-    this.jdbc = jdbc;
-  }
+  @Autowired
+  private JdbcTemplate jdbc;
 
   @Override
   public Optional<StudyRef> findStudy(StudyAccessScope scope, long studyId) {

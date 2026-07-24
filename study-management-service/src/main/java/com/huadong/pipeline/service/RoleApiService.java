@@ -1,5 +1,6 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.RoleApi;
 import com.huadong.pipeline.domain.role.Permission;
 import com.huadong.pipeline.domain.role.Role;
@@ -7,17 +8,15 @@ import com.huadong.pipeline.domain.role.RoleStatus;
 import com.huadong.pipeline.domain.user.DataScope;
 import com.huadong.pipeline.manager.RoleManager;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RoleApiService implements RoleApi {
-  private final RoleManager manager;
-  private final RoleSessionInvalidator sessions;
-
-  public RoleApiService(RoleManager manager, RoleSessionInvalidator sessions) {
-    this.manager = manager;
-    this.sessions = sessions;
-  }
+  @Autowired
+  private RoleManager manager;
+  @Autowired
+  private RoleSessionInvalidator sessions;
 
   @Override
   public RolePageResponse list(int page, int pageSize, String keyword, String status) {

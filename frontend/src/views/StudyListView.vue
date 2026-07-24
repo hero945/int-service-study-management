@@ -87,7 +87,7 @@ onMounted(async () => {
           <input v-model.trim="filters.program" type="text" class="filter-input" placeholder="输入编号搜索">
         </label>
         <label class="filter-field">
-          <span class="filter-field__label">状态</span>
+          <span class="filter-field__label">里程碑节点</span>
           <select v-model="filters.status" class="filter-select filter-select--status">
             <option value="">全部</option>
             <option v-for="o in statusOptions" :key="o" :value="o">{{ o }}</option>
@@ -105,8 +105,8 @@ onMounted(async () => {
             <th>Product</th>
             <th>Study No.</th>
             <th>适应症</th>
-            <th>当前阶段</th>
-            <th>状态</th>
+            <th>里程碑阶段</th>
+            <th>里程碑节点</th>
             <th>PL/PM</th>
             <th>更新时间</th>
             <th>操作</th>

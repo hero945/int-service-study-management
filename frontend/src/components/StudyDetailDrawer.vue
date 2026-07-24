@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { apiClient } from '../api/client'
 import type { Study, MilestonePage, RiskPage, TeamMatrixPage } from '../api/types'
 import PageState from '../components/PageState.vue'
+import { riskLevelLabel, riskLevelTone, riskStatusLabel } from '../domain/risk-labels'
 import { session } from '../session'
 
 const props = defineProps<{
@@ -86,8 +87,6 @@ function msStatus(s: string) {
 function msStatusClass(s: string) {
   return s === 'COMPLETED' ? 'green' : s === 'IN_PROGRESS' ? 'blue' : ''
 }
-function riskLevelLabel(l: string) { return { LOW: '低风险', MEDIUM: '中风险', HIGH: '高危' }[l as keyof object] ?? l }
-function riskLevelTone(l: string) { return l === 'HIGH' ? 'red' : l === 'MEDIUM' ? 'orange' : 'green' }
 
 // 团队角色模板：先渲染所有角色，再用当前 study 的后端数据填充（空角色显示「暂无成员」）
 const teamRoles = computed(() => {
@@ -206,7 +205,7 @@ const tabs = computed(() => {
                 <div v-for="r in riskData.data" :key="r.riskCode" class="risk-card">
                   <div class="risk-card-top">
                     <span class="risk-card-code mono">{{ r.riskCode }}</span>
-                    <span class="status-chip" :class="r.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">{{ r.status === 'OPEN' ? 'Open' : 'Closed' }}</span>
+                    <span class="status-chip" :class="r.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">{{ riskStatusLabel(r.status) }}</span>
                   </div>
                   <p class="risk-card-desc">{{ r.description }}</p>
                   <div class="risk-card-tags">

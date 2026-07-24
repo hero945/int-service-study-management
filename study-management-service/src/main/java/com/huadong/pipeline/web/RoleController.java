@@ -1,5 +1,6 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.RoleApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -7,6 +8,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import java.security.Principal;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -25,11 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/platform")
 public class RoleController {
-  private final RoleApi roleApi;
-
-  public RoleController(RoleApi roleApi) {
-    this.roleApi = roleApi;
-  }
+  @Autowired
+  private RoleApi roleApi;
 
   @GetMapping("/roles")
   @PreAuthorize("hasAuthority('role.page.view')")

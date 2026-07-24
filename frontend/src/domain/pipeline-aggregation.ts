@@ -1,5 +1,5 @@
 import {
-  PHASE_TAGS,
+  CLINICAL_PHASE_CODES,
   normalizePhase,
   type PipelinePhase,
   type PipelineTone,
@@ -111,7 +111,7 @@ function furthestStudy(studies: CellStudy[]): CellStudy | undefined {
   for (const s of studies) {
     const phase = normalizePhase(s.phase)
     if (!phase) continue
-    const index = PHASE_TAGS.indexOf(phase)
+    const index = CLINICAL_PHASE_CODES.indexOf(phase)
     const updated = s.updatedAt ?? ''
     if (index > bestIndex || (index === bestIndex && updated > bestUpdated)) {
       bestIndex = index
@@ -184,16 +184,16 @@ function withTip(
 }
 
 /**
- * 监管列 → 里程碑主阶段 + 取数 Study 的 Phase。
- * PreIND / IND ← Phase 1 study 的 PreIND / IND 里程碑；
- * PRE-3 ← Phase 3-1 study 的 Pre3 里程碑。
+ * 监管列 → 里程碑主阶段 + 取数 Study 的临床 phase code。
+ * PRE_IND / IND ← PHASE_1 study 的 PreIND / IND 里程碑；
+ * PRE_3 ← PHASE_3_1 study 的 Pre3 里程碑。
  */
 const REGULATORY_COLUMN_SOURCE: Partial<
   Record<PipelinePhase, { stageCode: string; sourcePhase: PipelinePhase }>
 > = {
-  PreIND: { stageCode: 'PreIND', sourcePhase: 'Phase 1' },
-  IND: { stageCode: 'IND', sourcePhase: 'Phase 1' },
-  'PRE-3': { stageCode: 'Pre3', sourcePhase: 'Phase 3-1' },
+  PRE_IND: { stageCode: 'PreIND', sourcePhase: 'PHASE_1' },
+  IND: { stageCode: 'IND', sourcePhase: 'PHASE_1' },
+  PRE_3: { stageCode: 'Pre3', sourcePhase: 'PHASE_3_1' },
 }
 
 /** 将 mainStage code/label 归一到可比较的排序索引（与 MilestoneDefinition 一致） */
@@ -333,8 +333,8 @@ function getRegulatoryMilestoneCell(
 /**
  * 单元格取数与状态。
  *
- * PreIND / IND / PRE-3（监管列）：逻辑不变，见 getRegulatoryMilestoneCell。
- * 普通列（Phase 1 / 2 / 3-1 / 3-2，以及监管列无约定 Study 时的回退）：
+ * PRE_IND / IND / PRE_3（监管列）：逻辑不变，见 getRegulatoryMilestoneCell。
+ * 普通列（PHASE_1 / 2 / 3_1 / 3_2，以及监管列无约定 Study 时的回退）：
  *   只认本列对应 Phase 的 Study + 真实里程碑；
  *   不因「后面还有更大阶段」而把本列回填成「已完成」。
  *   - 无该 Phase 的 Study → "—"（灰）

@@ -1,8 +1,10 @@
 package com.huadong.pipeline.web;
 
+
 import com.huadong.pipeline.api.MonthlyReportApi;
 import jakarta.validation.Valid;
 import java.security.Principal;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,11 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1")
 public class MonthlyReportController {
 
-  private final MonthlyReportApi api;
-
-  public MonthlyReportController(MonthlyReportApi api) {
-    this.api = api;
-  }
+  @Autowired
+  private MonthlyReportApi api;
 
   @GetMapping("/studies/{studyId}/monthly-reports")
   @PreAuthorize("hasAuthority('monthly.read')")

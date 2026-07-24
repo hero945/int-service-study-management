@@ -1,17 +1,16 @@
 package com.huadong.pipeline.service;
 
+
 import com.huadong.pipeline.api.SettingApi;
 import com.huadong.pipeline.manager.SettingManager;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SettingApiService implements SettingApi {
-  private final SettingManager manager;
-
-  public SettingApiService(SettingManager manager) {
-    this.manager = manager;
-  }
+  @Autowired
+  private SettingManager manager;
 
   @Override
   public List<SettingResponse> listPublic() {

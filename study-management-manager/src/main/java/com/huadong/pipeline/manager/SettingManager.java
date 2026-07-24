@@ -1,19 +1,18 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.setting.SettingRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SettingManager {
-  private final SettingRepository settings;
-
-  public SettingManager(SettingRepository settings) {
-    this.settings = settings;
-  }
+  @Autowired
+  private SettingRepository settings;
 
   public List<SettingView> listPublic() {
     return settings.findPublic().stream().map(SettingView::from).toList();

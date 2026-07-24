@@ -1,5 +1,6 @@
 package com.huadong.pipeline.manager;
 
+
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.risk.RiskLevel;
 import com.huadong.pipeline.domain.risk.RiskRepository;
@@ -17,6 +18,7 @@ import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,13 +27,10 @@ public class RiskManager {
   private static final Set<String> RISK_STATUSES = Set.of("OPEN", "CLOSED");
   private static final Set<String> ACTION_STATUSES =
       Set.of("OPEN", "IN_PROGRESS", "COMPLETED", "CANCELLED");
-  private final RiskRepository risks;
-  private final UserAccountRepository users;
-
-  public RiskManager(RiskRepository risks, UserAccountRepository users) {
-    this.risks = risks;
-    this.users = users;
-  }
+  @Autowired
+  private RiskRepository risks;
+  @Autowired
+  private UserAccountRepository users;
 
   public RiskPage list(String username, RiskQuery query) {
     return risks.findPage(scope(currentUser(username)), normalized(query));
