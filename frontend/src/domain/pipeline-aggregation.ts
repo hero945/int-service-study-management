@@ -331,58 +331,24 @@ function getRegulatoryMilestoneCell(
 }
 
 /**
- * 单元格取数与状态（对齐参考样式：早于当前阶段=已完成 / 等于=当前进度 / 晚于=—）。
+ * 单元格取数与状态。
  *
- * PreIND / IND：优先按 Phase 1 study 的 PreIND / IND 里程碑展示并链接该 study。
- * PRE-3：优先按 Phase 3-1 study 的 Pre3 里程碑展示并链接该 study。
- * 其余列以 project 最靠后阶段（furthestPhaseOf）为基准：
- *   - 目标列 < 当前阶段 → "已完成"（绿），上方灰色 caption = 列阶段名 targetPhase
- *   - 目标列 = 当前阶段 → pill = 里程碑子状态全文；上方灰色 = 主节点名
- *   - 目标列 > 当前阶段 → "—"（灰）
+ * PreIND / IND / PRE-3（监管列）：逻辑不变，见 getRegulatoryMilestoneCell。
+ * 普通列（Phase 1 / 2 / 3-1 / 3-2，以及监管列无约定 Study 时的回退）：
+ *   只认本列对应 Phase 的 Study + 真实里程碑；
+ *   不因「后面还有更大阶段」而把本列回填成「已完成」。
+ *   - 无该 Phase 的 Study → "—"（灰）
+ *   - 有 Study 且阶段/全局已完成 → "已完成"（绿）
+ *   - 有 Study 进行中 → pill = 里程碑子状态全文（蓝）；上方灰色 = 主节点名
  */
 export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase): ProjectCell {
   const regulatory = getRegulatoryMilestoneCell(studies, targetPhase)
   if (regulatory) return regulatory
 
-  const currentPhase = furthestPhaseOf(studies)
-  if (!currentPhase) {
-    return { label: '—', tone: 'empty', clickable: false }
-  }
-  const targetIndex = PHASE_TAGS.indexOf(targetPhase)
-  const currentIndex = PHASE_TAGS.indexOf(currentPhase)
-  const fillSource = furthestStudy(studies)
-
-  // 早于当前阶段 → 已完成，上方显示列阶段名
-  if (targetIndex < currentIndex) {
-    const own = studies.find((s) => normalizePhase(s.phase) === targetPhase)
-    const tipStudy = own ?? fillSource
-    const backfill = !own && fillSource
-      ? `${targetPhase} 实际无项目，由 ${currentPhase} 回填`
-      : undefined
-    return withTip(
-      {
-        label: '已完成',
-        tone: 'green',
-        clickable: true,
-        studyId: tipStudy?.id,
-        subText: targetPhase,
-      },
-      targetPhase,
-      '已完成',
-      tipStudy,
-      backfill,
-    )
-  }
-  // 晚于当前阶段 → 尚未到达
-  if (targetIndex > currentIndex) {
-    return { label: '—', tone: 'empty', clickable: false }
-  }
-  // 等于当前阶段 → 当前研究的里程碑进度
-  const study = furthestStudy(studies)
+  const study = findStudyByPhase(studies, targetPhase)
   if (!study) {
     return { label: '—', tone: 'empty', clickable: false }
   }
-  // 当前阶段已完成 → 绿底「已完成」，上方显示列阶段名
   if (study.currentPhaseCompleted || study.globallyCompleted) {
     return withTip(
       {
@@ -397,7 +363,6 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
       study,
     )
   }
-  // 进行中：pill = 完整子状态（与筛选框一致）；上方灰色 = 主节点名
   const subStatus = study.subStatusLabel?.trim()
   if (subStatus) {
     const stage = study.mainStageLabel ?? targetPhase
@@ -414,7 +379,6 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
       study,
     )
   }
-  // 无子节点时回退主节点/statusLabel，且不重复设 caption
   const fallback = study.mainStageLabel ?? study.statusLabel
   return withTip(
     {

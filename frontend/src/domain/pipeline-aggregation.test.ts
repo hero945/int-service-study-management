@@ -51,7 +51,7 @@ describe('groupByProject', () => {
 })
 
 describe('getProjectCell', () => {
-  it('marks earlier phases as backfilled with tip explanation when no own study exists', () => {
+  it('does not backfill earlier columns from a later phase study', () => {
     const studies = [ms({
       phase: 'PHASE_3_1',
       code: 'HDM2001-301',
@@ -60,40 +60,27 @@ describe('getProjectCell', () => {
       productName: 'HDM2001',
       updatedAt: '2026-06-15T00:00:00',
     })]
-    const cell = getProjectCell(studies, 'PreIND')
-    expect(cell).toMatchObject({
-      label: '已完成',
-      tone: 'green',
-      tipStage: 'PreIND',
-      tipStatus: '已完成',
-      tipUpdated: '2026-06',
-      tipOwner: '张伟 / 李静',
-      explanation: 'PreIND 实际无项目，由 Phase 3-1 回填',
-    })
+    // 无 Phase 1 → 监管列空；无本列 Study → 普通列也空
+    expect(getProjectCell(studies, 'PreIND')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'Phase 2')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
-  it('marks all phases earlier than current as 已完成 (green) with column caption', () => {
+  it('ordinary columns without an own-phase study stay empty even if a later phase exists', () => {
     const studies = [ms({ phase: 'PHASE_2', statusLabel: '进行中', statusTone: 'positive' })]
-    // current = Phase 2 → PreIND / IND / Phase 1 are earlier
-    expect(getProjectCell(studies, 'PreIND')).toMatchObject({
-      label: '已完成', tone: 'green', subText: 'PreIND',
-    })
-    expect(getProjectCell(studies, 'IND')).toMatchObject({
-      label: '已完成', tone: 'green', subText: 'IND',
-    })
-    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({
-      label: '已完成', tone: 'green', subText: 'Phase 1',
-    })
+    expect(getProjectCell(studies, 'PreIND')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'IND')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
-  it('marks all phases later than current as — (empty/gray)', () => {
+  it('marks phases without a matching study as — (empty/gray)', () => {
     const studies = [ms({ phase: 'PHASE_2', statusLabel: '进行中' })]
     expect(getProjectCell(studies, 'PRE-3')).toMatchObject({ label: '—', tone: 'empty' })
     expect(getProjectCell(studies, 'Phase 3-1')).toMatchObject({ label: '—', tone: 'empty' })
     expect(getProjectCell(studies, 'Phase 3-2')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
-  it('current column shows full sub-status matching filter options', () => {
+  it('own-phase column shows full sub-status matching filter options', () => {
     const studies = [ms({
       phase: 'PHASE_2',
       mainStageLabel: 'Protocol',
@@ -123,7 +110,7 @@ describe('getProjectCell', () => {
     expect(displaySubNodeLabel('方案摘要定稿', 'Protocol')).toBe('方案摘要定稿')
   })
 
-  it('shows 已完成 on the current column when current phase completed with column caption', () => {
+  it('shows 已完成 on own-phase column when that phase milestone is completed', () => {
     const studies = [ms({
       phase: 'PHASE_2',
       mainStageLabel: 'Enrollment',
@@ -148,7 +135,7 @@ describe('getProjectCell', () => {
     expect(getProjectCell(studies, 'Phase 1')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
-  it('deep program shows all earlier phases 已完成 and only the furthest as current sub-status', () => {
+  it('each ordinary column follows its own study milestone; later phases do not force earlier 已完成', () => {
     const phase1 = ms({
       id: 11,
       phase: 'PHASE_1',
@@ -168,7 +155,7 @@ describe('getProjectCell', () => {
       phase31,
       ms({ phase: 'PHASE_3_2', mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交' }),
     ]
-    // PreIND/IND ← Phase 1；PRE-3 ← Phase 3-1（已过 Pre3）
+    // 监管列不变：PreIND/IND ← Phase 1；PRE-3 ← Phase 3-1（已过 Pre3）
     expect(getProjectCell(studies, 'PreIND')).toMatchObject({
       label: '已完成', tone: 'green', subText: 'PreIND', studyId: 11,
     })
@@ -178,14 +165,19 @@ describe('getProjectCell', () => {
     expect(getProjectCell(studies, 'PRE-3')).toMatchObject({
       label: '已完成', tone: 'green', studyId: 31,
     })
+    // 普通列：Phase 3-1 仍进行中（DBL），不因存在 Phase 3-2 而变「已完成」
     expect(getProjectCell(studies, 'Phase 3-1')).toMatchObject({
-      label: '已完成', tone: 'green', subText: 'Phase 3-1',
+      label: 'DBL', tone: 'blue', subText: 'Data & Report', studyId: 31,
     })
+    expect(getProjectCell(studies, 'Phase 1')).toMatchObject({
+      label: 'LPI', tone: 'blue', subText: 'Enrollment', studyId: 11,
+    })
+    expect(getProjectCell(studies, 'Phase 2')).toMatchObject({ label: '—', tone: 'empty' })
     const cell = getProjectCell(studies, 'Phase 3-2')
     expect(cell).toMatchObject({ label: 'NDA/BLA 递交', subText: 'NDA/BLA', tone: 'blue' })
   })
 
-  it('takes the latest study at the current phase for the equal column', () => {
+  it('takes the latest study at the own phase for that column', () => {
     const studies = [
       ms({ phase: 'PHASE_1', statusLabel: '旧', updatedAt: '2026-01-01T00:00:00' }),
       ms({ phase: 'PHASE_1', statusLabel: '新', updatedAt: '2026-07-01T00:00:00' }),
@@ -219,7 +211,7 @@ describe('getProjectCell', () => {
       studyId: 42,
     })
     expect(getProjectCell(studies, 'IND')).toMatchObject({ label: '—', tone: 'empty' })
-    // 无 Phase 3-1 → PRE-3 回退阶段相对规则；当前最远 Phase 2，PRE-3 尚未到达
+    // 无 Phase 3-1 / PRE_3 Study → PRE-3 为空
     expect(getProjectCell(studies, 'PRE-3')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
@@ -267,7 +259,7 @@ describe('getProjectCell', () => {
     expect(getProjectCell([phase1], 'IND')).toMatchObject({
       label: '已完成', tone: 'green', studyId: 7,
     })
-    // 无 Phase 3-1：最远为 Phase 1，PRE-3 列晚于当前 → —
+    // 无 Phase 3-1 / PRE_3 Study → PRE-3 为空
     expect(getProjectCell([phase1], 'PRE-3')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
