@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  PIPELINE_PHASE_STATUS_OPTIONS,
   phaseCodeToColumn,
   pipelineStatusOptions,
 } from './milestone-filters'
@@ -11,6 +12,21 @@ describe('phaseCodeToColumn', () => {
     expect(phaseCodeToColumn('PHASE_1')).toBe('Phase 1')
     expect(phaseCodeToColumn('PRE_3')).toBe('PRE-3')
     expect(phaseCodeToColumn('')).toBeUndefined()
+  })
+})
+
+describe('PIPELINE_PHASE_STATUS_OPTIONS', () => {
+  it('uses the same Arabic Phase labels as overview PHASE_TAGS', () => {
+    expect(PIPELINE_PHASE_STATUS_OPTIONS.map((o) => o.label)).toEqual([
+      'PreIND',
+      'IND',
+      'Phase 1',
+      'Phase 2',
+      'PRE-3',
+      'Phase 3-1',
+      'Phase 3-2',
+    ])
+    expect(PIPELINE_PHASE_STATUS_OPTIONS.find((o) => o.code === 'PHASE_1')?.label).toBe('Phase 1')
   })
 })
 

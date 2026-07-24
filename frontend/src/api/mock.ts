@@ -28,6 +28,16 @@ import type {
   TherapeuticArea,
   UpdateUserInput,
 } from './types'
+import {
+  ORIGIN_LABELS,
+  SOURCE_LABELS,
+} from '../domain/pipeline-status'
+import {
+  EXPORT_STATUS,
+  deriveMilestoneExportStatus,
+  deriveOverviewCompletionFlags,
+  flattenMilestoneNodes,
+} from '../domain/milestone-status'
 
 const users: Array<CurrentUser & { password: string }> = [
   {
@@ -38,6 +48,8 @@ const users: Array<CurrentUser & { password: string }> = [
     permissions: [
       'pipeline.page.view',
       'study.read',
+      'milestone.read',
+      'milestone.update',
       'config.page.view',
       'config.create',
       'config.update',
@@ -72,7 +84,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '??',
     title: '????? ? PL',
     roles: ['USER'],
-    permissions: ['pipeline.page.view', 'study.read', 'milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'report.page.view', 'report.export', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
+    permissions: ['pipeline.page.view', 'study.read', 'milestone.read', 'milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'report.page.view', 'report.export', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -81,16 +93,16 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '??',
     title: '?????',
     roles: ['VIEWER'],
-    permissions: ['pipeline.page.view', 'study.read', 'monthly.read', 'report.page.view', 'risk.page.view', 'risk.read'],
+    permissions: ['pipeline.page.view', 'study.read', 'milestone.read', 'monthly.read', 'report.page.view', 'risk.page.view', 'risk.read'],
     dataScope: 'ALL',
     password: '1234',
   },
 ]
 
 const STUDY_STATUS_META = {
-  PLANNED: { label: '???', tone: 'neutral' },
-  ACTIVE: { label: '???', tone: 'positive' },
-  COMPLETED: { label: '???', tone: 'info' },
+  PLANNED: { label: '计划中', tone: 'neutral' },
+  ACTIVE: { label: '进行中', tone: 'positive' },
+  COMPLETED: { label: '已完成', tone: 'info' },
 } as const
 
 type StudySeed = Omit<Study, 'id' | 'status' | 'statusLabel' | 'statusTone'> & {
@@ -205,8 +217,35 @@ const mockOverviewMilestoneView: Record<string, {
   'HDM2066-301': { mainStageLabel: 'SSU', subStatusLabel: '??????', currentPhaseCompleted: false },
 }
 
-const SOURCE_LABEL: Record<string, string> = { SELF_DEVELOPED: '??', IN_LICENSE: '??', COOPERATION: '??' }
-const ORIGIN_LABEL: Record<string, string> = { DOMESTIC: '??', IMPORTED: '??' }
+const SOURCE_LABEL = SOURCE_LABELS
+const ORIGIN_LABEL = ORIGIN_LABELS
+
+/** Overview seed stage order (aligned with MilestoneDefinition / mockOverviewMilestoneView). */
+const OVERVIEW_STAGE_ORDER = [
+  'PreIND', 'IND', 'Pre3', 'Protocol', 'SSU', 'Enrollment', 'IA', 'Data & Report', 'PreNDA/BLA', 'NDA/BLA',
+] as const
+
+/**
+ * When no full milestone tree exists, approximate MilestoneManager completion flags
+ * from the overview frontier stage: stages already passed count as completed;
+ * current stage counts when currentPhaseCompleted.
+ */
+function deriveOverviewCompletionFromStage(
+  mainStageLabel: string | null | undefined,
+  currentPhaseCompleted: boolean,
+): { preindCompleted: boolean; indCompleted: boolean; globallyCompleted: boolean } {
+  const rank = mainStageLabel
+    ? (OVERVIEW_STAGE_ORDER as readonly string[]).indexOf(mainStageLabel)
+    : -1
+  if (rank < 0) {
+    return { preindCompleted: false, indCompleted: false, globallyCompleted: false }
+  }
+  return {
+    preindCompleted: rank > 0 || (rank === 0 && currentPhaseCompleted),
+    indCompleted: rank > 1 || (rank === 1 && currentPhaseCompleted),
+    globallyCompleted: rank === OVERVIEW_STAGE_ORDER.length - 1 && currentPhaseCompleted,
+  }
+}
 
 let nextRiskId = 19
 let nextRiskActionId = 2
@@ -435,6 +474,17 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
 
 })()
 
+function overviewCompletionForStudy(study: Study, mv: {
+  mainStageLabel: string
+  currentPhaseCompleted: boolean
+} | undefined) {
+  const stored = mockMilestones.get(study.id)
+  if (stored) {
+    return deriveOverviewCompletionFlags(flattenMilestoneNodes(stored.groups))
+  }
+  return deriveOverviewCompletionFromStage(mv?.mainStageLabel, mv?.currentPhaseCompleted ?? false)
+}
+
 function nodeSortOrder(node: MilestoneNode, index: number): number {
   const order = (node as MilestoneNode & { sortOrder?: number }).sortOrder
   return typeof order === 'number' ? order : index
@@ -540,6 +590,7 @@ export function createMockApiClient(): ApiClient {
   const permissions: PlatformPermission[] = [
     ['pipeline', 'pipeline.page.view', '??????', 'PAGE', 'view'],
     ['study', 'study.read', '?? Study', 'ACTION', 'read'],
+    ['milestone', 'milestone.read', '?????', 'DATA', 'read'],
     ['milestone', 'milestone.update', '?????', 'DATA', 'update'],
     ['config', 'config.page.view', '??????', 'PAGE', 'view'],
     ['config', 'config.create', '??????', 'ACTION', 'create'],
@@ -698,9 +749,7 @@ export function createMockApiClient(): ApiClient {
               mainStageCode: null,
               mainStageLabel: mv?.mainStageLabel ?? null,
               subStatusLabel: mv?.subStatusLabel ?? null,
-              preindCompleted: false,
-              indCompleted: false,
-              globallyCompleted: false,
+              ...overviewCompletionForStudy(s, mv),
               currentPhaseCompleted: mv?.currentPhaseCompleted ?? false,
               startDate: s.startDate,
               updatedAt: s.updatedAt,
@@ -980,7 +1029,7 @@ export function createMockApiClient(): ApiClient {
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = `研发管线月报_${query.startDate}_${query.endDate}.${format}`
+      anchor.download = `??????_${query.startDate}_${query.endDate}.${format}`
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
@@ -1037,6 +1086,23 @@ export function createMockApiClient(): ApiClient {
           pageSize,
           totalItems: filteredStudies.length,
           totalPages: Math.max(1, Math.ceil(filteredStudies.length / pageSize)),
+        },
+      }
+    },
+    async getStudyTeam(studyId) {
+      const study = demoStudies.find(s => s.id === studyId)
+      if (!study) throw new Error('Study ???')
+      const page = await this.listTeamMatrix({ studyQuery: study.code, page: 1, pageSize: 100 })
+      const studies = page.studies.filter(s => s.studyId === studyId)
+      return {
+        ...page,
+        studies,
+        assignments: page.assignments.filter(a => a.studyId === studyId),
+        pagination: {
+          page: 1,
+          pageSize: 1,
+          totalItems: studies.length,
+          totalPages: 1,
         },
       }
     },
@@ -1374,21 +1440,21 @@ function buildMockMonthlyExport(
   programs: PipelineProgram[],
 ): MonthlyExportReport {
   if (!query.startDate || !query.endDate) {
-    throw new Error('请选择汇报开始与结束日期')
+    throw new Error('????????????')
   }
   if (query.endDate < query.startDate) {
-    throw new Error('结束日期不能早于开始日期')
+    throw new Error('????????????')
   }
   let scoped = [...demoStudies]
-  let scopeLabels = ['全部项目']
+  let scopeLabels = ['????']
   if (query.scopeType === 'TA') {
-    if (!query.taIds?.length) throw new Error('请至少选择一个治疗领域')
+    if (!query.taIds?.length) throw new Error('???????????')
     const selected = therapeuticAreas.filter((area) => query.taIds!.includes(area.id))
     const codes = new Set(selected.map((area) => area.code))
     scoped = demoStudies.filter((study) => codes.has(study.therapeuticAreaCode ?? ''))
     scopeLabels = selected.map((area) => area.name || area.code)
   } else if (query.scopeType === 'PROGRAM') {
-    if (!query.programIds?.length) throw new Error('请至少选择一个 Program')
+    if (!query.programIds?.length) throw new Error('??????? Program')
     const selected = programs.filter((program) => query.programIds!.includes(program.id))
     const codes = new Set(selected.map((program) => program.code))
     scoped = demoStudies.filter((study) => codes.has(study.programCode ?? ''))
@@ -1455,9 +1521,9 @@ function buildMockMonthlyExport(
     },
     summary: {
       total: scoped.length,
-      notStarted: scoped.filter((s) => deriveMockStatus(s) === '未开始').length,
-      inProgress: scoped.filter((s) => deriveMockStatus(s) === '进行中').length,
-      completed: scoped.filter((s) => deriveMockStatus(s) === '已完成').length,
+      notStarted: scoped.filter((s) => deriveMockStatus(s) === EXPORT_STATUS.NOT_STARTED).length,
+      inProgress: scoped.filter((s) => deriveMockStatus(s) === EXPORT_STATUS.IN_PROGRESS).length,
+      completed: scoped.filter((s) => deriveMockStatus(s) === EXPORT_STATUS.COMPLETED).length,
       reportedStudyCount: new Set(progress.map((item) => item.studyCode)).size,
       openRiskCount: openRisks.length,
     },
@@ -1467,17 +1533,33 @@ function buildMockMonthlyExport(
   }
 }
 
-/** Mock approximates milestone-based export status from Study list fields. */
+/**
+ * Mock export status: same rules as MonthlyExportManager.deriveMilestoneStatus.
+ * Prefer stored milestone tree; otherwise approximate from overview frontier.
+ */
 function deriveMockStatus(study: Study): string {
-  if (study.status === 'COMPLETED' || study.statusLabel === '已完成') return '已完成'
-  if (study.status === 'ACTIVE' || study.statusLabel === '进行中') return '进行中'
-  return '未开始'
+  const stored = mockMilestones.get(study.id)
+  if (stored) {
+    return deriveMilestoneExportStatus(flattenMilestoneNodes(stored.groups))
+  }
+  const mv = mockOverviewMilestoneView[study.code]
+  if (!mv) return EXPORT_STATUS.NOT_STARTED
+  const { globallyCompleted } = deriveOverviewCompletionFromStage(
+    mv.mainStageLabel,
+    mv.currentPhaseCompleted,
+  )
+  if (globallyCompleted) return EXPORT_STATUS.COMPLETED
+  // ???????? ? ????? frontier ????????????
+  if (study.status === 'PLANNED' && !mv.currentPhaseCompleted) {
+    return EXPORT_STATUS.NOT_STARTED
+  }
+  return EXPORT_STATUS.IN_PROGRESS
 }
 
 function mockExportBlob(report: MonthlyExportReport, format: MonthlyExportFormat): Blob {
   if (format === 'csv') {
     const lines = [
-      '汇报开始,汇报结束,TA,Program,Study,功能线代码,功能线名称,进展日期,月报进展',
+      '????,????,TA,Program,Study,?????,?????,????,????',
       ...report.progress.map((item) =>
         [report.meta.startDate, report.meta.endDate, item.taName, item.programCode,
           item.studyCode, item.functionCode, item.functionName, item.entryDate, item.content]
@@ -1491,10 +1573,10 @@ function mockExportBlob(report: MonthlyExportReport, format: MonthlyExportFormat
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
   }
-  const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>临床研发管线月度报告</title></head>
-<body><h1>临床研发管线月度报告</h1>
-<p>${report.meta.startDate} 至 ${report.meta.endDate} · ${report.meta.scopeLabels.join('、')}</p>
-<p>Study ${report.summary.total} · 进展 ${report.progress.length} · Open 风险 ${report.summary.openRiskCount}</p>
+  const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>??????????</title></head>
+<body><h1>??????????</h1>
+<p>${report.meta.startDate} ? ${report.meta.endDate} ? ${report.meta.scopeLabels.join('?')}</p>
+<p>Study ${report.summary.total} ? ?? ${report.progress.length} ? Open ?? ${report.summary.openRiskCount}</p>
 </body></html>`
   return new Blob([html], { type: 'text/html;charset=utf-8' })
 }

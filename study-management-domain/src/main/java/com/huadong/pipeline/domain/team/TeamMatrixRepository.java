@@ -9,6 +9,9 @@ public interface TeamMatrixRepository {
   MatrixPage findMatrix(
       StudyAccessScope scope, String studyQuery, String roleQuery, int page, int pageSize);
 
+  /** Single-study team read model within the caller's Study data scope. */
+  MatrixPage findStudyTeam(StudyAccessScope scope, long studyId);
+
   Map<Long, Long> findStudyVersions(Set<Long> studyIds, StudyAccessScope scope);
 
   Map<String, TeamRole> findRoles(Set<String> roleCodes);

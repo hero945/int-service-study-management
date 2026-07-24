@@ -37,7 +37,24 @@ public class MybatisPlusTeamMatrixRepository implements TeamMatrixRepository {
     if (studies.isEmpty()) {
       return new MatrixPage(studies, roles, List.of(), total, roles.size(), page, pageSize);
     }
+    return assemblePage(studies, roles, total, page, pageSize);
+  }
 
+  @Override
+  public MatrixPage findStudyTeam(StudyAccessScope scope, long studyId) {
+    var row = mapper.findVisibleStudy(studyId, scope.allStudies(), scope.userId());
+    if (row == null) {
+      return new MatrixPage(List.of(), List.of(), List.of(), 0, 0, 1, 1);
+    }
+    var study = new TeamStudy(
+        row.studyId(), row.studyCode(), row.indication(),
+        row.statusCode(), row.statusLabel(), "", row.teamVersion());
+    var roles = mapper.findRoles("").stream().map(this::role).toList();
+    return assemblePage(List.of(study), roles, 1, 1, 1);
+  }
+
+  private MatrixPage assemblePage(
+      List<TeamStudy> studies, List<TeamRole> roles, long total, int page, int pageSize) {
     var visibleRoleCodes = roles.stream().map(TeamRole::roleCode).collect(Collectors.toSet());
     Map<String, List<TeamMember>> grouped = new LinkedHashMap<>();
     for (TeamMemberRow row : mapper.findAssignments(

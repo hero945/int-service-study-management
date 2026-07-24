@@ -68,6 +68,35 @@ public interface TeamMatrixMapper {
 
   @Select("""
       <script>
+      SELECT s.id AS study_id, s.study_code,
+             s.indication_description_snapshot AS indication,
+             CASE
+               WHEN s.actual_end_date IS NOT NULL THEN 'COMPLETED'
+               WHEN s.actual_start_date IS NOT NULL THEN 'ACTIVE'
+               ELSE 'PLANNED'
+             END AS status_code,
+             CASE
+               WHEN s.actual_end_date IS NOT NULL THEN '已完成'
+               WHEN s.actual_start_date IS NOT NULL THEN '进行中'
+               ELSE '计划中'
+             END AS status_label,
+             s.team_version
+      FROM hd_plt_study s
+      WHERE s.sys_deleted = 0 AND s.id = #{studyId}
+        <if test="!allStudies">
+          AND EXISTS (
+            SELECT 1 FROM hd_plt_team_assignment ta
+            WHERE ta.study_id = s.id AND ta.user_id = #{scopeUserId} AND ta.sys_deleted = 0)
+        </if>
+      </script>
+      """)
+  TeamStudyRow findVisibleStudy(
+      @Param("studyId") long studyId,
+      @Param("allStudies") boolean allStudies,
+      @Param("scopeUserId") long scopeUserId);
+
+  @Select("""
+      <script>
       SELECT tr.id, tr.role_code, tr.role_name, tr.function_line_id,
              fl.function_code, fl.function_name, tr.sort_order
       FROM hd_plt_team_role tr

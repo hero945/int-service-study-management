@@ -341,6 +341,33 @@ class MonthlyReportIntegrationTest {
         .andExpect(jsonPath("$.code").value("MONTHLY_FORBIDDEN"));
   }
 
+  @Test
+  void getMonthlyReportsWithoutStudyAssignmentIsForbidden() throws Exception {
+    long studyId = seedStudy();
+    seedMonthlyUser("monthly.unassigned@example.com", "无分配成员");
+
+    mvc.perform(get("/api/v1/studies/{id}/monthly-reports", studyId)
+            .param("month", MONTH)
+            .with(user("monthly.unassigned@example.com")
+                .authorities(authority("monthly.read"))))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("STUDY_OUT_OF_SCOPE"));
+  }
+
+  @Test
+  void getMonthlyReportsWithinAssignedStudyScopeIsAllowed() throws Exception {
+    long studyId = seedStudy();
+    long memberId = seedMonthlyUser(MEMBER, "月报成员");
+    seedAssignment(studyId, memberId, "CM");
+
+    mvc.perform(get("/api/v1/studies/{id}/monthly-reports", studyId)
+            .param("month", MONTH)
+            .with(user(MEMBER).authorities(authority("monthly.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.studyId").value(studyId))
+        .andExpect(jsonPath("$.studyCode").value("MS-001"));
+  }
+
   // ──────────── seed helpers ────────────
 
   /** GET as member to trigger materialization, then read back the CM report id. */

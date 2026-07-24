@@ -41,8 +41,8 @@ public class MonthlyReportManager {
   @Transactional
   public MonthlyPageResult getMonthlyReports(long studyId, YearMonth month, String username) {
     UserAccount user = currentUser(username);
-    StudyRef study = requireStudy(studyId);
     StudyAccessScope scope = scope(user);
+    StudyRef study = requireStudyInScope(studyId, scope);
     LocalDate reportMonth = month.atDay(1);
 
     // 可填功能线集合
@@ -242,6 +242,12 @@ public class MonthlyReportManager {
     return reports.findStudy(studyId)
         .orElseThrow(() -> new BusinessException("STUDY_NOT_FOUND",
             "Study " + studyId + " 不存在"));
+  }
+
+  private StudyRef requireStudyInScope(long studyId, StudyAccessScope scope) {
+    return reports.findStudy(scope, studyId)
+        .orElseThrow(() -> new BusinessException("STUDY_OUT_OF_SCOPE",
+            "目标Study不存在或不在当前数据范围"));
   }
 
   private UserAccount currentUser(String username) {

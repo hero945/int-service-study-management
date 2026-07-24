@@ -15,7 +15,16 @@ public class TeamMatrixApiService implements TeamMatrixApi {
   @Override
   public MatrixResponse list(
       String username, String studyQuery, String roleQuery, int page, int pageSize) {
-    var matrix = manager.list(username, studyQuery, roleQuery, page, pageSize);
+    return toResponse(manager.list(username, studyQuery, roleQuery, page, pageSize));
+  }
+
+  @Override
+  public MatrixResponse getStudyTeam(long studyId, String username) {
+    return toResponse(manager.getStudyTeam(studyId, username));
+  }
+
+  private MatrixResponse toResponse(
+      com.huadong.pipeline.domain.team.TeamMatrixRepository.MatrixPage matrix) {
     var studies = matrix.studies().stream()
         .map(study -> new StudyResponse(
             study.studyId(), study.studyCode(), study.indication(),
@@ -35,7 +44,7 @@ public class TeamMatrixApiService implements TeamMatrixApi {
                 .toList()))
         .toList();
     int totalPages = Math.max(1,
-        (int) Math.ceil((double) matrix.totalStudies() / matrix.pageSize()));
+        (int) Math.ceil((double) matrix.totalStudies() / Math.max(1, matrix.pageSize())));
     return new MatrixResponse(
         studies, roles, assignments, matrix.totalRoles(),
         new PaginationResponse(

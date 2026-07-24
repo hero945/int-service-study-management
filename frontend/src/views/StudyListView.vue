@@ -12,6 +12,9 @@ const router = useRouter()
 const canReadMonthly = computed(() =>
   session.currentUser.value?.permissions.includes('monthly.read') ?? false,
 )
+const canReadMilestone = computed(() =>
+  session.currentUser.value?.permissions.includes('milestone.read') ?? false,
+)
 
 const studies = ref<Study[]>([])
 const loading = ref(true)
@@ -120,7 +123,11 @@ onMounted(async () => {
               <td>{{ plPm(study) || '—' }}</td>
               <td>{{ study.updatedAt ? new Date(study.updatedAt).toLocaleDateString('zh-CN') : '—' }}</td>
               <td class="actions">
-                <button class="link-button" @click.stop="goMilestones(study.id)">里程碑</button>
+                <button
+                  v-if="canReadMilestone"
+                  class="link-button"
+                  @click.stop="goMilestones(study.id)"
+                >里程碑</button>
                 <button v-if="canReadMonthly" class="link-button" @click.stop="goMonthlyReport(study.id)">月报</button>
               </td>
             </tr>

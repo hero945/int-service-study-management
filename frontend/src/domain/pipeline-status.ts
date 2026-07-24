@@ -37,6 +37,14 @@ export function normalizePhase(phase: string): PipelinePhase | undefined {
   return PHASE_CODE_TO_TAG[phase]
 }
 
+/**
+ * 临床阶段展示文案（与管线总览 PHASE_TAGS 同源：Arabic 数字 Phase 1 / Phase 2…）。
+ * 筛选下拉、配置页、总览列共用此映射，避免 Phase I / Phase 1 两套文案。
+ */
+export function phaseDisplayLabel(code: string): string {
+  return PHASE_CODE_TO_TAG[code] ?? code
+}
+
 const STATUS_TONE: Record<string, PipelineTone> = {
   positive: 'blue',
   info: 'green',

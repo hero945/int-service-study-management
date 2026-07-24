@@ -10,6 +10,8 @@ import com.huadong.pipeline.domain.milestone.StudyMilestonePort.MilestoneSaveCom
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.MilestoneUpdateCommand;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilestone;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.StudyRef;
+import com.huadong.pipeline.domain.study.StudyAccessScope;
+import com.huadong.pipeline.domain.user.DataScope;
 import com.huadong.pipeline.domain.user.UserAccount;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
@@ -36,7 +38,14 @@ public class MilestoneManager {
 
   public MilestoneResult getMilestones(long studyId, String username) {
     UserAccount user = currentUser(username);
-    StudyRef study = requireStudy(studyId);
+    if (!user.permissions().contains("milestone.read")) {
+      throw forbiddenRead();
+    }
+    return loadMilestones(studyId, user);
+  }
+
+  private MilestoneResult loadMilestones(long studyId, UserAccount user) {
+    StudyRef study = requireStudy(studyId, user);
     List<PersistedMilestone> rows = milestones.findByStudyId(studyId);
     Map<String, PersistedMilestone> byCode = new LinkedHashMap<>();
     for (PersistedMilestone row : rows) {
@@ -71,7 +80,7 @@ public class MilestoneManager {
     if (!user.permissions().contains("milestone.update")) {
       throw forbidden();
     }
-    requireStudy(studyId);
+    requireStudy(studyId, user);
     // Resolve stage code and node index from milestone code
     String stageCode = stagePart(milestoneCode);
     int nodeIndex = nodeIndex(milestoneCode);
@@ -106,7 +115,7 @@ public class MilestoneManager {
         input.actualStartDate(), input.actualEndDate(),
         input.deviationNote(), user.username()));
 
-    return getMilestones(studyId, username);
+    return loadMilestones(studyId, user);
   }
 
   // ──────────── stage projection (Section 7.2) ────────────
@@ -327,15 +336,23 @@ public class MilestoneManager {
 
   // ──────────── helpers ────────────
 
-  private StudyRef requireStudy(long studyId) {
-    return milestones.findStudy(studyId)
-        .orElseThrow(() -> new BusinessException("STUDY_NOT_FOUND",
-            "Study " + studyId + " 不存在"));
+  private StudyRef requireStudy(long studyId, UserAccount user) {
+    return milestones.findStudy(scope(user), studyId)
+        .orElseThrow(MilestoneManager::outOfScope);
   }
 
   private UserAccount currentUser(String username) {
     return users.findByUsername(username)
         .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "当前登录账号不存在"));
+  }
+
+  private static StudyAccessScope scope(UserAccount user) {
+    return user.dataScope() == DataScope.ALL ? StudyAccessScope.all()
+        : StudyAccessScope.assignedTo(user.id());
+  }
+
+  private static BusinessException outOfScope() {
+    return new BusinessException("STUDY_OUT_OF_SCOPE", "目标Study不存在或不在当前数据范围");
   }
 
   private static String stagePart(String milestoneCode) {
@@ -360,6 +377,10 @@ public class MilestoneManager {
 
   private static BusinessException forbidden() {
     return new BusinessException("MILESTONE_FORBIDDEN", "需要 milestone.update 权限");
+  }
+
+  private static BusinessException forbiddenRead() {
+    return new BusinessException("MILESTONE_FORBIDDEN", "需要 milestone.read 权限");
   }
 
   // ──────────── result types ────────────

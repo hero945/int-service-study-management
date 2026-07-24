@@ -6,7 +6,11 @@ import type {
   ProgramUpdateInput, ProjectInput, ProjectUpdateInput, TherapeuticArea,
 } from '../api/types'
 import PageState from '../components/PageState.vue'
+import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
+import { phaseDisplayLabel } from '../domain/pipeline-status'
 import { session } from '../session'
+
+const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
 
 type ViewMode = 'studies' | 'entities'
 type EntityKind = 'program' | 'project'
@@ -286,8 +290,7 @@ async function remove(kind: 'program' | 'project' | 'study', id: number, label: 
 }
 
 function phaseLabel(code: string) {
-  return ({ PRE_IND: 'Pre-IND', IND: 'IND', PHASE_1: 'Phase I', PHASE_2: 'Phase II',
-    PRE_3: 'Pre-III', PHASE_3_1: 'Phase III-1', PHASE_3_2: 'Phase III-2' } as Record<string, string>)[code] ?? code
+  return phaseDisplayLabel(code)
 }
 
 function messageOf(reason: unknown, fallback: string) {
@@ -392,7 +395,7 @@ onUnmounted(() => {
           <label>Study No. *<input v-model="studyForm.code" required maxlength="64" :disabled="!!editingStudy"></label>
           <label>Program *<details ref="studyProgramDetails" class="entity-select"><summary>{{ programs.find(item => item.id === studyForm.programId)?.code || '请选择 Program' }}</summary><div class="entity-select-menu" role="listbox"><button v-for="program in programs" :key="program.id" type="button" role="option" @click="selectStudyProgram(program.id, $event)">{{ program.code }}</button><button v-if="canCreate" class="entity-select-create" type="button" @click="quickCreateProgram">＋ 新建 Program</button></div></details></label>
           <label>Project *<details ref="studyProjectDetails" class="entity-select"><summary>{{ projects.find(item => item.id === studyForm.projectId)?.code || '请选择 Project' }}</summary><div class="entity-select-menu" role="listbox"><button v-for="project in selectedProjectsForStudy()" :key="project.id" type="button" role="option" @click="selectStudyProject(project.id, $event)">{{ project.code }}</button><button v-if="canCreate" class="entity-select-create" type="button" @click="quickCreateProject">＋ 新建 Project</button></div></details></label>
-          <label>Phase Status *<select v-model="studyForm.phaseStatusCode"><option value="PRE_IND">Pre-IND</option><option value="IND">IND</option><option value="PHASE_1">Phase I</option><option value="PHASE_2">Phase II</option><option value="PRE_3">Pre-III</option><option value="PHASE_3_1">Phase III-1</option><option value="PHASE_3_2">Phase III-2</option></select></label>
+          <label>Phase Status *<select v-model="studyForm.phaseStatusCode"><option v-for="opt in phaseStatusOptions" :key="opt.code" :value="opt.code">{{ opt.label }}</option></select></label>
         </div>
         <footer><button class="secondary-button" type="button" @click="studyDialog = false">取消</button><button class="primary-button" type="submit" :disabled="saving || !studyForm.projectId">{{ saving ? '保存中…' : '保存 Study' }}</button></footer>
       </form>

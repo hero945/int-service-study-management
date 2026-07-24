@@ -24,7 +24,7 @@ public class MilestoneController {
   }
 
   @GetMapping("/studies/{studyId}/milestones")
-  @PreAuthorize("hasAuthority('study.read')")
+  @PreAuthorize("hasAuthority('milestone.read')")
   MilestoneApi.MilestonePageResponse getMilestones(@PathVariable long studyId,
                                                    Principal principal) {
     return api.getMilestones(studyId, principal.getName());
@@ -40,7 +40,7 @@ public class MilestoneController {
   }
 
   @GetMapping("/studies/{studyId}/stage-projection")
-  @PreAuthorize("hasAuthority('study.read')")
+  @PreAuthorize("hasAuthority('milestone.read')")
   MilestoneApi.StageProjectionResponse getStageProjection(@PathVariable long studyId,
                                                           Principal principal) {
     return api.getStageProjection(studyId, principal.getName());

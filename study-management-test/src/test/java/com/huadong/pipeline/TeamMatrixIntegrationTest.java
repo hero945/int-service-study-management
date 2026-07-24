@@ -195,6 +195,55 @@ class TeamMatrixIntegrationTest {
     org.assertj.core.api.Assertions.assertThat(firstAssignments).isZero();
   }
 
+  @Test
+  void studyDrawerTeamIsReadableWithStudyReadWithoutTeamPageView() throws Exception {
+    long studyId = seedStudy("TEAM-STUDY-008");
+    long memberId = seedUser("drawer.member@example.com", "抽屉成员", true);
+    replace(studyId, 0, memberId).andExpect(status().isOk());
+
+    mvc.perform(get("/api/v1/studies/{id}/team", studyId)
+            .with(user("admin@example.com").authorities(authority("study.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.studies[0].studyCode").value("TEAM-STUDY-008"))
+        .andExpect(jsonPath("$.roles.length()").value(44))
+        .andExpect(jsonPath("$.assignments[0].roleCode").value("PL"))
+        .andExpect(jsonPath("$.assignments[0].members[0].displayName").value("抽屉成员"));
+
+    mvc.perform(get("/api/v1/team-matrix")
+            .with(user("admin@example.com").authorities(authority("study.read"))))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void studyDrawerTeamOutsideAssignedScopeIsForbidden() throws Exception {
+    long inScope = seedStudy("TEAM-STUDY-009");
+    long outOfScope = seedStudy("TEAM-STUDY-010");
+    long memberId = seedUser("drawer.scoped@example.com", "抽屉范围成员", true);
+    jdbc.update("""
+        INSERT INTO hd_plt_role(
+            role_name, role_description, data_scope_mode, status_code,
+            is_system_role, sys_create_by, sys_update_by)
+        VALUES ('TEAM_DRAWER_SCOPED', 'Drawer assigned study', 'ASSIGNED_STUDY',
+            'ACTIVE', 0, 'seed', 'seed')
+        """);
+    jdbc.update("""
+        INSERT INTO hd_plt_user_role(user_id, role_id, sys_create_by, sys_update_by)
+        SELECT ?, id, 'seed', 'seed'
+        FROM hd_plt_role WHERE role_name = 'TEAM_DRAWER_SCOPED'
+        """, memberId);
+    replace(inScope, 0, memberId).andExpect(status().isOk());
+
+    mvc.perform(get("/api/v1/studies/{id}/team", inScope)
+            .with(user("drawer.scoped@example.com").authorities(authority("study.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.studies[0].studyId").value(inScope));
+
+    mvc.perform(get("/api/v1/studies/{id}/team", outOfScope)
+            .with(user("drawer.scoped@example.com").authorities(authority("study.read"))))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.code").value("STUDY_OUT_OF_SCOPE"));
+  }
+
   private org.springframework.test.web.servlet.ResultActions replace(
       long studyId, long version, long userId) throws Exception {
     return mvc.perform(put("/api/v1/team-matrix/assignments")
@@ -227,30 +276,28 @@ class TeamMatrixIntegrationTest {
         """, "TA-TEAM-" + suffix);
     jdbc.update("""
         INSERT INTO hd_plt_program(
-            program_code, program_name, product_name, status_code,
-            sys_create_by, sys_update_by)
-        VALUES (?, '团队测试Program', ?, 'ACTIVE', 'seed', 'seed')
+            program_code, product_name, status_code, sys_create_by, sys_update_by)
+        VALUES (?, ?, 'ACTIVE', 'seed', 'seed')
         """, "PROGRAM-TEAM-" + suffix, "HD-TEAM-" + suffix);
     jdbc.update("""
         INSERT INTO hd_plt_project(
-            project_code, project_name, program_id, indication_description,
-            therapeutic_area_id, sys_create_by, sys_update_by)
-        SELECT ?, '团队测试Project', p.id, '实体瘤', ta.id, 'seed', 'seed'
+            project_code, program_id, indication_description, therapeutic_area_id,
+            sys_create_by, sys_update_by)
+        SELECT ?, p.id, '实体瘤', ta.id, 'seed', 'seed'
         FROM hd_plt_program p CROSS JOIN hd_plt_therapeutic_area ta
         WHERE p.program_code = ? AND ta.area_code = ?
         """, "PROJECT-TEAM-" + suffix,
         "PROGRAM-TEAM-" + suffix, "TA-TEAM-" + suffix);
     jdbc.update("""
         INSERT INTO hd_plt_study(
-            study_code, study_name, phase_status_code,
-            program_id, program_code_snapshot, program_name_snapshot,
+            study_code, phase_status_code, program_id, program_code_snapshot,
             product_name_snapshot, project_id, project_code_snapshot,
-            project_name_snapshot, therapeutic_area_id,
-            therapeutic_area_code_snapshot, therapeutic_area_name_snapshot,
-            indication_description_snapshot, sys_create_by, sys_update_by)
-        SELECT ?, '团队测试Study', 'PHASE_1', p.id, p.program_code, p.program_name,
-            p.product_name, pr.id, pr.project_code, pr.project_name, ta.id,
-            ta.area_code, ta.area_name, pr.indication_description, 'seed', 'seed'
+            therapeutic_area_id, therapeutic_area_code_snapshot,
+            therapeutic_area_name_snapshot, indication_description_snapshot,
+            sys_create_by, sys_update_by)
+        SELECT ?, 'PHASE_1', p.id, p.program_code, p.product_name,
+            pr.id, pr.project_code, ta.id, ta.area_code, ta.area_name,
+            pr.indication_description, 'seed', 'seed'
         FROM hd_plt_program p
         JOIN hd_plt_project pr ON pr.program_id = p.id
         JOIN hd_plt_therapeutic_area ta ON ta.id = pr.therapeutic_area_id

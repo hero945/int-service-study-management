@@ -1,5 +1,6 @@
 package com.huadong.pipeline.domain.monthly;
 
+import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,6 +16,9 @@ public interface MonthlyReportPort {
 
   /** Look up study metadata used for materialization snapshots. */
   Optional<StudyRef> findStudy(long studyId);
+
+  /** Look up study metadata within the caller's Study data scope. */
+  Optional<StudyRef> findStudy(StudyAccessScope scope, long studyId);
 
   /** Function lines assigned to a specific user on a study (regular-user fillable set). */
   List<FunctionLineRef> findAssignedFunctionLines(long studyId, long userId);

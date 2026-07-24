@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { OverviewProject, OverviewStudy } from '../api/types'
 import { toneForStatus } from '../domain/pipeline-status'
+import { session } from '../session'
 
 const props = defineProps<{
   open: boolean
@@ -16,6 +17,9 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
+const canReadMilestone = computed(() =>
+  session.currentUser.value?.permissions.includes('milestone.read') ?? false,
+)
 
 const studies = computed(() => props.project?.studies ?? [])
 const studyCount = computed(() => studies.value.length)
@@ -80,6 +84,7 @@ function openMilestones(studyId: number) {
                 :class="`status-chip--${toneForStatus(study.statusTone)}`"
               >{{ study.statusLabel || study.status }}</span>
               <button
+                v-if="canReadMilestone"
                 class="text-button"
                 type="button"
                 @click.stop="openMilestones(study.id)"

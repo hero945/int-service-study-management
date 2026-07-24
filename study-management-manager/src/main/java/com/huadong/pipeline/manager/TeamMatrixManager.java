@@ -45,6 +45,16 @@ public class TeamMatrixManager {
     return withCurrentStatus(matrix);
   }
 
+  /** Study drawer team tab: requires study visibility, not team.page.view. */
+  public MatrixPage getStudyTeam(long studyId, String username) {
+    UserAccount user = currentUser(username);
+    MatrixPage matrix = teams.findStudyTeam(accessScope(user), studyId);
+    if (matrix.studies().isEmpty()) {
+      throw new BusinessException("STUDY_OUT_OF_SCOPE", "目标Study不存在或不在当前数据范围");
+    }
+    return withCurrentStatus(matrix);
+  }
+
   private MatrixPage withCurrentStatus(MatrixPage matrix) {
     List<Long> studyIds = matrix.studies().stream().map(TeamStudy::studyId).toList();
     Map<Long, List<PersistedMilestone>> milestonesByStudy =

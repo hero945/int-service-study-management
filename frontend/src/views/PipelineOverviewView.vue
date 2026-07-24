@@ -18,6 +18,7 @@ import {
 import PageState from '../components/PageState.vue'
 import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
+import { session } from '../session'
 
 // 后端已按 TA 聚合的 project，附带 TA 信息便于筛选
 interface ProjectRow extends OverviewProject {
@@ -117,7 +118,9 @@ const tipStyle = computed(() => {
 })
 
 function openStudy(studyId?: number) {
-  if (studyId != null) router.push(`/milestones/${studyId}`)
+  if (studyId == null) return
+  if (!session.currentUser.value?.permissions.includes('milestone.read')) return
+  router.push(`/milestones/${studyId}`)
 }
 
 function showCellTip(event: MouseEvent, project: OverviewProject, phase: PipelinePhase) {

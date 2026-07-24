@@ -1,10 +1,10 @@
 package com.huadong.pipeline.repository;
 
-import com.huadong.pipeline.common.BusinessException;
-import com.huadong.pipeline.domain.milestone.MilestoneDefinition;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
+import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.sql.Date;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -20,16 +20,19 @@ public class JdbcMilestoneRepository implements StudyMilestonePort {
   }
 
   @Override
-  public Optional<StudyRef> findStudy(long studyId) {
+  public Optional<StudyRef> findStudy(StudyAccessScope scope, long studyId) {
+    List<Object> args = new ArrayList<>();
+    args.add(studyId);
+    String scopeSql = scopeClause(scope, args);
     return jdbc.query("""
         SELECT s.id, s.study_code, s.program_id, s.program_code_snapshot,
           s.project_id, s.project_code_snapshot
         FROM hd_plt_study s WHERE s.id = ? AND s.sys_deleted = 0
-        """, (rs, row) -> new StudyRef(
+        """ + scopeSql, (rs, row) -> new StudyRef(
             rs.getLong("id"), rs.getString("study_code"),
             rs.getLong("program_id"), rs.getString("program_code_snapshot"),
             rs.getLong("project_id"), rs.getString("project_code_snapshot")),
-        studyId).stream().findFirst();
+        args.toArray()).stream().findFirst();
   }
 
   @Override
@@ -110,6 +113,16 @@ public class JdbcMilestoneRepository implements StudyMilestonePort {
   }
 
   // ──────────── helpers ────────────
+
+  private static String scopeClause(StudyAccessScope scope, List<Object> args) {
+    if (scope.allStudies()) {
+      return "";
+    }
+    args.add(scope.userId());
+    return " AND EXISTS (SELECT 1 FROM hd_plt_team_assignment scope_ta"
+        + " WHERE scope_ta.study_id = s.id AND scope_ta.user_id = ?"
+        + " AND scope_ta.sys_deleted = 0)";
+  }
 
   private void audit(String action, MilestoneSaveCommand command) {
     jdbc.update("""

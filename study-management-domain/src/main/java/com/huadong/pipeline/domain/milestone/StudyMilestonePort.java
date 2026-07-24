@@ -1,5 +1,6 @@
 package com.huadong.pipeline.domain.milestone;
 
+import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -18,8 +19,8 @@ public interface StudyMilestonePort {
   /** Batch load persisted milestone rows for many studies (single IN query, avoids N+1). */
   List<PersistedMilestone> findByStudyIds(List<Long> studyIds);
 
-  /** Look up study metadata for access validation. */
-  Optional<StudyRef> findStudy(long studyId);
+  /** Look up study metadata within the caller's Study data scope. */
+  Optional<StudyRef> findStudy(StudyAccessScope scope, long studyId);
 
   // ──────────── mutation ────────────
 

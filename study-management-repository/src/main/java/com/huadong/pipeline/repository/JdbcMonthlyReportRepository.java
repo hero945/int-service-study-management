@@ -1,6 +1,7 @@
 package com.huadong.pipeline.repository;
 
 import com.huadong.pipeline.domain.monthly.MonthlyReportPort;
+import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -25,13 +26,21 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
 
   @Override
   public Optional<StudyRef> findStudy(long studyId) {
+    return findStudy(StudyAccessScope.all(), studyId);
+  }
+
+  @Override
+  public Optional<StudyRef> findStudy(StudyAccessScope scope, long studyId) {
+    List<Object> args = new ArrayList<>();
+    args.add(studyId);
+    String scopeSql = scopeClause(scope, args);
     return jdbc.query("""
         SELECT s.id, s.study_code, s.program_id, s.program_code_snapshot,
           s.product_name_snapshot, s.project_id, s.project_code_snapshot,
           s.therapeutic_area_id, s.therapeutic_area_code_snapshot,
           s.therapeutic_area_name_snapshot, s.indication_description_snapshot
         FROM hd_plt_study s WHERE s.id = ? AND s.sys_deleted = 0
-        """, (rs, row) -> new StudyRef(
+        """ + scopeSql, (rs, row) -> new StudyRef(
             rs.getLong("id"), rs.getString("study_code"),
             rs.getLong("program_id"), rs.getString("program_code_snapshot"),
             rs.getString("product_name_snapshot"),
@@ -39,7 +48,7 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
             rs.getLong("therapeutic_area_id"), rs.getString("therapeutic_area_code_snapshot"),
             rs.getString("therapeutic_area_name_snapshot"),
             rs.getString("indication_description_snapshot")),
-        studyId).stream().findFirst();
+        args.toArray()).stream().findFirst();
   }
 
   @Override
@@ -309,6 +318,16 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
   }
 
   // ──────────── helpers ────────────
+
+  private static String scopeClause(StudyAccessScope scope, List<Object> args) {
+    if (scope.allStudies()) {
+      return "";
+    }
+    args.add(scope.userId());
+    return " AND EXISTS (SELECT 1 FROM hd_plt_team_assignment scope_ta"
+        + " WHERE scope_ta.study_id = s.id AND scope_ta.user_id = ?"
+        + " AND scope_ta.sys_deleted = 0)";
+  }
 
   private void audit(long operatorUserId, String operatorEmail, long entryId,
                      String reason, String actionCode) {

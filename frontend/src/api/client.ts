@@ -77,6 +77,7 @@ export interface ApiClient {
   previewMonthlyExport(query: MonthlyExportQuery): Promise<MonthlyExportReport>
   downloadMonthlyExport(query: MonthlyExportQuery, format: MonthlyExportFormat): Promise<void>
   listTeamMatrix(query?: TeamMatrixQuery): Promise<TeamMatrixPage>
+  getStudyTeam(studyId: number): Promise<TeamMatrixPage>
   replaceTeamAssignments(input: TeamMatrixBatchInput): Promise<TeamMatrixBatchResult>
   listPipelineConfig(): Promise<PipelineConfigRow[]>
   listTherapeuticAreas(): Promise<TherapeuticArea[]>
@@ -321,6 +322,8 @@ export function createHttpApiClient(): ApiClient {
       if (query.roleQuery) parameters.set('roleQuery', query.roleQuery)
       return request<TeamMatrixPage>(`/api/v1/team-matrix?${parameters}`)
     },
+    getStudyTeam: (studyId) =>
+      request<TeamMatrixPage>(`/api/v1/studies/${studyId}/team`),
     async replaceTeamAssignments(input) {
       await refreshCsrf()
       return request<TeamMatrixBatchResult>('/api/v1/team-matrix/assignments', {

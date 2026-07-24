@@ -13,6 +13,9 @@ public interface TeamMatrixApi {
   MatrixResponse list(
       String username, String studyQuery, String roleQuery, int page, int pageSize);
 
+  /** GET /api/v1/studies/{studyId}/team — Study drawer read model (study.read). */
+  MatrixResponse getStudyTeam(long studyId, String username);
+
   BatchResponse replace(@Valid BatchRequest request, String username);
 
   record StudyResponse(

@@ -5,6 +5,7 @@ import {
   PHASE_TAG_TO_CODE,
   normalizePhase,
   originLabel,
+  phaseDisplayLabel,
   sourceLabel,
   toneForStatus,
 } from './pipeline-status'
@@ -35,6 +36,14 @@ describe('pipeline phase dictionary', () => {
   it('returns undefined for unknown phase codes', () => {
     expect(normalizePhase('NDA')).toBeUndefined()
     expect(normalizePhase('')).toBeUndefined()
+  })
+
+  it('exposes Arabic Phase display labels aligned with overview tags', () => {
+    expect(phaseDisplayLabel('PHASE_1')).toBe('Phase 1')
+    expect(phaseDisplayLabel('PHASE_2')).toBe('Phase 2')
+    expect(phaseDisplayLabel('PRE_3')).toBe('PRE-3')
+    expect(phaseDisplayLabel('PHASE_3_1')).toBe('Phase 3-1')
+    expect(phaseDisplayLabel('UNKNOWN')).toBe('UNKNOWN')
   })
 
   it('keeps code and tag dictionaries inverse to each other', () => {

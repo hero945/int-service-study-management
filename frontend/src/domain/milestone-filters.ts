@@ -1,4 +1,10 @@
-import { normalizePhase, type PipelinePhase } from './pipeline-status'
+import {
+  PHASE_TAGS,
+  PHASE_TAG_TO_CODE,
+  normalizePhase,
+  phaseDisplayLabel,
+  type PipelinePhase,
+} from './pipeline-status'
 
 /** 筛选用：里程碑主阶段 → 子节点标签（与 MilestoneDefinition 对齐） */
 export const MILESTONE_STATUS_BY_STAGE: Record<string, string[]> = {
@@ -66,17 +72,12 @@ export const ALL_MILESTONE_SUB_STATUSES = Object.values(MILESTONE_STATUS_BY_STAG
 
 /**
  * 管线总览 Phase 枚举：用来选定表格列（不做行过滤）。
- * 临床研发阶段编码：Pre-IND / IND / Phase I…，映射到总览列 tag。
+ * 标签与 PHASE_TAGS / phaseDisplayLabel 同源（Phase 1 体系）。
  */
-export const PIPELINE_PHASE_STATUS_OPTIONS = [
-  { code: 'PRE_IND', label: 'Pre-IND' },
-  { code: 'IND', label: 'IND' },
-  { code: 'PHASE_1', label: 'Phase I' },
-  { code: 'PHASE_2', label: 'Phase II' },
-  { code: 'PRE_3', label: 'Pre-III' },
-  { code: 'PHASE_3_1', label: 'Phase III-1' },
-  { code: 'PHASE_3_2', label: 'Phase III-2' },
-] as const
+export const PIPELINE_PHASE_STATUS_OPTIONS = PHASE_TAGS.map((tag) => ({
+  code: PHASE_TAG_TO_CODE[tag],
+  label: phaseDisplayLabel(PHASE_TAG_TO_CODE[tag]),
+}))
 
 /** PreIND / IND / PRE-3 对应的里程碑主阶段 key（状态下拉用） */
 const MAIN_STAGE_BY_PHASE_CODE: Record<string, string> = {
@@ -94,7 +95,7 @@ export function phaseCodeToColumn(phaseCode: string): PipelinePhase | undefined 
 /**
  * 管线总览「状态」下拉选项（依赖已选列）：
  * - 未选 Phase → 空
- * - Pre-IND / IND / Pre-III → 「已完成」+ 对应主阶段里程碑节点
+ * - PreIND / IND / PRE-3 → 「已完成」+ 对应主阶段里程碑节点
  * - 其他 Phase → 「已完成」+ 全部里程碑子状态
  * 「已完成」与表格 chip 文案一致，用于筛已完成列单元格。
  */

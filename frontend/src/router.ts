@@ -63,7 +63,7 @@ export const router = createRouter({
           meta: {
             title: '里程碑',
             subtitle: 'Study 里程碑跟踪',
-            requiredPermission: 'pipeline.page.view',
+            requiredPermission: 'milestone.read',
           },
         },
         {

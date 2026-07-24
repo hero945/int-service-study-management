@@ -42,10 +42,11 @@ Java 运行时、Repository、Spring Session 与 Flyway 已统一接入 `hd_plt_
 | `DELETE /api/v1/risk-management/risks/{riskCode}` | `risk.delete` + CSRF | 按版本号软删除风险 |
 | `POST/PATCH/DELETE /api/v1/risk-management/risks/{riskCode}/actions...` | `risk.update` + CSRF | 新增、更新或软删除控制措施 |
 | `GET /api/v1/team-matrix` | `team.page.view` | 团队矩阵查询（Study × 角色分配） |
+| `GET /api/v1/studies/{studyId}/team` | `study.read` | Study 抽屉团队只读（不要求 team.page.view） |
 | `PUT /api/v1/team-matrix/assignments` | `team.update` + CSRF | 批量替换团队分配 |
-| `GET /api/v1/studies/{studyId}/milestones` | `study.read` | Study 里程碑分组与节点 |
+| `GET /api/v1/studies/{studyId}/milestones` | `milestone.read` | Study 里程碑分组与节点 |
 | `PUT /api/v1/studies/{studyId}/milestones/{milestoneCode}` | `milestone.update` + CSRF | 更新单个里程碑节点 |
-| `GET /api/v1/studies/{studyId}/stage-projection` | `study.read` | 阶段投影（供管线总览） |
+| `GET /api/v1/studies/{studyId}/stage-projection` | `milestone.read` | 阶段投影（供管线总览/里程碑页） |
 | `GET /api/v1/studies/{studyId}/monthly-reports` | `monthly.read` | Study×月度填报页读模型 |
 | `POST /api/v1/monthly-reports/{reportId}/entries` | `monthly.create` + CSRF | 新增功能线进展明细 |
 | `PATCH/DELETE /api/v1/monthly-report-entries/{entryId}` | `monthly.update` + CSRF | 修改或删除进展明细 |

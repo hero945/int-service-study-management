@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { apiClient } from '../api/client'
 import type { Study, MilestonePage, RiskPage, TeamMatrixPage } from '../api/types'
 import PageState from '../components/PageState.vue'
+import { session } from '../session'
 
 const props = defineProps<{
   open: boolean
@@ -13,6 +14,9 @@ const emit = defineEmits<{ close: [] }>()
 
 type TabKey = 'milestone' | 'team' | 'risk'
 const activeTab = ref<TabKey>('milestone')
+const canReadMilestone = computed(() =>
+  session.currentUser.value?.permissions.includes('milestone.read') ?? false,
+)
 
 // ── per-tab state ──
 const milestoneLoading = ref(false)
@@ -38,15 +42,15 @@ const teamCount = computed(() => {
 
 watch(() => props.open, (val) => {
   if (val && props.study) {
-    activeTab.value = 'milestone'
-    loadMilestone()
+    activeTab.value = canReadMilestone.value ? 'milestone' : 'team'
+    if (canReadMilestone.value) loadMilestone()
     loadTeam()
     loadRisks()
   }
 })
 
 function loadMilestone() {
-  if (!props.study) return
+  if (!props.study || !canReadMilestone.value) return
   milestoneLoading.value = true; milestoneError.value = ''
   apiClient.getMilestones(props.study.id)
     .then(d => { milestoneData.value = d })
@@ -58,42 +62,7 @@ async function loadTeam() {
   if (!props.study) return
   teamLoading.value = true; teamError.value = ''
   try {
-    // 团队矩阵接口单次查询 pageSize 上限已提到 @Max(100)（限返回的 study 条数，成员本身不截断）。
-    // study.code 是 LIKE 匹配，可能命中多个 study；翻页累积所有页（每页最多 100），
-    // 按 studyId|roleCode 去重合并 assignments，确保拿全当前 study 的成员。
-    const PAGE_SIZE = 100
-    let page = 1
-    let merged: TeamMatrixPage | null = null
-    let totalPages = 1
-    do {
-      const d = await apiClient.listTeamMatrix({
-        studyQuery: props.study.code,
-        page,
-        pageSize: PAGE_SIZE,
-      })
-      if (!merged) {
-        merged = {
-          studies: [...d.studies],
-          roles: [...d.roles],
-          assignments: [...d.assignments],
-          totalRoles: d.totalRoles,
-          pagination: d.pagination,
-        }
-      } else {
-        const studyIds = new Set(merged.studies.map(s => s.studyId))
-        for (const s of d.studies) if (!studyIds.has(s.studyId)) merged.studies.push(s)
-        const roleCodes = new Set(merged.roles.map(r => r.roleCode))
-        for (const r of d.roles) if (!roleCodes.has(r.roleCode)) merged.roles.push(r)
-        const aKeys = new Set(merged.assignments.map(a => `${a.studyId}|${a.roleCode}`))
-        for (const a of d.assignments) {
-          const key = `${a.studyId}|${a.roleCode}`
-          if (!aKeys.has(key)) { merged.assignments.push(a); aKeys.add(key) }
-        }
-      }
-      totalPages = d.pagination.totalPages
-      page++
-    } while (page <= totalPages)
-    teamData.value = merged
+    teamData.value = await apiClient.getStudyTeam(props.study.id)
   } catch (e) {
     teamError.value = e instanceof Error ? e.message : '团队数据加载失败'
   } finally {
@@ -138,11 +107,12 @@ const teamRoles = computed(() => {
 
 const teamHasMembers = computed(() => teamRoles.value.some(r => r.members.length > 0))
 
-const tabs: { key: TabKey; label: string }[] = [
-  { key: 'milestone', label: '里程碑' },
-  { key: 'team', label: '团队' },
-  { key: 'risk', label: '风险' },
-]
+const tabs = computed(() => {
+  const items: { key: TabKey; label: string }[] = []
+  if (canReadMilestone.value) items.push({ key: 'milestone', label: '里程碑' })
+  items.push({ key: 'team', label: '团队' }, { key: 'risk', label: '风险' })
+  return items
+})
 </script>
 
 <template>
@@ -240,9 +210,8 @@ const tabs: { key: TabKey; label: string }[] = [
                   </div>
                   <p class="risk-card-desc">{{ r.description }}</p>
                   <div class="risk-card-tags">
-                    <span class="risk-tag risk-tag--pri">Priority {{ r.score >= 15 ? 'High' : r.score >= 6 ? 'Medium' : 'Low' }}</span>
-                    <span class="risk-tag">Probability {{ ['Low','Medium','High'][Math.min(2, Math.floor((r.score / 5) % 3))] ?? 'Low' }}</span>
-                    <span class="risk-tag">Impact {{ ['Low','Medium','High'][Math.min(2, Math.floor(r.score / 25))] ?? 'Low' }}</span>
+                    <span class="status-chip" :class="`status-chip--${riskLevelTone(r.level)}`">{{ riskLevelLabel(r.level) }}</span>
+                    <span class="risk-tag mono">Score {{ r.score }}</span>
                   </div>
                   <div class="risk-card-owner">Owner：{{ r.ownerName }}</div>
                 </div>

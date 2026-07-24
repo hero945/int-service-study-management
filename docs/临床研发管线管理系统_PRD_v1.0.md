@@ -20,8 +20,8 @@
 | 管线总览、Study 列表 | 已闭环 | 后端聚合读模型；TA 内拖拽排序仍未落地 |
 | 管线配置 | 已闭环 | Program / Project / Study CRUD 与 TA 字典；分页与并发版本控制仍弱 |
 | 风险管理 | 已闭环 | 评分、措施、关闭/重开、乐观锁 |
-| 团队矩阵 | 已闭环 | 查询、编辑模式、批量写分配，并驱动 `ASSIGNED_STUDY` 可见范围 |
-| 里程碑 | 已闭环 | 按 Study 读写节点、阶段投影 |
+| 团队矩阵 | 已闭环 | 整页查询需 `team.page.view`；Study 抽屉团队 tab 仅需 `study.read` + 数据范围 |
+| 里程碑 | 已闭环 | 查询需 `milestone.read`，编辑需 `milestone.update`；按 Study 读写节点、阶段投影 |
 | Study 月报填报 | 已闭环 | 从 Study 进入；功能线进展增改删与历史 |
 | 跨 Study 月报完成率列表 | 未做 / 部分 | 路由 `/monthly` 仍为骨架，侧栏已不再入口 |
 | 月报导出 | 已闭环 | 起止日期 + ALL/TA/PROGRAM 范围；预览与 html/csv/xlsx；权限码 `report.export` |
@@ -181,7 +181,7 @@ flowchart LR
 |---|---|---|
 | 页面查看权限 | 是否显示导航、是否允许进入页面 | `pipeline.page.view`、`risk.page.view`、`account.page.view` |
 | 页面操作权限 | 页面级按钮和非单条数据操作 | `report.export.xlsx`、`report.print`、`team.edit_mode` |
-| 数据查询权限 | 是否可以读取列表、详情、统计和导出数据 | `study.read`、`risk.read`、`monthly.read` |
+| 数据查询权限 | 是否可以读取列表、详情、统计和导出数据 | `study.read`、`risk.read`、`monthly.read`、`milestone.read` |
 | 数据新增权限 | 是否可以创建业务记录 | `risk.create`、`monthly.create`、`account.create` |
 | 数据修改权限 | 是否可以修改业务记录 | `risk.update`、`milestone.update`、`config.update` |
 | 数据删除权限 | 是否可以删除业务记录 | `risk.delete`、`config.delete`、`account.delete` |
@@ -266,7 +266,8 @@ flowchart LR
 
 - 展示授权范围内全部Study明细。
 - 支持全局搜索、四类筛选和表头排序。
-- 点击行打开Study详情抽屉；点击“里程碑”进入里程碑页。
+- 点击行打开 Study 详情抽屉（里程碑 / 团队 / 风险等 tab）；抽屉内团队只读取数校验 `study.read` 与 Study 数据范围，**不要求** `team.page.view`。
+- 操作列“里程碑”进入里程碑页（需 `milestone.read`）；“月报”进入填报页（需 `monthly.read`）。
 - Study编号旁展示Open风险数量。
 
 ### 字段
@@ -283,7 +284,7 @@ flowchart LR
 | PL / PM | Team.PL/PM | Derived | `PL / PM` 拼接 | - |
 | 最近更新 | Study.updatedAt、关联记录updatedAt | Derived/DateTime | 取Study基础信息、里程碑、月度汇报和风险记录中最大的 `updatedAt`；现状仅显示演示月 | - |
 | 结果数量 | Study.study | Derived Integer | 对当前权限范围内同时满足搜索、TA、Program、阶段和状态条件的Study ID去重计数 | 非负整数 |
-| 操作 | - | Action | 打开里程碑页 | - |
+| 操作 | - | Action | 有 `milestone.read` 时显示「里程碑」；有 `monthly.read` 时显示「月报」 | - |
 
 ## 4.3 研究月度汇报
 
@@ -388,7 +389,8 @@ flowchart LR
 
 - 横向为Study，纵向为角色；顶部展示适应症和当前状态。
 - 分别支持Study/适应症搜索和角色名称搜索。
-- 拥有 `team.edit_mode` 和 `team.update` 权限，且目标Study属于用户可见范围时可进入编辑模式。
+- 页面访问校验 `team.page.view`；拥有 `team.edit_mode` 和 `team.update` 权限，且目标Study属于用户可见范围时可进入编辑模式。
+- Study 详情抽屉中的「团队」tab 使用 `GET /studies/{studyId}/team`，仅校验 `study.read` 与数据范围，不打开本页、也不要求 `team.page.view`。
 - 单元格支持从平台账号中搜索、添加和移除成员；数据库使用 `user_id` 关联，不保存姓名拼接字符串。
 - 团队成员必须已有平台账号，不允许临时成员。
 - 团队矩阵同时表达业务分工和 `ASSIGNED_STUDY` 用户的Study可见范围，不直接授予新增、修改、删除等操作权限。
@@ -540,7 +542,7 @@ flowchart LR
 
 - 从Study列表进入，只展示一个Study的里程碑。
 - 按Java固定的阶段和里程碑节点顺序展示；数据库不建立阶段或节点配置表。
-- 拥有 `milestone.update` 且数据范围覆盖目标Study的用户可编辑；其他用户只读。
+- 进入页面与查询校验 `milestone.read` 及 Study 数据范围；拥有 `milestone.update` 且数据范围覆盖目标Study的用户可编辑，否则只读。
 - 编辑状态下可维护计划V1.0、计划V2.0、实际开始、实际结束和偏差说明。
 
 ### 字段
