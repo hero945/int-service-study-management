@@ -10,6 +10,7 @@ out/
 # -----------------------------------------------------------------------------
 **/node_modules/
 .npm/
+/.vite/
 .eslintcache
 coverage/
 .nyc_output/
@@ -67,7 +68,10 @@ docker-compose.override.yaml
 .tools/
 .codex/
 .agents/
-.chrome-shot-batch/
+/.claude/settings.local.json
+/.review-diff-*.patch
+/.chrome-shot-*/
+/.chrome-profile-*/
 
 # -----------------------------------------------------------------------------
 # Logs, temporary files, and crash dumps

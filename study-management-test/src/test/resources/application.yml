@@ -19,3 +19,8 @@ app:
     admin-username: admin@example.com
     admin-password: Admin-Change-Me-123!
     admin-display-name: 测试管理员
+sentry:
+  dsn:
+  environment: test
+  traces-sample-rate: 0
+  send-default-pii: false

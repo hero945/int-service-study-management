@@ -3,6 +3,8 @@ package com.huadong.pipeline.web;
 import lombok.extern.slf4j.Slf4j;
 
 import com.huadong.pipeline.common.BusinessException;
+import io.sentry.Sentry;
+import io.sentry.protocol.User;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
@@ -165,6 +167,16 @@ public class ApiExceptionHandler {
         request.getMethod(),
         request.getRequestURI(),
         ex);
+    // @ExceptionHandler 已吞掉异常，需手动上报；业务/校验异常不走此分支
+    Sentry.withScope(
+        scope -> {
+          scope.setTag("http.method", request.getMethod());
+          scope.setTag("http.path", request.getRequestURI());
+          User user = new User();
+          user.setUsername(currentUsername());
+          scope.setUser(user);
+          Sentry.captureException(ex);
+        });
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
         .body(new ApiError("INTERNAL_ERROR", "服务器内部错误", Map.of(), Instant.now()));
   }

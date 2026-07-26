@@ -52,6 +52,7 @@ docker compose --profile monitoring up -d
 - 平台：`http://127.0.0.1:8080`
 - Prometheus：`http://127.0.0.1:9091`
 - Grafana：`http://127.0.0.1:3000`
+- Sentry：在 `.env` 配置 `SENTRY_DSN` 后启用未预期异常上报（留空则不上报）
 
 首个管理员创建后，应创建日常管理员账号，从部署环境移除 `BOOTSTRAP_ADMIN_PASSWORD`，再重启应用。数据库中已有同名账号时不会覆盖密码。
 

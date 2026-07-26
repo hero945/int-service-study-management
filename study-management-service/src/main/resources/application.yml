@@ -55,3 +55,11 @@ app:
     admin-username: ${BOOTSTRAP_ADMIN_USERNAME:}
     admin-password: ${BOOTSTRAP_ADMIN_PASSWORD:}
     admin-display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:系统管理员}
+# Sentry：未配置 SENTRY_DSN 时不上报。官方文档：
+# https://docs.sentry.io/platforms/java/guides/spring-boot/
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:local}
+  release: ${SENTRY_RELEASE:}
+  send-default-pii: false
+  traces-sample-rate: 0
