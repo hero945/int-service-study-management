@@ -7,7 +7,7 @@
 - [验证记录 V1.0](./验证记录_v1.0.md)
 - [角色权限与 Session 常见问题](./角色权限管理_QA.md)
 
-- [临床研发管线管理系统 PRD V1.0](临床研发管线管理系统_PRD_v1.0.md)
+- [临床研发管线管理系统 PRD V1.2](临床研发管线管理系统_PRD_v1.0.md)
 - [前后端拆分技术设计 V1.2](前后端拆分技术设计_v1.0.md)
 - [完整PRD数据库设计规格](database/完整PRD数据库设计规格.md)
 - [25表MySQL建表语句及Flyway V1基线](database/V1__hd_plt_full_schema.sql)
