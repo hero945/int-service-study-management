@@ -52,7 +52,7 @@ const matrix = {
   }],
   assignments: [],
   totalRoles: 44,
-  pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+  pagination: { page: 1, pageSize: 10, totalItems: 1, totalPages: 1 },
 }
 
 describe('TeamMatrixView', () => {
@@ -61,16 +61,22 @@ describe('TeamMatrixView', () => {
     replaceTeamAssignments.mockReset().mockResolvedValue({
       studies: [{ studyId: 11, version: 1 }],
     })
-    listUsers.mockReset().mockResolvedValue([{
-      id: 21,
-      username: 'member@example.com',
-      displayName: '张伟',
-      roles: ['USER'],
-      roleDescriptions: ['普通成员'],
-      dataScope: 'ASSIGNED_STUDY',
-      visibleStudyCount: 0,
-      enabled: true,
-    }])
+    listUsers.mockReset().mockResolvedValue({
+      data: [{
+        id: 21,
+        username: 'member@example.com',
+        displayName: '张伟',
+        roles: ['USER'],
+        roleDescriptions: ['普通成员'],
+        dataScope: 'ASSIGNED_STUDY',
+        visibleStudyCount: 0,
+        enabled: true,
+      }],
+      page: 1,
+      pageSize: 100,
+      totalItems: 1,
+      totalPages: 1,
+    })
   })
 
   it('renders the role by Study matrix and saves staged member changes', async () => {

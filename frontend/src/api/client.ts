@@ -7,11 +7,15 @@ import type {
   LoginCredentials,
   MonthlyReport,
   CreateStudyConfigInput,
+  PipelineConfigPage,
+  PipelineConfigQuery,
   PipelineConfigRow,
   PipelineProgram,
   PipelineProject,
   PipelineOverview,
   PlatformUser,
+  UserListQuery,
+  UserPage,
   PlatformPermission,
   PlatformRole,
   CreateRiskInput,
@@ -40,6 +44,8 @@ import type {
   RoleStatus,
   RoleUpdateResult,
   Study,
+  StudyListQuery,
+  StudyPage,
   StudyConfigInput,
   TeamMatrixBatchInput,
   TeamMatrixBatchResult,
@@ -55,7 +61,7 @@ export interface ApiClient {
   login(credentials: LoginCredentials): Promise<CurrentUser>
   logout(): Promise<void>
   getPipelineOverview(): Promise<PipelineOverview>
-  listStudies(): Promise<Study[]>
+  listStudies(query?: StudyListQuery): Promise<StudyPage>
   listRisks(query?: RiskQuery): Promise<RiskPage>
   getRisk(riskCode: string): Promise<RiskDetail>
   getRiskFormOptions(studyId?: number): Promise<RiskFormOptions>
@@ -79,7 +85,7 @@ export interface ApiClient {
   listTeamMatrix(query?: TeamMatrixQuery): Promise<TeamMatrixPage>
   getStudyTeam(studyId: number): Promise<TeamMatrixPage>
   replaceTeamAssignments(input: TeamMatrixBatchInput): Promise<TeamMatrixBatchResult>
-  listPipelineConfig(): Promise<PipelineConfigRow[]>
+  listPipelineConfig(query?: PipelineConfigQuery): Promise<PipelineConfigPage>
   listTherapeuticAreas(): Promise<TherapeuticArea[]>
   listPrograms(keyword?: string): Promise<PipelineProgram[]>
   createProgram(input: ProgramInput): Promise<PipelineProgram>
@@ -92,7 +98,7 @@ export interface ApiClient {
   createStudyConfig(input: CreateStudyConfigInput): Promise<void>
   updateStudyConfig(id: number, input: StudyConfigInput): Promise<PipelineConfigRow>
   deleteStudyConfig(id: number): Promise<void>
-  listUsers(keyword?: string, roleCode?: string): Promise<PlatformUser[]>
+  listUsers(query?: UserListQuery): Promise<UserPage>
   createUser(input: CreateUserInput): Promise<void>
   changePassword(input: ChangePasswordInput): Promise<void>
   resetPassword(id: number): Promise<void>
@@ -191,11 +197,19 @@ export function createHttpApiClient(): ApiClient {
     },
     getPipelineOverview: () =>
       request<PipelineOverview>('/api/v1/clinical-pipeline/overview'),
-    listStudies: () => request<Study[]>('/api/v1/clinical-pipeline/studies'),
+    listStudies: (query = {}) => {
+      const parameters = new URLSearchParams()
+      parameters.set('page', String(query.page ?? 1))
+      parameters.set('pageSize', String(query.pageSize ?? 10))
+      if (query.therapeuticArea) parameters.set('therapeuticArea', query.therapeuticArea)
+      if (query.program) parameters.set('program', query.program)
+      if (query.milestoneStatus) parameters.set('milestoneStatus', query.milestoneStatus)
+      return request<StudyPage>(`/api/v1/clinical-pipeline/studies?${parameters}`)
+    },
     listRisks: (query = {}) => {
       const parameters = new URLSearchParams()
       parameters.set('page', String(query.page ?? 1))
-      parameters.set('pageSize', String(query.pageSize ?? 20))
+      parameters.set('pageSize', String(query.pageSize ?? 10))
       parameters.set('sortBy', query.sortBy ?? 'updatedAt')
       parameters.set('sortOrder', query.sortOrder ?? 'desc')
       if (query.query) parameters.set('query', query.query)
@@ -317,7 +331,7 @@ export function createHttpApiClient(): ApiClient {
     listTeamMatrix: (query = {}) => {
       const parameters = new URLSearchParams()
       parameters.set('page', String(query.page ?? 1))
-      parameters.set('pageSize', String(query.pageSize ?? 20))
+      parameters.set('pageSize', String(query.pageSize ?? 10))
       if (query.studyQuery) parameters.set('studyQuery', query.studyQuery)
       if (query.roleQuery) parameters.set('roleQuery', query.roleQuery)
       return request<TeamMatrixPage>(`/api/v1/team-matrix?${parameters}`)
@@ -331,8 +345,13 @@ export function createHttpApiClient(): ApiClient {
         body: JSON.stringify(input),
       })
     },
-    listPipelineConfig: () =>
-      request<PipelineConfigRow[]>('/api/v1/clinical-pipeline/pipeline-config'),
+    listPipelineConfig: (query = {}) => {
+      const parameters = new URLSearchParams()
+      parameters.set('page', String(query.page ?? 1))
+      parameters.set('pageSize', String(query.pageSize ?? 10))
+      if (query.keyword) parameters.set('keyword', query.keyword)
+      return request<PipelineConfigPage>(`/api/v1/clinical-pipeline/pipeline-config?${parameters}`)
+    },
     listTherapeuticAreas: () =>
       request<TherapeuticArea[]>('/api/v1/clinical-pipeline/therapeutic-areas'),
     listPrograms: (keyword = '') =>
@@ -392,12 +411,13 @@ export function createHttpApiClient(): ApiClient {
       await refreshCsrf()
       await request<void>(`/api/v1/clinical-pipeline/studies/${id}`, { method: 'DELETE' })
     },
-    listUsers: (keyword = '', roleCode = '') => {
+    listUsers: (query = {}) => {
       const params = new URLSearchParams()
-      if (keyword) params.set('keyword', keyword)
-      if (roleCode) params.set('roleCode', roleCode)
-      const qs = params.toString()
-      return request<PlatformUser[]>(`/api/v1/platform/users${qs ? `?${qs}` : ''}`)
+      params.set('page', String(query.page ?? 1))
+      params.set('pageSize', String(query.pageSize ?? 10))
+      if (query.keyword) params.set('keyword', query.keyword)
+      if (query.roleCode) params.set('roleCode', query.roleCode)
+      return request<UserPage>(`/api/v1/platform/users?${params}`)
     },
     async createUser(input) {
       await refreshCsrf()
@@ -440,7 +460,7 @@ export function createHttpApiClient(): ApiClient {
     listRoles: (filters = {}) => {
       const parameters = new URLSearchParams()
       parameters.set('page', String(filters.page ?? 1))
-      parameters.set('pageSize', String(filters.pageSize ?? 20))
+      parameters.set('pageSize', String(filters.pageSize ?? 10))
       if (filters.keyword) parameters.set('keyword', filters.keyword)
       if (filters.status) parameters.set('status', filters.status)
       return request<RolePage>(`/api/v1/platform/roles?${parameters}`)

@@ -99,10 +99,10 @@ class PlatformIntegrationTest {
         mvc.perform(get("/api/v1/clinical-pipeline/studies")
                         .with(user(userDetailsService.loadUserByUsername("admin@example.com"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").doesNotExist())
-                .andExpect(jsonPath("$[0].statusLabel").value("进行中"))
-                .andExpect(jsonPath("$[0].statusTone").value("positive"));
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].name").doesNotExist())
+                .andExpect(jsonPath("$.data[0].statusLabel").value("进行中"))
+                .andExpect(jsonPath("$.data[0].statusTone").value("positive"));
         mvc.perform(get("/api/v1/clinical-pipeline/overview")
                         .with(user(userDetailsService.loadUserByUsername("admin@example.com"))))
                 .andExpect(status().isOk())
@@ -159,9 +159,21 @@ class PlatformIntegrationTest {
         mvc.perform(get("/api/v1/platform/users").with(user("account-auditor").authorities(
                         new SimpleGrantedAuthority("account.page.view"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.username == 'test.user@example.com')]", hasSize(1)))
-                .andExpect(jsonPath("$[?(@.username == 'test.user@example.com')].roles[0]", hasSize(1)))
-                .andExpect(jsonPath("$[0].passwordHash").doesNotExist());
+                .andExpect(jsonPath("$.data[?(@.username == 'test.user@example.com')]", hasSize(1)))
+                .andExpect(jsonPath("$.data[?(@.username == 'test.user@example.com')].roles[0]", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].passwordHash").doesNotExist())
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.pageSize").value(10));
+
+        mvc.perform(get("/api/v1/platform/users")
+                        .param("keyword", "test.user@example.com")
+                        .param("pageSize", "1")
+                        .with(user("account-auditor").authorities(
+                                new SimpleGrantedAuthority("account.page.view"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)))
+                .andExpect(jsonPath("$.data[0].username").value("test.user@example.com"))
+                .andExpect(jsonPath("$.pageSize").value(1));
     }
 
     private void seedStudyHierarchy() {

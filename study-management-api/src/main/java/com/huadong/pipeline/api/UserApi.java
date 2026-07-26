@@ -11,7 +11,7 @@ import java.util.List;
 public interface UserApi {
   CurrentUserResponse getCurrentUser(String username);
 
-  List<UserResponse> list(String keyword, String roleCode);
+  UserPageResponse list(int page, int pageSize, String keyword, String roleCode);
 
   void create(@Valid CreateUserRequest request);
 
@@ -69,5 +69,13 @@ public interface UserApi {
       String dataScope,
       long visibleStudyCount,
       boolean enabled) {
+  }
+
+  record UserPageResponse(
+      List<UserResponse> data,
+      int page,
+      int pageSize,
+      long totalItems,
+      long totalPages) {
   }
 }

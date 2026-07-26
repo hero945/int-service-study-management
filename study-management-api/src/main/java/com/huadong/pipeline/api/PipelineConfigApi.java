@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PipelineConfigApi {
-  List<PipelineConfigRowResponse> listRows();
+  PipelineConfigPageResponse listRows(String keyword, int page, int pageSize);
   List<TherapeuticAreaResponse> listTherapeuticAreas();
   List<ProgramResponse> listPrograms(String keyword);
   List<ProjectResponse> listProjects(Long programId, String keyword);
@@ -73,6 +73,14 @@ public interface PipelineConfigApi {
       long programId, String programCode,
       String productName, String moa, String sourceCode, String sourceLabel,
       String originCode, String originLabel, LocalDateTime updatedAt) {
+  }
+
+  record PipelineConfigPageResponse(
+      List<PipelineConfigRowResponse> data,
+      int page,
+      int pageSize,
+      long totalItems,
+      long totalPages) {
   }
 
   record TherapeuticAreaResponse(long id, String code, String name, String englishName) {

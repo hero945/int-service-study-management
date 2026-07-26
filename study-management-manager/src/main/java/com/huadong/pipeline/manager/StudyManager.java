@@ -10,6 +10,8 @@ import com.huadong.pipeline.domain.study.PipelineOverview;
 import com.huadong.pipeline.domain.study.PipelineOverviewRepository;
 import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.StudyRepository;
+import com.huadong.pipeline.domain.study.StudyRepository.StudyListQuery;
+import com.huadong.pipeline.domain.study.StudyRepository.StudyPage;
 import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
 import com.huadong.pipeline.domain.study.OverviewStudy;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
@@ -50,17 +52,48 @@ public class StudyManager {
   @Autowired
   private TeamMatrixRepository team;
 
-  public List<StudyView> list(String username) {
+  public StudyListPage list(String username, StudyListQuery rawQuery) {
     UserAccount user = currentUser(username);
-    List<Study> all = studies.findAll(accessScope(user));
+    StudyAccessScope scope = accessScope(user);
+    StudyListQuery query = rawQuery.normalized();
     boolean canReadMilestone = user.permissions().contains("milestone.read");
-    Set<Long> studyIds = all.stream().map(Study::id).collect(Collectors.toSet());
+    boolean filterByMilestoneStatus = !query.milestoneStatus().isBlank();
+
+    if (!filterByMilestoneStatus) {
+      StudyPage page = studies.findPage(scope, query);
+      return new StudyListPage(
+          enrichViews(page.data(), canReadMilestone),
+          page.totalItems(), page.page(), page.pageSize());
+    }
+
+    // Milestone node labels are derived after load; filter in memory then page.
+    StudyPage candidates = studies.findPage(
+        scope, query.withoutMilestoneStatus().withPaging(1, 500));
+    List<StudyView> matched = enrichViews(candidates.data(), canReadMilestone).stream()
+        .filter(view -> query.milestoneStatus().equals(view.currentStatus()))
+        .toList();
+    int from = Math.min((query.page() - 1) * query.pageSize(), matched.size());
+    int to = Math.min(from + query.pageSize(), matched.size());
+    return new StudyListPage(
+        matched.subList(from, to), matched.size(), query.page(), query.pageSize());
+  }
+
+  private List<StudyView> enrichViews(List<Study> rows, boolean canReadMilestone) {
+    if (rows.isEmpty()) {
+      return List.of();
+    }
+    Set<Long> studyIds = rows.stream().map(Study::id).collect(Collectors.toSet());
     Map<Long, String> plNames = team.findRoleMemberNames(studyIds, "PL");
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIds, "PM");
-    return all.stream()
+    Map<Long, List<PersistedMilestone>> milestonesByStudy = canReadMilestone
+        ? studyMilestones.findByStudyIds(List.copyOf(studyIds)).stream()
+            .collect(Collectors.groupingBy(PersistedMilestone::studyId))
+        : Map.of();
+    return rows.stream()
         .map(study -> {
           CurrentMilestoneStatus.PhaseStatus derived = canReadMilestone
-              ? CurrentMilestoneStatus.derive(studyMilestones.findByStudyId(study.id()))
+              ? CurrentMilestoneStatus.derive(
+                  milestonesByStudy.getOrDefault(study.id(), List.of()))
               : CurrentMilestoneStatus.PhaseStatus.EMPTY;
           String currentPhase = canReadMilestone ? derived.phase() : "";
           String currentStatus = canReadMilestone ? derived.status() : study.status().label();
@@ -257,6 +290,10 @@ public class StudyManager {
       LocalDate actualStartDate,
       LocalDate actualEndDate,
       String description) {
+  }
+
+  public record StudyListPage(
+      List<StudyView> data, long totalItems, int page, int pageSize) {
   }
 
   public record StudyView(

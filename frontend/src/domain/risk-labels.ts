@@ -18,6 +18,14 @@ const RISK_ACTION_STATUS_LABELS: Record<string, string> = {
   CANCELLED: '已取消',
 }
 
+/** 与后端 hd_plt_risk_rule_version 生效阈值对应；缺省时仅作离线回退 */
+export interface RiskScoringRuleThresholds {
+  lowMax: number
+  mediumMax: number
+}
+
+const DEFAULT_SCORE_RULE: RiskScoringRuleThresholds = { lowMax: 12, mediumMax: 36 }
+
 /** 未知 code 回退为原值，避免空白 */
 export function riskLevelLabel(code: string): string {
   return RISK_LEVEL_LABELS[code] ?? code
@@ -37,9 +45,23 @@ export function riskLevelTone(level: string): 'red' | 'orange' | 'green' {
   return 'green'
 }
 
-/** 按评分推导展示等级文案（阈值与前后端一致：≤12 / ≤36） */
-export function riskScoreLevelLabel(score: number): string {
-  if (score <= 12) return RISK_LEVEL_LABELS.LOW
-  if (score <= 36) return RISK_LEVEL_LABELS.MEDIUM
+/** 按评分与生效规则阈值推导展示等级文案 */
+export function riskScoreLevelLabel(
+  score: number,
+  rule: RiskScoringRuleThresholds = DEFAULT_SCORE_RULE,
+): string {
+  if (score <= rule.lowMax) return RISK_LEVEL_LABELS.LOW
+  if (score <= rule.mediumMax) return RISK_LEVEL_LABELS.MEDIUM
   return RISK_LEVEL_LABELS.HIGH
+}
+
+/** 由生效评分规则生成悬停提示文案 */
+export function riskScoreRuleLines(
+  rule: RiskScoringRuleThresholds = DEFAULT_SCORE_RULE,
+): string[] {
+  return [
+    '总分 = 影响程度 a × 发生可能性 b × 可探测性 c',
+    'a、b、c 各取值 1–5，总分范围 1–125',
+    `等级：≤${rule.lowMax} 低风险 · ${rule.lowMax + 1}–${rule.mediumMax} 中风险 · ≥${rule.mediumMax + 1} 高危`,
+  ]
 }

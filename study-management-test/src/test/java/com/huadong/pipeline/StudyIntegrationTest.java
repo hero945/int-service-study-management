@@ -34,12 +34,15 @@ class StudyIntegrationTest {
     assignToStudy(studyId, ownerId);
 
     String body = mvc.perform(get("/api/v1/clinical-pipeline/studies")
-            .with(user(operator).authorities(new SimpleGrantedAuthority("study.read"))))
+            .param("pageSize", "100")
+            .with(user(operator).authorities(
+                new SimpleGrantedAuthority("study.read"),
+                new SimpleGrantedAuthority("milestone.read"))))
         .andExpect(status().isOk())
         .andReturn().getResponse().getContentAsString();
 
     JsonNode study = null;
-    for (JsonNode node : mapper.readTree(body)) {
+    for (JsonNode node : mapper.readTree(body).get("data")) {
       if ("STUDY-PLPM-001".equals(node.get("code").asText())) {
         study = node;
         break;
@@ -104,6 +107,29 @@ class StudyIntegrationTest {
     assertEquals("计划中", study.get("currentStatus").asText());
   }
 
+  @Test
+  void listSupportsServerSidePagingAndProgramFilter() throws Exception {
+    String operator = "study.page@example.com";
+    long ownerId = seedUser(operator, "分页测试");
+    long firstId = seedStudy("STUDY-PAGE-A");
+    assignToStudy(firstId, ownerId);
+
+    String page1 = mvc.perform(get("/api/v1/clinical-pipeline/studies")
+            .param("program", "PROGRAM-RISK")
+            .param("page", "1")
+            .param("pageSize", "1")
+            .with(user(operator).authorities(new SimpleGrantedAuthority("study.read"))))
+        .andExpect(status().isOk())
+        .andReturn().getResponse().getContentAsString();
+    JsonNode root = mapper.readTree(page1);
+    assertEquals(1, root.get("data").size());
+    assertTrue(root.get("total").asInt() >= 1);
+    assertEquals(1, root.get("page").asInt());
+    assertEquals(1, root.get("pageSize").asInt());
+    assertTrue(root.get("totalPages").asInt() >= 1);
+    assertTrue(root.get("data").get(0).get("code").asText().startsWith("STUDY-"));
+  }
+
   private long seedUserWithPermission(String email, String displayName, String permissionCode) {
     jdbc.update("""
         INSERT INTO hd_plt_user(
@@ -139,10 +165,13 @@ class StudyIntegrationTest {
 
   private JsonNode findStudyInList(String operator, String studyCode) throws Exception {
     String body = mvc.perform(get("/api/v1/clinical-pipeline/studies")
-            .with(user(operator).authorities(new SimpleGrantedAuthority("study.read"))))
+            .param("pageSize", "100")
+            .with(user(operator).authorities(
+                new SimpleGrantedAuthority("study.read"),
+                new SimpleGrantedAuthority("milestone.read"))))
         .andExpect(status().isOk())
         .andReturn().getResponse().getContentAsString();
-    for (JsonNode node : mapper.readTree(body)) {
+    for (JsonNode node : mapper.readTree(body).get("data")) {
       if (studyCode.equals(node.get("code").asText())) {
         return node;
       }

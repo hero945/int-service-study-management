@@ -3,9 +3,9 @@ package com.huadong.pipeline.web;
 
 import com.huadong.pipeline.api.UserApi;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.security.Principal;
-import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,10 +29,12 @@ public class AdminUserController {
 
   @GetMapping
   @PreAuthorize("hasAuthority('account.page.view')")
-  List<UserApi.UserResponse> list(
+  UserApi.UserPageResponse list(
+      @RequestParam(defaultValue = "1") @Min(1) int page,
+      @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
       @RequestParam(defaultValue = "") String keyword,
       @RequestParam(defaultValue = "") String roleCode) {
-    return userApi.list(keyword, roleCode);
+    return userApi.list(page, pageSize, keyword, roleCode);
   }
 
   @PostMapping

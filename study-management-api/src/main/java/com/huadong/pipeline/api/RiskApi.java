@@ -44,8 +44,11 @@ public interface RiskApi {
   record StudyOptionResponse(long id, String studyCode, String programCode, String projectCode) {}
   record FunctionOptionResponse(long id, String code, String name) {}
   record MemberOptionResponse(long id, String email, String displayName) {}
+  /** Active scoring thresholds from hd_plt_risk_rule_version. */
+  record ScoringRuleResponse(long id, int lowMax, int mediumMax) {}
   record FormOptionsResponse(List<StudyOptionResponse> studies,
-      List<FunctionOptionResponse> functions, List<MemberOptionResponse> owners) {}
+      List<FunctionOptionResponse> functions, List<MemberOptionResponse> owners,
+      ScoringRuleResponse scoringRule) {}
 
   record AssessmentRequest(
       @Min(1) @Max(5) int impact,

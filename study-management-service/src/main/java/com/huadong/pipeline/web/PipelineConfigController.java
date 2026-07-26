@@ -3,6 +3,8 @@ package com.huadong.pipeline.web;
 
 import com.huadong.pipeline.api.PipelineConfigApi;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.security.Principal;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,8 +29,11 @@ public class PipelineConfigController {
 
   @GetMapping("/pipeline-config")
   @PreAuthorize("hasAuthority('config.page.view')")
-  List<PipelineConfigApi.PipelineConfigRowResponse> listRows() {
-    return api.listRows();
+  PipelineConfigApi.PipelineConfigPageResponse listRows(
+      @RequestParam(defaultValue = "") String keyword,
+      @RequestParam(defaultValue = "1") @Min(1) int page,
+      @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize) {
+    return api.listRows(keyword, page, pageSize);
   }
 
   @GetMapping("/therapeutic-areas")

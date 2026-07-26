@@ -34,7 +34,7 @@ public class RoleController {
   @PreAuthorize("hasAuthority('role.page.view')")
   RoleApi.RolePageResponse list(
       @RequestParam(defaultValue = "1") @Min(1) int page,
-      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize,
+      @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
       @RequestParam(defaultValue = "") String keyword,
       @RequestParam(required = false) @Pattern(regexp = "ACTIVE|DISABLED") String status) {
     return roleApi.list(page, pageSize, keyword, status);

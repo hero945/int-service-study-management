@@ -2,12 +2,14 @@ package com.huadong.pipeline.repository;
 
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.huadong.pipeline.domain.config.PipelineConfigPage;
 import com.huadong.pipeline.domain.config.PipelineConfigRepository;
 import com.huadong.pipeline.domain.config.PipelineConfigRow;
 import com.huadong.pipeline.domain.config.StudyReferenceCounts;
 import com.huadong.pipeline.domain.config.TherapeuticArea;
 import com.huadong.pipeline.repository.entity.StudyEntity;
 import com.huadong.pipeline.repository.mapper.PipelineConfigMapper;
+import com.huadong.pipeline.repository.mapper.PipelineConfigRowData;
 import com.huadong.pipeline.repository.mapper.StudyMapper;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,12 +25,31 @@ public class MybatisPlusPipelineConfigRepository implements PipelineConfigReposi
 
   @Override
   public List<PipelineConfigRow> findAll() {
-    return mapper.findRows().stream().map(row -> new PipelineConfigRow(
+    return mapper.findRows().stream().map(this::toRow).toList();
+  }
+
+  @Override
+  public PipelineConfigPage findPage(String keyword, int page, int pageSize) {
+    int safePage = Math.max(page, 1);
+    int safeSize = Math.min(Math.max(pageSize, 1), 100);
+    String term = keyword == null || keyword.isBlank() ? null : keyword.trim();
+    long total = mapper.countRows(term);
+    if (total == 0) {
+      return new PipelineConfigPage(List.of(), safePage, safeSize, 0);
+    }
+    var rows = mapper.findRowsPage(term, safeSize, (safePage - 1) * safeSize).stream()
+        .map(this::toRow)
+        .toList();
+    return new PipelineConfigPage(rows, safePage, safeSize, total);
+  }
+
+  private PipelineConfigRow toRow(PipelineConfigRowData row) {
+    return new PipelineConfigRow(
         row.studyId(), row.studyCode(), row.phaseStatusCode(),
         row.projectId(), row.projectCode(), row.indication(),
         row.therapeuticAreaCode(), row.therapeuticAreaName(), row.programId(), row.programCode(),
         row.productName(), row.moa(), row.sourceCode(), row.originCode(),
-        row.updatedAt())).toList();
+        row.updatedAt());
   }
 
   @Override

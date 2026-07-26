@@ -91,6 +91,27 @@ export interface Study {
   originCode?: string
 }
 
+export interface StudyListQuery {
+  therapeuticArea?: string
+  program?: string
+  milestoneStatus?: string
+  page?: number
+  pageSize?: number
+}
+
+export interface StudyPage {
+  /** 当页数据 */
+  data: Study[]
+  /** 符合条件的总条数 */
+  total: number
+  /** 当前页（从 1 起） */
+  page: number
+  /** 每页条数 */
+  pageSize: number
+  /** 总页数 */
+  totalPages: number
+}
+
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
 export type RiskStatus = 'OPEN' | 'CLOSED'
 export type RiskActionStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
@@ -173,10 +194,17 @@ export interface RiskStudyOption {
 }
 export interface RiskFunctionOption { id: number; code: string; name: string }
 export interface RiskMemberOption { id: number; email: string; displayName: string }
+/** 来自 hd_plt_risk_rule_version 的当前生效评分阈值 */
+export interface RiskScoringRule {
+  id: number
+  lowMax: number
+  mediumMax: number
+}
 export interface RiskFormOptions {
   studies: RiskStudyOption[]
   functions: RiskFunctionOption[]
   owners: RiskMemberOption[]
+  scoringRule: RiskScoringRule
 }
 export interface RiskAssessmentInput {
   impact: number
@@ -460,6 +488,20 @@ export interface PipelineConfigRow {
   updatedAt: string
 }
 
+export interface PipelineConfigPage {
+  data: PipelineConfigRow[]
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+}
+
+export interface PipelineConfigQuery {
+  keyword?: string
+  page?: number
+  pageSize?: number
+}
+
 export interface PipelineProgram {
   id: number
   code: string
@@ -533,6 +575,21 @@ export interface PlatformUser {
   dataScope: DataScope
   visibleStudyCount: number
   enabled: boolean
+}
+
+export interface UserPage {
+  data: PlatformUser[]
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
+}
+
+export interface UserListQuery {
+  keyword?: string
+  roleCode?: string
+  page?: number
+  pageSize?: number
 }
 
 export interface CreateUserInput {

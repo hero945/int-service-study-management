@@ -28,6 +28,18 @@ class RiskManagementIntegrationTest {
   @Autowired JdbcTemplate jdbc;
 
   @Test
+  void formOptionsExposeActiveScoringRuleFromDatabase() throws Exception {
+    String operator = "risk.rule.reader@example.com";
+    seedUser(operator, "规则读取人");
+    mvc.perform(get("/api/v1/risk-management/form-options")
+            .with(user(operator).authorities(authority("risk.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.scoringRule.lowMax").value(12))
+        .andExpect(jsonPath("$.scoringRule.mediumMax").value(36))
+        .andExpect(jsonPath("$.scoringRule.id").isNumber());
+  }
+
+  @Test
   void createsAndListsRiskWithAssessmentAndControlAction() throws Exception {
     String operator = "risk.owner@example.com";
     long ownerId = seedUser(operator, "风险负责人");

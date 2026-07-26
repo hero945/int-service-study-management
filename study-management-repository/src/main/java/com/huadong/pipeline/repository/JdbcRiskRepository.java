@@ -166,7 +166,8 @@ public class JdbcRiskRepository implements RiskRepository {
           """, (rs, row) -> new FunctionOption(rs.getLong(1), rs.getString(2), rs.getString(3)),
           scope.userId());
     }
-    if (studyId == null) return new FormOptions(studies, functions, List.of());
+    Rule scoringRule = activeRule();
+    if (studyId == null) return new FormOptions(studies, functions, List.of(), scoringRule);
     List<MemberOption> owners = jdbc.query("""
         SELECT DISTINCT u.id, u.email, u.display_name
         FROM hd_plt_team_assignment ta JOIN hd_plt_user u ON u.id = ta.user_id
@@ -174,7 +175,7 @@ public class JdbcRiskRepository implements RiskRepository {
           AND u.status_code = 'ACTIVE' ORDER BY u.display_name, u.id
         """, (rs, row) -> new MemberOption(rs.getLong(1), rs.getString(2), rs.getString(3)),
         studyId);
-    return new FormOptions(studies, functions, owners);
+    return new FormOptions(studies, functions, owners, scoringRule);
   }
 
   @Override

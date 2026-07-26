@@ -7,6 +7,7 @@ import type {
   TeamMatrixPage,
 } from '../api/types'
 import PageState from '../components/PageState.vue'
+import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
 import { session } from '../session'
 
 const matrix = ref<TeamMatrixPage>()
@@ -18,6 +19,7 @@ const notice = ref('')
 const studyQuery = ref('')
 const roleQuery = ref('')
 const page = ref(1)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
 const editMode = ref(false)
 const picker = ref<{ studyId: number; roleCode: string }>()
 const drafts = ref(new Map<string, TeamMatrixMember[]>())
@@ -62,7 +64,7 @@ async function loadMatrix() {
       studyQuery: studyQuery.value,
       roleQuery: roleQuery.value,
       page: page.value,
-      pageSize: 20,
+      pageSize: pageSize.value,
     })
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '团队矩阵加载失败'
@@ -83,12 +85,19 @@ async function changePage(nextPage: number) {
   await loadMatrix()
 }
 
+async function changePageSize(nextSize: number) {
+  pageSize.value = nextSize
+  page.value = 1
+  cancelEdit()
+  await loadMatrix()
+}
+
 async function startEdit() {
   if (!canEdit.value) return
   error.value = ''
   if (!users.value.length) {
     try {
-      users.value = await apiClient.listUsers()
+      users.value = (await apiClient.listUsers({ page: 1, pageSize: 100 })).data
     } catch (reason) {
       error.value = reason instanceof Error ? reason.message : '平台账号加载失败'
       return
@@ -184,16 +193,18 @@ onMounted(loadMatrix)
 
 <template>
   <section class="page-content team-page">
-    <form class="team-toolbar" role="search" @submit.prevent="applyFilters">
-      <label>
-        <span class="sr-only">搜索 Study 或适应症</span>
-        <input v-model="studyQuery" type="search" placeholder="搜索 Study / 适应症">
-      </label>
-      <label>
-        <span class="sr-only">搜索角色或功能线</span>
-        <input v-model="roleQuery" type="search" placeholder="搜索角色 / 功能线">
-      </label>
-      <button class="secondary-button" type="submit">搜索</button>
+    <form class="page-toolbar team-toolbar" role="search" @submit.prevent="applyFilters">
+      <div class="toolbar-filters">
+        <label>
+          <span class="sr-only">搜索 Study 或适应症</span>
+          <input v-model="studyQuery" type="search" class="filter-input" placeholder="搜索 Study / 适应症">
+        </label>
+        <label>
+          <span class="sr-only">搜索角色或功能线</span>
+          <input v-model="roleQuery" type="search" class="filter-input" placeholder="搜索角色 / 功能线">
+        </label>
+        <button class="secondary-button" type="submit">搜索</button>
+      </div>
       <div class="team-toolbar__summary">
         <span>{{ matrix?.pagination.totalItems ?? 0 }} 个 Study · {{ matrix?.totalRoles ?? 0 }} 个角色</span>
         <template v-if="editMode">
@@ -301,22 +312,17 @@ onMounted(loadMatrix)
           </table>
         </div>
       </div>
-
-      <nav class="team-pagination" aria-label="团队矩阵分页">
-        <button
-          class="secondary-button"
-          type="button"
-          :disabled="(matrix?.pagination.page ?? 1) <= 1"
-          @click="changePage((matrix?.pagination.page ?? 1) - 1)"
-        >上一页</button>
-        <span>第 {{ matrix?.pagination.page }} / {{ matrix?.pagination.totalPages }} 页</span>
-        <button
-          class="secondary-button"
-          type="button"
-          :disabled="(matrix?.pagination.page ?? 1) >= (matrix?.pagination.totalPages ?? 1)"
-          @click="changePage((matrix?.pagination.page ?? 1) + 1)"
-        >下一页</button>
-      </nav>
     </PageState>
+
+    <ListPagination
+      v-if="!loading && !error && matrix"
+      :total="matrix.pagination.totalItems"
+      :page="matrix.pagination.page"
+      :page-size="matrix.pagination.pageSize"
+      :total-pages="matrix.pagination.totalPages"
+      aria-label="团队矩阵分页"
+      @update:page="changePage"
+      @update:page-size="changePageSize"
+    />
   </section>
 </template>

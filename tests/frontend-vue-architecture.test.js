@@ -86,8 +86,10 @@ test('pipeline entity forms use the reduced fields and database-backed therapeut
   assert.match(configView, /ref="studyProjectDetails"/);
   assert.match(configView, /onDocumentPointerDown/);
   assert.match(configView, /placeholder="搜索 Study \/ TA \/ Program"/);
-  assert.match(configView, /pagedStudyRows/);
-  assert.match(configView, /study-pagination/);
+  assert.match(configView, /rows/);
+  assert.match(configView, /ListPagination/);
+  assert.match(read('frontend/src/components/ListPagination.vue'), /study-pagination/);
+  assert.match(read('frontend/src/components/ListPagination.vue'), /DEFAULT_PAGE_SIZE = 10/);
   assert.match(configView, /保存 Program/);
   assert.match(configView, /保存 Project/);
   const programForm = configView.slice(

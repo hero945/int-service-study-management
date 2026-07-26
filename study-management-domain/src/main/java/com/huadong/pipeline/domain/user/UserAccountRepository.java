@@ -13,6 +13,8 @@ public interface UserAccountRepository {
 
   List<UserAccount> findAll(String keyword, String roleCode);
 
+  UserPage findPage(int page, int pageSize, String keyword, String roleCode);
+
   boolean rolesExist(List<String> roleCodes);
 
   void create(String username, String passwordHash, String displayName, List<String> roleCodes);

@@ -31,13 +31,15 @@ public class RiskApiService implements RiskApi {
   }
   @Override public FormOptionsResponse formOptions(String username, Long studyId) {
     var options = manager.formOptions(username, studyId);
+    var rule = options.scoringRule();
     return new FormOptionsResponse(
         options.studies().stream().map(item -> new StudyOptionResponse(
             item.id(), item.studyCode(), item.programCode(), item.projectCode())).toList(),
         options.functions().stream().map(item -> new FunctionOptionResponse(
             item.id(), item.code(), item.name())).toList(),
         options.owners().stream().map(item -> new MemberOptionResponse(
-            item.id(), item.email(), item.displayName())).toList());
+            item.id(), item.email(), item.displayName())).toList(),
+        new ScoringRuleResponse(rule.id(), rule.lowMax(), rule.mediumMax()));
   }
   @Override public DetailResponse create(CreateRequest request, String username) {
     return detail(manager.create(new RiskManager.CreateCommand(request.studyId(),

@@ -4,6 +4,9 @@ import java.util.List;
 
 public interface PipelineConfigRepository {
   List<PipelineConfigRow> findAll();
+
+  PipelineConfigPage findPage(String keyword, int page, int pageSize);
+
   List<TherapeuticArea> findTherapeuticAreas();
   long countProjects(long programId);
   long countStudiesByProgram(long programId);

@@ -34,18 +34,27 @@ public class UserApiService implements UserApi {
   }
 
   @Override
-  public List<UserResponse> list(String keyword, String roleCode) {
-    return manager.list(keyword, roleCode).stream()
-        .map(user -> new UserResponse(
-            user.id(),
-            user.username(),
-            user.displayName(),
-            user.roles(),
-            user.roleDescriptions(),
-            user.dataScope(),
-            user.visibleStudyCount(),
-            user.enabled()))
-        .toList();
+  public UserPageResponse list(int page, int pageSize, String keyword, String roleCode) {
+    var result = manager.list(page, pageSize, keyword, roleCode);
+    long totalPages = result.totalItems() == 0
+        ? 1
+        : (result.totalItems() + result.pageSize() - 1) / result.pageSize();
+    return new UserPageResponse(
+        result.data().stream()
+            .map(user -> new UserResponse(
+                user.id(),
+                user.username(),
+                user.displayName(),
+                user.roles(),
+                user.roleDescriptions(),
+                user.dataScope(),
+                user.visibleStudyCount(),
+                user.enabled()))
+            .toList(),
+        result.page(),
+        result.pageSize(),
+        result.totalItems(),
+        totalPages);
   }
 
   @Override

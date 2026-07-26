@@ -37,6 +37,10 @@ const title = computed(() => {
 function openMilestones(studyId: number) {
   router.push(`/milestones/${studyId}`)
 }
+
+function milestoneStage(study: OverviewStudy) {
+  return study.mainStageLabel || study.phase || '—'
+}
 </script>
 
 <template>
@@ -70,25 +74,26 @@ function openMilestones(studyId: number) {
             class="project-study-card"
             @click="emit('select-study', study)"
           >
-            <div class="project-study-card__main">
+            <div class="project-study-card__top">
               <strong class="mono">{{ study.code }}</strong>
-              <p>{{ project?.indication || '—' }}</p>
-              <small>
-                {{ study.mainStageLabel || study.phase || '—' }}
-                <template v-if="study.subStatusLabel"> · {{ study.subStatusLabel }}</template>
-              </small>
-            </div>
-            <div class="project-study-card__side">
-              <span
-                class="status-chip"
-                :class="`status-chip--${toneForStatus(study.statusTone)}`"
-              >{{ study.statusLabel || study.status }}</span>
               <button
                 v-if="canReadMilestone"
-                class="text-button"
+                class="project-study-ms-btn"
                 type="button"
                 @click.stop="openMilestones(study.id)"
               >里程碑</button>
+            </div>
+            <p class="project-study-card__indication">{{ project?.indication || '—' }}</p>
+            <div class="project-study-card__meta">
+              <span class="project-study-tag project-study-tag--stage">{{ milestoneStage(study) }}</span>
+              <span
+                v-if="study.subStatusLabel"
+                class="project-study-tag project-study-tag--node"
+              >{{ study.subStatusLabel }}</span>
+              <span
+                class="project-study-tag"
+                :class="`project-study-tag--${toneForStatus(study.statusTone)}`"
+              >{{ study.statusLabel || study.status }}</span>
             </div>
           </article>
         </div>
@@ -135,11 +140,11 @@ function openMilestones(studyId: number) {
 }
 .project-study-card {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 10px;
   background: var(--surface);
   cursor: pointer;
   transition: background .12s ease, border-color .12s ease;
@@ -148,27 +153,96 @@ function openMilestones(studyId: number) {
   background: var(--hover-surface);
   border-color: #d7e3f5;
 }
-.project-study-card__main strong {
-  display: block;
-  font-size: 14px;
+.project-study-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.project-study-card__top strong {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--body);
 }
-.project-study-card__main p {
-  margin: 6px 0 0;
+.project-study-ms-btn {
+  flex-shrink: 0;
+  border: 1px solid #1e5ed6;
+  background: #fff;
+  color: #1e5ed6;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.project-study-ms-btn:hover {
+  background: #f3f7ff;
+}
+.project-study-card__indication {
+  margin: 0;
   color: var(--secondary);
   font-size: 12.5px;
+  line-height: 1.4;
 }
-.project-study-card__main small {
-  display: block;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 11.5px;
-}
-.project-study-card__side {
+.project-study-card__meta {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  flex-shrink: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+.project-study-tag {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.project-study-tag--stage {
+  background: #f3f5f8;
+  color: #5b6472;
+  border-color: #e4e7ec;
+  font-weight: 500;
+}
+.project-study-tag--node {
+  background: #f3f7ff;
+  color: #2a5088;
+  border-color: #d5e2f5;
+}
+.project-study-tag--blue {
+  background: #fff;
+  color: #1d5fd1;
+  border-color: #b7cff5;
+}
+.project-study-tag--green {
+  background: #e5f4eb;
+  color: #177245;
+  border-color: #d0e3d8;
+}
+.project-study-tag--orange {
+  background: #fff0dc;
+  color: #a85e0c;
+  border-color: #efd4ad;
+}
+.project-study-tag--red {
+  background: #fce7e6;
+  color: #bf3630;
+  border-color: #efc4c1;
+}
+.project-study-tag--empty {
+  background: #f3f5f8;
+  color: #8a929e;
+  border-color: #e4e7ec;
+  font-weight: 500;
 }
 </style>

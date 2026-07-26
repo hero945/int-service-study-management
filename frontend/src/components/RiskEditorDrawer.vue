@@ -13,7 +13,12 @@ import { session } from '../session'
 const props = defineProps<{ open: boolean; riskCode?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const detail = ref<RiskDetail>()
-const options = ref<RiskFormOptions>({ studies: [], functions: [], owners: [] })
+const options = ref<RiskFormOptions>({
+  studies: [],
+  functions: [],
+  owners: [],
+  scoringRule: { id: 0, lowMax: 12, mediumMax: 36 },
+})
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
@@ -34,7 +39,7 @@ const canUpdate = computed(() => props.riskCode
   : permissions.value.includes('risk.create'))
 const canDelete = computed(() => !!props.riskCode && permissions.value.includes('risk.delete'))
 const score = computed(() => form.impact * form.likelihood * form.detectability)
-const level = computed(() => riskScoreLevelLabel(score.value))
+const level = computed(() => riskScoreLevelLabel(score.value, options.value.scoringRule))
 const selectedStudy = computed(() => options.value.studies.find(item => item.id === form.studyId))
 
 watch(() => props.open, async open => {

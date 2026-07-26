@@ -11,7 +11,13 @@ import java.util.List;
 public interface StudyApi {
   PipelineOverviewResponse overview(String username);
 
-  List<StudyResponse> list(String username);
+  StudyPageResponse list(
+      String username,
+      String therapeuticArea,
+      String program,
+      String milestoneStatus,
+      int page,
+      int pageSize);
 
   void create(@Valid CreateStudyRequest request, String username);
 
@@ -52,6 +58,15 @@ public interface StudyApi {
       String moa,
       String sourceCode,
       String originCode) {
+  }
+
+  /** 标准翻页：当页数据 + 总数 + 当前页 + 页大小 + 总页数 */
+  record StudyPageResponse(
+      List<StudyResponse> data,
+      long total,
+      int page,
+      int pageSize,
+      int totalPages) {
   }
 
   record OverviewStudyResponse(

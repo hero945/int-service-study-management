@@ -54,17 +54,17 @@ public class UserManager {
   }
 
   public List<UserView> list() {
-    return list(null, null);
+    return list(1, 500, null, null).data();
   }
 
-  public List<UserView> list(String keyword, String roleCode) {
-    var accounts = users.findAll(keyword, roleCode);
-    if (accounts.isEmpty()) {
-      return List.of();
+  public UserPageView list(int page, int pageSize, String keyword, String roleCode) {
+    var result = users.findPage(page, pageSize, keyword, roleCode);
+    if (result.data().isEmpty()) {
+      return new UserPageView(List.of(), result.page(), result.pageSize(), result.totalItems());
     }
-    var userIds = accounts.stream().map(u -> u.id()).toList();
+    var userIds = result.data().stream().map(u -> u.id()).toList();
     var studyCounts = users.countStudyAssignments(userIds);
-    return accounts.stream()
+    var views = result.data().stream()
         .map(user -> new UserView(
             user.id(),
             user.username(),
@@ -75,6 +75,7 @@ public class UserManager {
             studyCounts.getOrDefault(user.id(), 0L),
             user.enabled()))
         .toList();
+    return new UserPageView(views, result.page(), result.pageSize(), result.totalItems());
   }
 
   @Transactional
@@ -144,6 +145,13 @@ public class UserManager {
       String dataScope,
       long visibleStudyCount,
       boolean enabled) {
+  }
+
+  public record UserPageView(
+      List<UserView> data,
+      int page,
+      int pageSize,
+      long totalItems) {
   }
 
 }

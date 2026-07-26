@@ -10,6 +10,8 @@ import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
 import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.study.StudyRepository;
+import com.huadong.pipeline.domain.study.StudyRepository.StudyListQuery;
+import com.huadong.pipeline.domain.study.StudyRepository.StudyPage;
 import com.huadong.pipeline.repository.entity.StudyEntity;
 import com.huadong.pipeline.repository.mapper.StudyMapper;
 import java.util.List;
@@ -33,6 +35,30 @@ public class MybatisPlusStudyRepository implements StudyRepository {
     applyAccessScope(query, accessScope);
     return mapper.selectPage(Page.of(1, LIST_LIMIT, false), query)
         .getRecords().stream().map(MybatisPlusStudyRepository::toDomain).toList();
+  }
+
+  @Override
+  public StudyPage findPage(StudyAccessScope accessScope, StudyListQuery query) {
+    StudyListQuery q = query.normalized();
+    var wrapper = Wrappers.<StudyEntity>lambdaQuery()
+        .eq(StudyEntity::getSysDeleted, 0)
+        .orderByDesc(StudyEntity::getSysUpdateTime)
+        .orderByDesc(StudyEntity::getId);
+    applyAccessScope(wrapper, accessScope);
+    if (!q.therapeuticArea().isBlank()) {
+      wrapper.and(w -> w.eq(StudyEntity::getTherapeuticAreaNameSnapshot, q.therapeuticArea())
+          .or()
+          .eq(StudyEntity::getTherapeuticAreaCodeSnapshot, q.therapeuticArea()));
+    }
+    if (!q.program().isBlank()) {
+      wrapper.like(StudyEntity::getProgramCodeSnapshot, q.program());
+    }
+    var result = mapper.selectPage(Page.of(q.page(), q.pageSize(), true), wrapper);
+    return new StudyPage(
+        result.getRecords().stream().map(MybatisPlusStudyRepository::toDomain).toList(),
+        result.getTotal(),
+        q.page(),
+        q.pageSize());
   }
 
   @Override

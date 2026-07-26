@@ -3,6 +3,7 @@ package com.huadong.pipeline.manager;
 import lombok.extern.slf4j.Slf4j;
 
 import com.huadong.pipeline.common.BusinessException;
+import com.huadong.pipeline.domain.config.PipelineConfigPage;
 import com.huadong.pipeline.domain.config.PipelineConfigRepository;
 import com.huadong.pipeline.domain.config.PipelineConfigRow;
 import com.huadong.pipeline.domain.config.Program;
@@ -35,6 +36,10 @@ public class PipelineConfigManager {
 
   public List<PipelineConfigRow> listRows() {
     return configuration.findAll();
+  }
+
+  public PipelineConfigPage listRows(String keyword, int page, int pageSize) {
+    return configuration.findPage(keyword, page, pageSize);
   }
 
   public List<TherapeuticArea> listTherapeuticAreas() {

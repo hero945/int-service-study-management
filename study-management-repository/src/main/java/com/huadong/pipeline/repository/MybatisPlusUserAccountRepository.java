@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huadong.pipeline.domain.user.UserAccount;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
+import com.huadong.pipeline.domain.user.UserPage;
 import com.huadong.pipeline.domain.user.DataScope;
 import com.huadong.pipeline.repository.entity.UserAccountEntity;
 import com.huadong.pipeline.repository.mapper.UserAccountMapper;
@@ -62,6 +63,13 @@ public class MybatisPlusUserAccountRepository implements UserAccountRepository {
 
   @Override
   public List<UserAccount> findAll(String keyword, String roleCode) {
+    return findPage(1, (int) LIST_LIMIT, keyword, roleCode).data();
+  }
+
+  @Override
+  public UserPage findPage(int page, int pageSize, String keyword, String roleCode) {
+    int safePage = Math.max(page, 1);
+    int safeSize = Math.min(Math.max(pageSize, 1), 100);
     var query = Wrappers.<UserAccountEntity>lambdaQuery()
         .eq(UserAccountEntity::getSysDeleted, 0)
         .orderByAsc(UserAccountEntity::getId);
@@ -75,20 +83,22 @@ public class MybatisPlusUserAccountRepository implements UserAccountRepository {
     if (roleCode != null && !roleCode.isBlank()) {
       var filteredUserIds = mapper.findUserIdsByRole(roleCode);
       if (filteredUserIds.isEmpty()) {
-        return List.of();
+        return new UserPage(List.of(), safePage, safeSize, 0);
       }
       query.in(UserAccountEntity::getId, filteredUserIds);
     }
-    var records = mapper.selectPage(Page.of(1, LIST_LIMIT, false), query).getRecords();
+    var result = mapper.selectPage(Page.of(safePage, safeSize), query);
+    var records = result.getRecords();
     if (records.isEmpty()) {
-      return List.of();
+      return new UserPage(List.of(), safePage, safeSize, result.getTotal());
     }
     var authorizationByUserId = loadAuthorization(records);
-    return records.stream()
+    var accounts = records.stream()
         .map(entity -> toDomain(
             entity,
             authorizationByUserId.getOrDefault(entity.getId(), new AuthorizationValues())))
         .toList();
+    return new UserPage(accounts, safePage, safeSize, result.getTotal());
   }
 
   @Override

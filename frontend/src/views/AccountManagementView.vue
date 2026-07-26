@@ -6,6 +6,7 @@ import type {
   PlatformRole,
   PlatformUser,
 } from '../api/types'
+import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { session } from '../session'
 
@@ -17,6 +18,10 @@ const error = ref('')
 const notice = ref('')
 const keyword = ref('')
 const roleFilter = ref('')
+const page = ref(1)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
+const totalItems = ref(0)
+const totalPages = ref(1)
 
 const dialogOpen = ref(false)
 const formError = ref('')
@@ -64,11 +69,20 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [userList, rolePage] = await Promise.all([
-      apiClient.listUsers(keyword.value, roleFilter.value),
+    const [userPage, rolePage] = await Promise.all([
+      apiClient.listUsers({
+        keyword: keyword.value,
+        roleCode: roleFilter.value || undefined,
+        page: page.value,
+        pageSize: pageSize.value,
+      }),
       apiClient.listRoles({ page: 1, pageSize: 100 }),
     ])
-    users.value = userList
+    users.value = userPage.data
+    page.value = userPage.page
+    pageSize.value = userPage.pageSize
+    totalItems.value = userPage.totalItems
+    totalPages.value = Math.max(userPage.totalPages, 1)
     roles.value = rolePage.data
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '数据加载失败'
@@ -78,6 +92,7 @@ async function loadData() {
 }
 
 async function doSearch() {
+  page.value = 1
   await loadData()
 }
 
@@ -85,7 +100,21 @@ const searchTimer = ref<ReturnType<typeof setTimeout>>()
 function onKeywordInput(value: string) {
   keyword.value = value
   if (searchTimer.value) clearTimeout(searchTimer.value)
-  searchTimer.value = setTimeout(() => loadData(), 300)
+  searchTimer.value = setTimeout(() => {
+    page.value = 1
+    void loadData()
+  }, 300)
+}
+
+function changePage(next: number) {
+  page.value = next
+  void loadData()
+}
+
+function changePageSize(nextSize: number) {
+  pageSize.value = nextSize
+  page.value = 1
+  void loadData()
 }
 
 function openCreateDialog() {
@@ -342,6 +371,17 @@ onUnmounted(() => {
         </table>
       </div>
     </PageState>
+
+    <ListPagination
+      v-if="!loading && !error"
+      :total="totalItems"
+      :page="page"
+      :page-size="pageSize"
+      :total-pages="totalPages"
+      aria-label="账号列表分页"
+      @update:page="changePage"
+      @update:page-size="changePageSize"
+    />
 
     <!-- 新增账号弹窗 -->
     <Teleport to="body">

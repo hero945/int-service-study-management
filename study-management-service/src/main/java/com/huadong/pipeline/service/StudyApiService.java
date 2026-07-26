@@ -2,6 +2,7 @@ package com.huadong.pipeline.service;
 
 
 import com.huadong.pipeline.api.StudyApi;
+import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.manager.StudyManager;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,32 +56,48 @@ public class StudyApiService implements StudyApi {
   }
 
   @Override
-  public List<StudyResponse> list(String username) {
-    return manager.list(username).stream()
-        .map(study -> new StudyResponse(
-            study.id(),
-            study.code(),
-            study.indication(),
-            study.phase(),
-            study.status().name(),
-            study.status().label(),
-            study.status().tone(),
-            study.ownerName(),
-            study.startDate(),
-            study.plName(),
-            study.pmName(),
-            study.currentPhase(),
-            study.currentStatus(),
-            study.updatedAt(),
-            study.therapeuticAreaCode(),
-            study.therapeuticAreaName(),
-            study.programCode(),
-            study.projectCode(),
-            study.productName(),
-            study.moa(),
-            study.sourceCode(),
-            study.originCode()))
-        .toList();
+  public StudyPageResponse list(
+      String username,
+      String therapeuticArea,
+      String program,
+      String milestoneStatus,
+      int page,
+      int pageSize) {
+    var result = manager.list(username, new StudyRepository.StudyListQuery(
+        therapeuticArea, program, milestoneStatus, page, pageSize));
+    int totalPages = Math.max(1, (int) Math.ceil((double) result.totalItems() / result.pageSize()));
+    return new StudyPageResponse(
+        result.data().stream().map(this::toResponse).toList(),
+        result.totalItems(),
+        result.page(),
+        result.pageSize(),
+        totalPages);
+  }
+
+  private StudyResponse toResponse(StudyManager.StudyView study) {
+    return new StudyResponse(
+        study.id(),
+        study.code(),
+        study.indication(),
+        study.phase(),
+        study.status().name(),
+        study.status().label(),
+        study.status().tone(),
+        study.ownerName(),
+        study.startDate(),
+        study.plName(),
+        study.pmName(),
+        study.currentPhase(),
+        study.currentStatus(),
+        study.updatedAt(),
+        study.therapeuticAreaCode(),
+        study.therapeuticAreaName(),
+        study.programCode(),
+        study.projectCode(),
+        study.productName(),
+        study.moa(),
+        study.sourceCode(),
+        study.originCode());
   }
 
   @Override

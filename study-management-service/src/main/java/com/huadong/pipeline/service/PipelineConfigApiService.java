@@ -16,8 +16,17 @@ public class PipelineConfigApiService implements PipelineConfigApi {
   private PipelineConfigManager manager;
 
   @Override
-  public List<PipelineConfigRowResponse> listRows() {
-    return manager.listRows().stream().map(PipelineConfigApiService::toResponse).toList();
+  public PipelineConfigPageResponse listRows(String keyword, int page, int pageSize) {
+    var result = manager.listRows(keyword, page, pageSize);
+    long totalPages = result.totalItems() == 0
+        ? 1
+        : (result.totalItems() + result.pageSize() - 1) / result.pageSize();
+    return new PipelineConfigPageResponse(
+        result.data().stream().map(PipelineConfigApiService::toResponse).toList(),
+        result.page(),
+        result.pageSize(),
+        result.totalItems(),
+        totalPages);
   }
 
   @Override

@@ -30,7 +30,7 @@ public class TeamMatrixController {
       @RequestParam(defaultValue = "") String studyQuery,
       @RequestParam(defaultValue = "") String roleQuery,
       @RequestParam(defaultValue = "1") @Min(1) int page,
-      @RequestParam(defaultValue = "100") @Min(1) @Max(100) int pageSize,
+      @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
       Principal principal) {
     return teamMatrixApi.list(
         principal.getName(), studyQuery, roleQuery, page, pageSize);

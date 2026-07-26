@@ -4,6 +4,7 @@ import {
   riskLevelLabel,
   riskLevelTone,
   riskScoreLevelLabel,
+  riskScoreRuleLines,
   riskStatusLabel,
 } from './risk-labels'
 
@@ -32,7 +33,7 @@ describe('risk-labels', () => {
     expect(riskActionStatusLabel('BLOCKED')).toBe('BLOCKED')
   })
 
-  it('maps tones and score thresholds without changing scoring rules', () => {
+  it('maps tones and score thresholds from the active scoring rule', () => {
     expect(riskLevelTone('HIGH')).toBe('red')
     expect(riskLevelTone('MEDIUM')).toBe('orange')
     expect(riskLevelTone('LOW')).toBe('green')
@@ -40,5 +41,16 @@ describe('risk-labels', () => {
     expect(riskScoreLevelLabel(13)).toBe('中风险')
     expect(riskScoreLevelLabel(36)).toBe('中风险')
     expect(riskScoreLevelLabel(37)).toBe('高危')
+    expect(riskScoreLevelLabel(20, { lowMax: 24, mediumMax: 48 })).toBe('低风险')
+    expect(riskScoreLevelLabel(25, { lowMax: 24, mediumMax: 48 })).toBe('中风险')
+    expect(riskScoreLevelLabel(49, { lowMax: 24, mediumMax: 48 })).toBe('高危')
+  })
+
+  it('builds score rule tip lines from the active scoring thresholds', () => {
+    const lines = riskScoreRuleLines({ lowMax: 12, mediumMax: 36 })
+    expect(lines.join(' ')).toContain('影响程度 a')
+    expect(lines.join(' ')).toContain('≤12 低风险')
+    expect(lines.join(' ')).toContain('13–36 中风险')
+    expect(lines.join(' ')).toContain('≥37 高危')
   })
 })

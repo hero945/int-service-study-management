@@ -94,15 +94,18 @@ class PipelineConfigIntegrationTest {
     mvc.perform(get("/api/v1/clinical-pipeline/pipeline-config")
             .with(authority("config.page.view")))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$", hasSize(1)))
-        .andExpect(jsonPath("$[0].programCode").value("PRG-001"))
-        .andExpect(jsonPath("$[0].projectCode").value("PRJ-001"))
-        .andExpect(jsonPath("$[0].studyCode").value("STD-001"))
-        .andExpect(jsonPath("$[0].studyName").doesNotExist())
-        .andExpect(jsonPath("$[0].programName").doesNotExist())
-        .andExpect(jsonPath("$[0].projectName").doesNotExist())
-        .andExpect(jsonPath("$[0].phaseStatusLabel").doesNotExist())
-        .andExpect(jsonPath("$[0].projectStatus").doesNotExist());
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.page").value(1))
+        .andExpect(jsonPath("$.pageSize").value(10))
+        .andExpect(jsonPath("$.totalItems").value(1))
+        .andExpect(jsonPath("$.data[0].programCode").value("PRG-001"))
+        .andExpect(jsonPath("$.data[0].projectCode").value("PRJ-001"))
+        .andExpect(jsonPath("$.data[0].studyCode").value("STD-001"))
+        .andExpect(jsonPath("$.data[0].studyName").doesNotExist())
+        .andExpect(jsonPath("$.data[0].programName").doesNotExist())
+        .andExpect(jsonPath("$.data[0].projectName").doesNotExist())
+        .andExpect(jsonPath("$.data[0].phaseStatusLabel").doesNotExist())
+        .andExpect(jsonPath("$.data[0].projectStatus").doesNotExist());
   }
 
   @Test
@@ -130,6 +133,44 @@ class PipelineConfigIntegrationTest {
     mvc.perform(get("/api/v1/clinical-pipeline/pipeline-config")
             .with(user("reader").authorities(new SimpleGrantedAuthority("study.read"))))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void listsPipelineConfigWithServerSidePagingAndKeyword() throws Exception {
+    long programId = createProgram("PRG-PAGE");
+    long projectId = createProject(programId, "PRJ-PAGE");
+    mvc.perform(post("/api/v1/clinical-pipeline/studies")
+            .with(authority("config.create")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"code":"STD-PAGE-A","projectId":%d,"phase":"PHASE_1"}
+                """.formatted(projectId)))
+        .andExpect(status().isCreated());
+    mvc.perform(post("/api/v1/clinical-pipeline/studies")
+            .with(authority("config.create")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"code":"STD-PAGE-B","projectId":%d,"phase":"PHASE_2"}
+                """.formatted(projectId)))
+        .andExpect(status().isCreated());
+
+    mvc.perform(get("/api/v1/clinical-pipeline/pipeline-config")
+            .param("page", "1")
+            .param("pageSize", "1")
+            .with(authority("config.page.view")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.totalItems").value(2))
+        .andExpect(jsonPath("$.totalPages").value(2))
+        .andExpect(jsonPath("$.pageSize").value(1));
+
+    mvc.perform(get("/api/v1/clinical-pipeline/pipeline-config")
+            .param("keyword", "STD-PAGE-B")
+            .with(authority("config.page.view")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data", hasSize(1)))
+        .andExpect(jsonPath("$.data[0].studyCode").value("STD-PAGE-B"))
+        .andExpect(jsonPath("$.totalItems").value(1));
   }
 
   private long createProgram(String code) throws Exception {

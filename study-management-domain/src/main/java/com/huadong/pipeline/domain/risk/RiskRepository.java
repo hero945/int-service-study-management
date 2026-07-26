@@ -54,7 +54,7 @@ public interface RiskRepository {
   record FunctionOption(long id, String code, String name) {}
   record MemberOption(long id, String email, String displayName) {}
   record FormOptions(List<StudyOption> studies, List<FunctionOption> functions,
-                     List<MemberOption> owners) {}
+                     List<MemberOption> owners, Rule scoringRule) {}
   record StudyContext(long id, String studyCode, long programId, String programCode,
                       long projectId, String projectCode) {}
   record Rule(long id, int lowMax, int mediumMax) {}

@@ -38,7 +38,7 @@ public class RiskController {
       @RequestParam(defaultValue = "updatedAt") String sortBy,
       @RequestParam(defaultValue = "desc") String sortOrder,
       @RequestParam(defaultValue = "1") @Min(1) int page,
-      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int pageSize,
+      @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
       Principal principal) {
     return api.list(principal.getName(), query, functionCode, status, level,
         studyId, sortBy, sortOrder, page, pageSize);

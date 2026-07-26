@@ -7,6 +7,7 @@ import type {
   RoleInput,
   RoleStatus,
 } from '../api/types'
+import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { session } from '../session'
 
@@ -19,6 +20,7 @@ const notice = ref('')
 const keyword = ref('')
 const status = ref<'' | RoleStatus>('')
 const page = ref(1)
+const pageSize = ref(DEFAULT_PAGE_SIZE)
 const totalPages = ref(1)
 const totalItems = ref(0)
 const dialogOpen = ref(false)
@@ -104,12 +106,13 @@ async function loadRoles(targetPage = 1) {
   try {
     const result = await apiClient.listRoles({
       page: targetPage,
-      pageSize: 20,
+      pageSize: pageSize.value,
       keyword: keyword.value.trim() || undefined,
       status: status.value || undefined,
     })
     roles.value = result.data
     page.value = result.page
+    pageSize.value = result.pageSize
     totalPages.value = Math.max(result.totalPages, 1)
     totalItems.value = result.totalItems
   } catch (reason) {
@@ -117,6 +120,11 @@ async function loadRoles(targetPage = 1) {
   } finally {
     loading.value = false
   }
+}
+
+function changePageSize(nextSize: number) {
+  pageSize.value = nextSize
+  void loadRoles(1)
 }
 
 function openCreate() {
@@ -276,12 +284,18 @@ onUnmounted(hideNotice)
           </tbody>
         </table>
       </div>
-      <div class="role-pagination">
-        <button class="secondary-button" type="button" :disabled="page <= 1" @click="loadRoles(page - 1)">上一页</button>
-        <span>第 {{ page }} / {{ totalPages }} 页</span>
-        <button class="secondary-button" type="button" :disabled="page >= totalPages" @click="loadRoles(page + 1)">下一页</button>
-      </div>
     </PageState>
+
+    <ListPagination
+      v-if="!loading && !error"
+      :total="totalItems"
+      :page="page"
+      :page-size="pageSize"
+      :total-pages="totalPages"
+      aria-label="角色列表分页"
+      @update:page="loadRoles"
+      @update:page-size="changePageSize"
+    />
 
     <Teleport to="body">
       <div v-if="dialogOpen" class="dialog-backdrop" @mousedown.self="closeDialog">

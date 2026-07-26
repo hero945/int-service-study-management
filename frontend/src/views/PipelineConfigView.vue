@@ -5,6 +5,7 @@ import type {
   PipelineConfigRow, PipelineProgram, PipelineProject, ProgramInput,
   ProgramUpdateInput, ProjectInput, ProjectUpdateInput, TherapeuticArea,
 } from '../api/types'
+import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
 import { session } from '../session'
@@ -35,7 +36,9 @@ const studyProgramDetails = ref<HTMLDetailsElement>()
 const studyProjectDetails = ref<HTMLDetailsElement>()
 const studyQuery = ref('')
 const studyPage = ref(1)
-const STUDY_PAGE_SIZE = 10
+const studyPageSize = ref(DEFAULT_PAGE_SIZE)
+const studyTotalItems = ref(0)
+const studyTotalPages = ref(1)
 
 const permissions = computed(() => session.currentUser.value?.permissions ?? [])
 const canCreate = computed(() => permissions.value.includes('config.create'))
@@ -43,18 +46,6 @@ const canUpdate = computed(() => permissions.value.includes('config.update'))
 const canDelete = computed(() => permissions.value.includes('config.delete'))
 const selectedProgram = computed(() => programs.value.find((item) => item.id === selectedProgramId.value))
 const selectedProjects = computed(() => projects.value.filter((item) => item.programId === selectedProgramId.value))
-const filteredStudyRows = computed(() => {
-  const keyword = studyQuery.value.trim().toLowerCase()
-  if (!keyword) return rows.value
-  return rows.value.filter((row) => [
-    row.studyCode, row.therapeuticAreaCode, row.therapeuticAreaName, row.programCode,
-  ].some((value) => value.toLowerCase().includes(keyword)))
-})
-const studyTotalPages = computed(() => Math.max(1, Math.ceil(filteredStudyRows.value.length / STUDY_PAGE_SIZE)))
-const pagedStudyRows = computed(() => {
-  const start = (studyPage.value - 1) * STUDY_PAGE_SIZE
-  return filteredStudyRows.value.slice(start, start + STUDY_PAGE_SIZE)
-})
 
 const programForm = reactive<ProgramInput>({
   code: '', productName: '', moa: '', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC',
@@ -64,16 +55,28 @@ const projectForm = reactive<ProjectInput>({
 })
 const studyForm = reactive({ code: '', programId: 0, projectId: 0, phaseStatusCode: 'PRE_IND' })
 
+async function loadStudyRows() {
+  const result = await apiClient.listPipelineConfig({
+    keyword: studyQuery.value.trim() || undefined,
+    page: studyPage.value,
+    pageSize: studyPageSize.value,
+  })
+  rows.value = result.data
+  studyPage.value = result.page
+  studyPageSize.value = result.pageSize
+  studyTotalItems.value = result.totalItems
+  studyTotalPages.value = Math.max(result.totalPages, 1)
+}
+
 async function loadAll() {
   loading.value = true
   error.value = ''
   try {
-    const [nextRows, nextPrograms, nextProjects, nextAreas] = await Promise.all([
-      apiClient.listPipelineConfig(), apiClient.listPrograms(), apiClient.listProjects(),
+    const [nextPrograms, nextProjects, nextAreas] = await Promise.all([
+      apiClient.listPrograms(), apiClient.listProjects(),
       apiClient.listTherapeuticAreas(),
     ])
-    rows.value = nextRows
-    studyPage.value = Math.min(studyPage.value, studyTotalPages.value)
+    await loadStudyRows()
     programs.value = nextPrograms
     projects.value = nextProjects
     therapeuticAreas.value = nextAreas
@@ -207,12 +210,30 @@ function onDocumentPointerDown(event: PointerEvent) {
   }
 }
 
+const studySearchTimer = ref<ReturnType<typeof setTimeout>>()
 function filterStudies() {
   studyPage.value = 1
+  if (studySearchTimer.value) clearTimeout(studySearchTimer.value)
+  studySearchTimer.value = setTimeout(() => {
+    void loadStudyRows().catch((reason) => {
+      error.value = messageOf(reason, 'Study 列表加载失败')
+    })
+  }, 300)
 }
 
 function goToStudyPage(page: number) {
-  studyPage.value = Math.min(Math.max(1, page), studyTotalPages.value)
+  studyPage.value = page
+  void loadStudyRows().catch((reason) => {
+    error.value = messageOf(reason, 'Study 列表加载失败')
+  })
+}
+
+function changeStudyPageSize(nextSize: number) {
+  studyPageSize.value = nextSize
+  studyPage.value = 1
+  void loadStudyRows().catch((reason) => {
+    error.value = messageOf(reason, 'Study 列表加载失败')
+  })
 }
 
 function quickCreateProgram() {
@@ -312,6 +333,7 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', onEscape)
   document.removeEventListener('pointerdown', onDocumentPointerDown)
+  if (studySearchTimer.value) clearTimeout(studySearchTimer.value)
 })
 </script>
 
@@ -329,20 +351,26 @@ onUnmounted(() => {
         <label class="config-study-search"><span class="sr-only">搜索 Study、TA 或 Program</span><input v-model="studyQuery" type="search" placeholder="搜索 Study / TA / Program" @input="filterStudies"></label>
         <button v-if="canCreate" class="primary-button" type="button" @click="openStudy()">＋ 新增 Study</button>
       </div>
-      <PageState :loading :error="''" :empty="!filteredStudyRows.length">
+      <PageState :loading :error="''" :empty="!rows.length">
         <div class="data-card config-table-card"><table class="data-table config-table"><thead><tr>
           <th>Source</th><th>Origin</th><th>Product</th><th>Program</th><th>MOA</th><th>Project</th><th>TA</th><th>Indication</th><th>Study No.</th><th>Phase Status</th><th>操作</th>
-        </tr></thead><tbody><tr v-for="row in pagedStudyRows" :key="row.studyId">
+        </tr></thead><tbody><tr v-for="row in rows" :key="row.studyId">
           <td>{{ row.sourceLabel }}</td><td>{{ row.originLabel }}</td><td>{{ row.productName }}</td><td class="mono">{{ row.programCode }}</td>
           <td>{{ row.moa || '—' }}</td><td class="mono">{{ row.projectCode }}</td><td>{{ row.therapeuticAreaName }}</td><td>{{ row.indication }}</td>
           <td class="mono">{{ row.studyCode }}</td><td><span class="status-chip status-chip--blue">{{ row.phaseStatusCode }}</span></td>
           <td class="row-actions"><button v-if="canUpdate" type="button" @click="openStudy(row)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('study', row.studyId, row.studyCode)">删除</button></td>
         </tr></tbody></table></div>
-        <nav class="study-pagination" aria-label="Study 分页">
-          <span>共 {{ filteredStudyRows.length }} 条 · 第 {{ studyPage }} / {{ studyTotalPages }} 页</span>
-          <div><button type="button" :disabled="studyPage === 1" @click="goToStudyPage(studyPage - 1)">上一页</button><button type="button" :disabled="studyPage === studyTotalPages" @click="goToStudyPage(studyPage + 1)">下一页</button></div>
-        </nav>
       </PageState>
+      <ListPagination
+        v-if="!loading"
+        :total="studyTotalItems"
+        :page="studyPage"
+        :page-size="studyPageSize"
+        :total-pages="studyTotalPages"
+        aria-label="Study 分页"
+        @update:page="goToStudyPage"
+        @update:page-size="changeStudyPageSize"
+      />
     </template>
 
     <template v-else>

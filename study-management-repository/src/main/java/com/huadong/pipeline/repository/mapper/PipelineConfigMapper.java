@@ -66,6 +66,58 @@ public interface PipelineConfigMapper {
   List<PipelineConfigRowData> findRows();
 
   @Select("""
+      <script>
+      SELECT s.id AS study_id, s.study_code, s.phase_status_code,
+             pr.id AS project_id, pr.project_code,
+             pr.indication_description AS indication,
+             ta.area_code AS therapeutic_area_code, ta.area_name AS therapeutic_area_name,
+             p.id AS program_id, p.program_code, p.product_name,
+             p.moa, p.source_code, p.origin_code, s.sys_update_time AS updated_at
+      FROM hd_plt_study s
+      JOIN hd_plt_project pr ON pr.id = s.project_id AND pr.sys_deleted = 0
+      JOIN hd_plt_program p ON p.id = pr.program_id AND p.sys_deleted = 0
+      JOIN hd_plt_therapeutic_area ta
+        ON ta.id = pr.therapeutic_area_id AND ta.sys_deleted = 0
+      WHERE s.sys_deleted = 0
+      <if test="keyword != null and keyword != ''">
+        AND (
+          LOWER(s.study_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(ta.area_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(ta.area_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(p.program_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+        )
+      </if>
+      ORDER BY p.program_code, pr.project_code, s.study_code
+      LIMIT #{limit} OFFSET #{offset}
+      </script>
+      """)
+  List<PipelineConfigRowData> findRowsPage(
+      @Param("keyword") String keyword,
+      @Param("limit") int limit,
+      @Param("offset") int offset);
+
+  @Select("""
+      <script>
+      SELECT COUNT(*)
+      FROM hd_plt_study s
+      JOIN hd_plt_project pr ON pr.id = s.project_id AND pr.sys_deleted = 0
+      JOIN hd_plt_program p ON p.id = pr.program_id AND p.sys_deleted = 0
+      JOIN hd_plt_therapeutic_area ta
+        ON ta.id = pr.therapeutic_area_id AND ta.sys_deleted = 0
+      WHERE s.sys_deleted = 0
+      <if test="keyword != null and keyword != ''">
+        AND (
+          LOWER(s.study_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(ta.area_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(ta.area_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(p.program_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+        )
+      </if>
+      </script>
+      """)
+  long countRows(@Param("keyword") String keyword);
+
+  @Select("""
       SELECT pr.id, pr.project_code AS code,
              pr.program_id, p.program_code, pr.indication_description AS indication,
              ta.id AS therapeutic_area_id, ta.area_code AS therapeutic_area_code,
