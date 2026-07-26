@@ -146,6 +146,7 @@ export const router = createRouter({
 const HOME_CANDIDATES = [
   'pipeline',
   'studies',
+  'monthly',
   'risks',
   'team',
   'config',
@@ -154,7 +155,7 @@ const HOME_CANDIDATES = [
   'roles',
 ] as const
 
-function firstAllowedHome(permissions: string[]): string {
+export function firstAllowedHome(permissions: string[]): string {
   for (const name of HOME_CANDIDATES) {
     const route = router.resolve({ name })
     const required = route.meta.requiredPermission

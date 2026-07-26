@@ -6,6 +6,7 @@ import type { OverviewProject, OverviewStudy, PipelineOverview, Study } from '..
 import {
   CLINICAL_PHASE_CODES,
   originLabel,
+  phaseLabel,
   sourceLabel,
   type PipelinePhase,
 } from '../domain/pipeline-status'
@@ -117,9 +118,17 @@ const tipStyle = computed(() => {
   return { left: `${left}px`, top: `${top}px` }
 })
 
+const canReadMilestone = computed(() =>
+  session.currentUser.value?.permissions.includes('milestone.read') ?? false,
+)
+
+function isCellClickable(project: OverviewProject, phase: PipelinePhase): boolean {
+  return canReadMilestone.value && cell(project, phase).clickable
+}
+
 function openStudy(studyId?: number) {
   if (studyId == null) return
-  if (!session.currentUser.value?.permissions.includes('milestone.read')) return
+  if (!canReadMilestone.value) return
   router.push(`/milestones/${studyId}`)
 }
 
@@ -257,7 +266,7 @@ onMounted(async () => {
               <th>Product</th>
               <th>Program (MOA)</th>
               <th>Project (Indication)</th>
-              <th v-for="phase in phases" :key="phase">{{ phase }}</th>
+              <th v-for="phase in phases" :key="phase">{{ phaseLabel(phase) }}</th>
             </tr>
           </thead>
           <tbody v-for="area in areaGroups" :key="area.therapeuticAreaName">
@@ -294,8 +303,8 @@ onMounted(async () => {
                 v-for="phase in phases"
                 :key="phase"
                 class="pipeline-stage-td"
-                :class="{ 'cell-clickable': cell(project, phase).clickable }"
-                @click="cell(project, phase).clickable && openStudy(cell(project, phase).studyId)"
+                :class="{ 'cell-clickable': isCellClickable(project, phase) }"
+                @click="isCellClickable(project, phase) && openStudy(cell(project, phase).studyId)"
                 @mouseenter="showCellTip($event, project, phase)"
                 @mousemove="moveCellTip"
                 @mouseleave="hideCellTip"

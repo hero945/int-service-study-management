@@ -18,6 +18,12 @@ const activeTab = ref<TabKey>('milestone')
 const canReadMilestone = computed(() =>
   session.currentUser.value?.permissions.includes('milestone.read') ?? false,
 )
+const canReadStudy = computed(() =>
+  session.currentUser.value?.permissions.includes('study.read') ?? false,
+)
+const canReadRisk = computed(() =>
+  session.currentUser.value?.permissions.includes('risk.read') ?? false,
+)
 
 // ── per-tab state ──
 const milestoneLoading = ref(false)
@@ -41,14 +47,29 @@ const teamCount = computed(() => {
     .reduce((sum, a) => sum + a.members.length, 0)
 })
 
-watch(() => props.open, (val) => {
-  if (val && props.study) {
-    activeTab.value = canReadMilestone.value ? 'milestone' : 'team'
-    if (canReadMilestone.value) loadMilestone()
-    loadTeam()
-    loadRisks()
+function resetTabState() {
+  milestoneData.value = undefined
+  milestoneError.value = ''
+  teamData.value = undefined
+  teamError.value = ''
+  riskData.value = undefined
+  riskError.value = ''
+}
+
+function loadAllowedTabs() {
+  if (!props.study) return
+  activeTab.value = canReadMilestone.value ? 'milestone' : (canReadStudy.value ? 'team' : 'risk')
+  if (canReadMilestone.value) loadMilestone()
+  if (canReadStudy.value) loadTeam()
+  if (canReadRisk.value) loadRisks()
+}
+
+watch(() => [props.open, props.study?.id], ([open]) => {
+  if (open && props.study) {
+    resetTabState()
+    loadAllowedTabs()
   }
-})
+}, { immediate: true })
 
 function loadMilestone() {
   if (!props.study || !canReadMilestone.value) return
@@ -60,7 +81,7 @@ function loadMilestone() {
 }
 
 async function loadTeam() {
-  if (!props.study) return
+  if (!props.study || !canReadStudy.value) return
   teamLoading.value = true; teamError.value = ''
   try {
     teamData.value = await apiClient.getStudyTeam(props.study.id)
@@ -72,7 +93,7 @@ async function loadTeam() {
 }
 
 function loadRisks() {
-  if (!props.study) return
+  if (!props.study || !canReadRisk.value) return
   riskLoading.value = true; riskError.value = ''
   apiClient.listRisks({ studyId: props.study.id, pageSize: 100 })
     .then(d => { riskData.value = d })
@@ -109,7 +130,8 @@ const teamHasMembers = computed(() => teamRoles.value.some(r => r.members.length
 const tabs = computed(() => {
   const items: { key: TabKey; label: string }[] = []
   if (canReadMilestone.value) items.push({ key: 'milestone', label: '里程碑' })
-  items.push({ key: 'team', label: '团队' }, { key: 'risk', label: '风险' })
+  if (canReadStudy.value) items.push({ key: 'team', label: '团队' })
+  if (canReadRisk.value) items.push({ key: 'risk', label: '风险' })
   return items
 })
 </script>

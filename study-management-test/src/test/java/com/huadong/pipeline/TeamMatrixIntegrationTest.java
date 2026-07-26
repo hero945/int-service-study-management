@@ -101,7 +101,7 @@ class TeamMatrixIntegrationTest {
     mvc.perform(get("/team")
             .accept(MediaType.TEXT_HTML)
             .with(user("admin@example.com")))
-        .andExpect(status().isForbidden());
+        .andExpect(status().is3xxRedirection());
     mvc.perform(get("/team")
             .accept(MediaType.TEXT_HTML)
             .with(user("admin@example.com").authorities(authority("team.page.view"))))
@@ -193,6 +193,57 @@ class TeamMatrixIntegrationTest {
         "SELECT COUNT(*) FROM hd_plt_team_assignment WHERE study_id = ? AND sys_deleted = 0",
         Integer.class, firstStudy);
     org.assertj.core.api.Assertions.assertThat(firstAssignments).isZero();
+  }
+
+  @Test
+  void studyDrawerTeamForUnknownStudyReturnsNotFound() throws Exception {
+    mvc.perform(get("/api/v1/studies/{id}/team", 999999L)
+            .with(user("admin@example.com").authorities(authority("study.read"))))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("STUDY_NOT_FOUND"));
+  }
+
+  @Test
+  void studyDrawerTeamFallsBackToStudyStatusWhenMilestoneReadMissing() throws Exception {
+    long studyId = seedStudy("TEAM-STUDY-011");
+    String viewer = "team.viewer@example.com";
+    seedUserWithPermission(viewer, "team viewer", "study.read");
+    mvc.perform(get("/api/v1/studies/{id}/team", studyId)
+            .with(user(viewer).authorities(authority("study.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.studies[0].currentStatus").value("计划中"));
+  }
+
+  private void seedUserWithPermission(String email, String displayName, String permissionCode) {
+    jdbc.update("""
+        INSERT INTO hd_plt_user(
+            email, password_hash, display_name, status_code, security_stamp,
+            sys_create_by, sys_update_by)
+        VALUES (?, 'hash', ?, 'ACTIVE', ?, 'seed', 'seed')
+        """, email, displayName, UUID.randomUUID().toString());
+    long userId = jdbc.queryForObject("SELECT id FROM hd_plt_user WHERE email = ?", Long.class, email);
+    jdbc.update("""
+        INSERT INTO hd_plt_role(
+            role_name, role_description, data_scope_mode, status_code,
+            is_system_role, sys_create_by, sys_update_by)
+        SELECT ?, 'Test role with single permission', 'ALL',
+            'ACTIVE', 0, 'seed', 'seed'
+        WHERE NOT EXISTS (SELECT 1 FROM hd_plt_role WHERE role_name = ?)
+        """, email + "_ROLE", email + "_ROLE");
+    jdbc.update("""
+        INSERT INTO hd_plt_role_permission(role_id, permission_id, sys_create_by, sys_update_by)
+        SELECT r.id, p.id, 'seed', 'seed'
+        FROM hd_plt_role r JOIN hd_plt_permission p ON p.permission_code = ?
+        WHERE r.role_name = ?
+          AND NOT EXISTS (
+            SELECT 1 FROM hd_plt_role_permission rp
+            WHERE rp.role_id = r.id AND rp.permission_id = p.id)
+        """, permissionCode, email + "_ROLE");
+    jdbc.update("""
+        INSERT INTO hd_plt_user_role(user_id, role_id, sys_create_by, sys_update_by)
+        SELECT ?, id, 'seed', 'seed'
+        FROM hd_plt_role WHERE role_name = ?
+        """, userId, email + "_ROLE");
   }
 
   @Test

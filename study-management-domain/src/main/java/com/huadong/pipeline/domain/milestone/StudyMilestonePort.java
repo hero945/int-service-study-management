@@ -19,6 +19,9 @@ public interface StudyMilestonePort {
   /** Batch load persisted milestone rows for many studies (single IN query, avoids N+1). */
   List<PersistedMilestone> findByStudyIds(List<Long> studyIds);
 
+  /** Look up study metadata without applying any data scope. */
+  Optional<StudyRef> findStudy(long studyId);
+
   /** Look up study metadata within the caller's Study data scope. */
   Optional<StudyRef> findStudy(StudyAccessScope scope, long studyId);
 

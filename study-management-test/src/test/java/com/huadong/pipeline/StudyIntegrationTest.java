@@ -87,6 +87,56 @@ class StudyIntegrationTest {
     assertEquals("", study.get("currentStatus").asText());
   }
 
+  @Test
+  void listDoesNotDeriveMilestoneStatusWithoutMilestoneReadPermission() throws Exception {
+    String operator = "study.no-milestone-read@example.com";
+    long ownerId = seedUserWithPermission(operator, "无里程碑读权限", "study.read");
+    long studyId = seedStudy("STUDY-NO-MS-READ");
+    assignToStudy(studyId, ownerId);
+
+    for (int i = 0; i <= 4; i++) {
+      seedMilestone(studyId, "IND", "IND-" + i,
+          null, null, "2024-01-0" + (i + 1), "2024-02-0" + (i + 1));
+    }
+
+    JsonNode study = findStudyInList(operator, "STUDY-NO-MS-READ");
+    assertEquals("", study.get("currentPhase").asText());
+    assertEquals("计划中", study.get("currentStatus").asText());
+  }
+
+  private long seedUserWithPermission(String email, String displayName, String permissionCode) {
+    jdbc.update("""
+        INSERT INTO hd_plt_user(
+            email, password_hash, display_name, status_code, security_stamp,
+            sys_create_by, sys_update_by)
+        VALUES (?, 'hash', ?, 'ACTIVE', 'stamp', 'seed', 'seed')
+        """, email, displayName);
+    long userId = jdbc.queryForObject("SELECT id FROM hd_plt_user WHERE email = ?", Long.class, email);
+    jdbc.update("""
+        INSERT INTO hd_plt_role(
+            role_name, role_description, data_scope_mode, status_code,
+            is_system_role, sys_create_by, sys_update_by)
+        SELECT ?, 'Test role with single permission', 'ALL',
+            'ACTIVE', 0, 'seed', 'seed'
+        WHERE NOT EXISTS (SELECT 1 FROM hd_plt_role WHERE role_name = ?)
+        """, email + "_ROLE", email + "_ROLE");
+    jdbc.update("""
+        INSERT INTO hd_plt_role_permission(role_id, permission_id, sys_create_by, sys_update_by)
+        SELECT r.id, p.id, 'seed', 'seed'
+        FROM hd_plt_role r JOIN hd_plt_permission p ON p.permission_code = ?
+        WHERE r.role_name = ?
+          AND NOT EXISTS (
+            SELECT 1 FROM hd_plt_role_permission rp
+            WHERE rp.role_id = r.id AND rp.permission_id = p.id)
+        """, permissionCode, email + "_ROLE");
+    jdbc.update("""
+        INSERT INTO hd_plt_user_role(user_id, role_id, sys_create_by, sys_update_by)
+        SELECT ?, id, 'seed', 'seed'
+        FROM hd_plt_role WHERE role_name = ?
+        """, userId, email + "_ROLE");
+    return userId;
+  }
+
   private JsonNode findStudyInList(String operator, String studyCode) throws Exception {
     String body = mvc.perform(get("/api/v1/clinical-pipeline/studies")
             .with(user(operator).authorities(new SimpleGrantedAuthority("study.read"))))

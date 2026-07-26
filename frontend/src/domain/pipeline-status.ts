@@ -18,6 +18,23 @@ export const CLINICAL_PHASE_CODES = [
 export type PipelinePhase = (typeof CLINICAL_PHASE_CODES)[number]
 export type PipelineTone = 'blue' | 'green' | 'orange' | 'red' | 'empty'
 
+/** 临床 phase DB code → 人类可读标签 */
+export const PHASE_LABELS: Record<PipelinePhase, string> = {
+  PRE_IND: 'Pre-IND',
+  IND: 'IND',
+  PHASE_1: 'I期临床',
+  PHASE_2: 'II期临床',
+  PRE_3: 'Pre-III',
+  PHASE_3_1: 'III期临床（A）',
+  PHASE_3_2: 'III期临床（B）',
+}
+
+/** 将 phase code 转为展示标签；未知或空值返回原值 */
+export function phaseLabel(code: string | undefined): string {
+  if (!code) return code ?? ''
+  return PHASE_LABELS[code as PipelinePhase] ?? code
+}
+
 const PHASE_CODE_SET: ReadonlySet<string> = new Set(CLINICAL_PHASE_CODES)
 
 /** 将后端返回的 phase code 归一为总览列 key；未知 code 返回 undefined */

@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -60,6 +61,61 @@ class PipelineOverviewMilestoneIntegrationTest {
         .andExpect(jsonPath("$.areas[0].projects[0].studies[0].statusLabel").value("计划中"));
   }
 
+  @Test
+  void overviewFallsBackToBaseStatusWithoutMilestoneReadPermission() throws Exception {
+    seedHierarchy();
+    createStudy("HD-MS-003", "PHASE_1");
+    long studyId = jdbc.queryForObject(
+        "SELECT id FROM hd_plt_study WHERE study_code='HD-MS-003'", Long.class);
+
+    LocalDate s = LocalDate.of(2026, 1, 1);
+    LocalDate e = LocalDate.of(2026, 2, 1);
+    for (int i = 0; i <= 5; i++) insertMilestone(studyId, "PreIND", "PreIND-" + i, s, e);
+    for (int i = 0; i <= 4; i++) insertMilestone(studyId, "IND", "IND-" + i, s, e);
+
+    String viewer = "pipeline.viewer@example.com";
+    seedUserWithPermission(viewer, "pipeline.page.view");
+
+    mvc.perform(get("/api/v1/clinical-pipeline/overview")
+            .with(user(viewer).authorities(authority("pipeline.page.view"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].statusLabel").value("计划中"))
+        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].mainStageLabel").value(""))
+        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].subStatusLabel").value(""));
+  }
+
+  private void seedUserWithPermission(String email, String permissionCode) {
+    jdbc.update("""
+        INSERT INTO hd_plt_user(
+            email, password_hash, display_name, status_code, security_stamp,
+            sys_create_by, sys_update_by)
+        VALUES (?, 'hash', ?, 'ACTIVE', ?, 'seed', 'seed')
+        """, email, email, UUID.randomUUID().toString());
+    long userId = jdbc.queryForObject("SELECT id FROM hd_plt_user WHERE email = ?", Long.class, email);
+    jdbc.update("""
+        INSERT INTO hd_plt_role(
+            role_name, role_description, data_scope_mode, status_code,
+            is_system_role, sys_create_by, sys_update_by)
+        SELECT ?, 'Test role with single permission', 'ALL',
+            'ACTIVE', 0, 'seed', 'seed'
+        WHERE NOT EXISTS (SELECT 1 FROM hd_plt_role WHERE role_name = ?)
+        """, email + "_ROLE", email + "_ROLE");
+    jdbc.update("""
+        INSERT INTO hd_plt_role_permission(role_id, permission_id, sys_create_by, sys_update_by)
+        SELECT r.id, p.id, 'seed', 'seed'
+        FROM hd_plt_role r JOIN hd_plt_permission p ON p.permission_code = ?
+        WHERE r.role_name = ?
+          AND NOT EXISTS (
+            SELECT 1 FROM hd_plt_role_permission rp
+            WHERE rp.role_id = r.id AND rp.permission_id = p.id)
+        """, permissionCode, email + "_ROLE");
+    jdbc.update("""
+        INSERT INTO hd_plt_user_role(user_id, role_id, sys_create_by, sys_update_by)
+        SELECT ?, id, 'seed', 'seed'
+        FROM hd_plt_role WHERE role_name = ?
+        """, userId, email + "_ROLE");
+  }
+
   private void createStudy(String code, String phase) throws Exception {
     mvc.perform(post("/api/v1/clinical-pipeline/studies")
             .with(user("researcher").authorities(new SimpleGrantedAuthority("config.create")))
@@ -92,5 +148,18 @@ class PipelineOverviewMilestoneIntegrationTest {
         + "SELECT 'PROJECT-001', p.id, '实体瘤', ta.id, 'seed', 'seed' "
         + "FROM hd_plt_program p CROSS JOIN hd_plt_therapeutic_area ta "
         + "WHERE p.program_code='PROGRAM-001' AND ta.area_code='ONCOLOGY'");
+  }
+
+  private void seedUser(String email) {
+    jdbc.update("""
+        INSERT INTO hd_plt_user(
+            email, password_hash, display_name, status_code, security_stamp,
+            sys_create_by, sys_update_by)
+        VALUES (?, 'hash', ?, 'ACTIVE', ?, 'seed', 'seed')
+        """, email, email, UUID.randomUUID().toString());
+  }
+
+  private static SimpleGrantedAuthority authority(String code) {
+    return new SimpleGrantedAuthority(code);
   }
 }

@@ -92,12 +92,13 @@ public class SecurityConfig {
               }
               writeApiError(response, mapper, 401, "UNAUTHENTICATED", "请先登录");
             })
-            .accessDeniedHandler((request, response, exception) -> writeApiError(
-                response,
-                mapper,
-                403,
-                "ACCESS_DENIED",
-                "无权执行此操作")))
+            .accessDeniedHandler((request, response, exception) -> {
+              if (isBrowserPageRequest(request)) {
+                response.sendRedirect(loginRedirect(request));
+                return;
+              }
+              writeApiError(response, mapper, 403, "ACCESS_DENIED", "无权执行此操作");
+            }))
         .headers(headers -> headers
             .contentSecurityPolicy(csp -> csp.policyDirectives(
                 "default-src 'self'; script-src 'self'; "

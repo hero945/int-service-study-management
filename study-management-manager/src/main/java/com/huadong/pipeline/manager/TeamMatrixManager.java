@@ -38,28 +38,35 @@ public class TeamMatrixManager {
     UserAccount user = currentUser(username);
     MatrixPage matrix = teams.findMatrix(
         accessScope(user), normalizeQuery(studyQuery), normalizeQuery(roleQuery), page, pageSize);
-    return withCurrentStatus(matrix);
+    return withCurrentStatus(matrix, user);
   }
 
   /** Study drawer team tab: requires study visibility, not team.page.view. */
   public MatrixPage getStudyTeam(long studyId, String username) {
     UserAccount user = currentUser(username);
+    if (studyMilestones.findStudy(studyId).isEmpty()) {
+      throw new BusinessException("STUDY_NOT_FOUND", "目标Study不存在");
+    }
     MatrixPage matrix = teams.findStudyTeam(accessScope(user), studyId);
     if (matrix.studies().isEmpty()) {
       throw new BusinessException("STUDY_OUT_OF_SCOPE", "目标Study不存在或不在当前数据范围");
     }
-    return withCurrentStatus(matrix);
+    return withCurrentStatus(matrix, user);
   }
 
-  private MatrixPage withCurrentStatus(MatrixPage matrix) {
+  private MatrixPage withCurrentStatus(MatrixPage matrix, UserAccount user) {
+    boolean canReadMilestone = user.permissions().contains("milestone.read");
     List<Long> studyIds = matrix.studies().stream().map(TeamStudy::studyId).toList();
-    Map<Long, List<PersistedMilestone>> milestonesByStudy =
-        studyMilestones.findByStudyIds(studyIds).stream()
-            .collect(Collectors.groupingBy(PersistedMilestone::studyId));
+    Map<Long, List<PersistedMilestone>> milestonesByStudy = canReadMilestone
+        ? studyMilestones.findByStudyIds(studyIds).stream()
+            .collect(Collectors.groupingBy(PersistedMilestone::studyId))
+        : Map.of();
     List<TeamStudy> studies = matrix.studies().stream()
         .map(study -> {
-          String currentStatus = CurrentMilestoneStatus.derive(
-              milestonesByStudy.getOrDefault(study.studyId(), List.of())).status();
+          String currentStatus = canReadMilestone
+              ? CurrentMilestoneStatus.derive(
+                  milestonesByStudy.getOrDefault(study.studyId(), List.of())).status()
+              : study.statusLabel();
           return new TeamStudy(
               study.studyId(),
               study.studyCode(),

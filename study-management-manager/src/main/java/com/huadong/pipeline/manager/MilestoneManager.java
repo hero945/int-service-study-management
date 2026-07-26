@@ -44,7 +44,8 @@ public class MilestoneManager {
   }
 
   private MilestoneResult loadMilestones(long studyId, UserAccount user) {
-    StudyRef study = requireStudy(studyId, user);
+    requireStudyExists(studyId);
+    StudyRef study = requireStudyInScope(studyId, user);
     List<PersistedMilestone> rows = milestones.findByStudyId(studyId);
     Map<String, PersistedMilestone> byCode = new LinkedHashMap<>();
     for (PersistedMilestone row : rows) {
@@ -79,7 +80,8 @@ public class MilestoneManager {
     if (!user.permissions().contains("milestone.update")) {
       throw forbidden();
     }
-    requireStudy(studyId, user);
+    requireStudyExists(studyId);
+    requireStudyInScope(studyId, user);
     // Resolve stage code and node index from milestone code
     String stageCode = stagePart(milestoneCode);
     int nodeIndex = nodeIndex(milestoneCode);
@@ -335,7 +337,12 @@ public class MilestoneManager {
 
   // ──────────── helpers ────────────
 
-  private StudyRef requireStudy(long studyId, UserAccount user) {
+  private StudyRef requireStudyExists(long studyId) {
+    return milestones.findStudy(studyId)
+        .orElseThrow(MilestoneManager::notFound);
+  }
+
+  private StudyRef requireStudyInScope(long studyId, UserAccount user) {
     return milestones.findStudy(scope(user), studyId)
         .orElseThrow(MilestoneManager::outOfScope);
   }
@@ -348,6 +355,10 @@ public class MilestoneManager {
   private static StudyAccessScope scope(UserAccount user) {
     return user.dataScope() == DataScope.ALL ? StudyAccessScope.all()
         : StudyAccessScope.assignedTo(user.id());
+  }
+
+  private static BusinessException notFound() {
+    return new BusinessException("STUDY_NOT_FOUND", "目标Study不存在");
   }
 
   private static BusinessException outOfScope() {

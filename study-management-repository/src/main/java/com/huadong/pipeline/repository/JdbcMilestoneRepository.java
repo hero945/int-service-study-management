@@ -19,6 +19,11 @@ public class JdbcMilestoneRepository implements StudyMilestonePort {
   private JdbcTemplate jdbc;
 
   @Override
+  public Optional<StudyRef> findStudy(long studyId) {
+    return findStudy(StudyAccessScope.all(), studyId);
+  }
+
+  @Override
   public Optional<StudyRef> findStudy(StudyAccessScope scope, long studyId) {
     List<Object> args = new ArrayList<>();
     args.add(studyId);

@@ -1,6 +1,7 @@
 import {
   CLINICAL_PHASE_CODES,
   normalizePhase,
+  phaseLabel,
   type PipelinePhase,
 } from './pipeline-status'
 
@@ -70,11 +71,11 @@ export const ALL_MILESTONE_SUB_STATUSES = Object.values(MILESTONE_STATUS_BY_STAG
 
 /**
  * 管线总览临床 phase 枚举：用来选定表格列（不做行过滤）。
- * 展示与 value 均为 DB code，与 CLINICAL_PHASE_CODES 一致。
+ * value 为 DB code，与 CLINICAL_PHASE_CODES 一致；label 为人类可读标签。
  */
 export const PIPELINE_PHASE_STATUS_OPTIONS = CLINICAL_PHASE_CODES.map((code) => ({
   code,
-  label: code,
+  label: phaseLabel(code),
 }))
 
 /** PreIND / IND / PRE-3 对应的里程碑主阶段 key（状态下拉用） */

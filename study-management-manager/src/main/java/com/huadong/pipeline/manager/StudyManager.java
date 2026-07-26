@@ -19,6 +19,7 @@ import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilesto
 import com.huadong.pipeline.domain.config.ProjectRepository;
 import com.huadong.pipeline.domain.team.TeamMatrixRepository;
 import com.huadong.pipeline.domain.user.DataScope;
+import com.huadong.pipeline.domain.user.UserAccount;
 import com.huadong.pipeline.domain.user.UserAccountRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -50,14 +51,19 @@ public class StudyManager {
   private TeamMatrixRepository team;
 
   public List<StudyView> list(String username) {
-    List<Study> all = studies.findAll(accessScope(username));
+    UserAccount user = currentUser(username);
+    List<Study> all = studies.findAll(accessScope(user));
+    boolean canReadMilestone = user.permissions().contains("milestone.read");
     Set<Long> studyIds = all.stream().map(Study::id).collect(Collectors.toSet());
     Map<Long, String> plNames = team.findRoleMemberNames(studyIds, "PL");
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIds, "PM");
     return all.stream()
         .map(study -> {
-          CurrentMilestoneStatus.PhaseStatus derived =
-              CurrentMilestoneStatus.derive(studyMilestones.findByStudyId(study.id()));
+          CurrentMilestoneStatus.PhaseStatus derived = canReadMilestone
+              ? CurrentMilestoneStatus.derive(studyMilestones.findByStudyId(study.id()))
+              : CurrentMilestoneStatus.PhaseStatus.EMPTY;
+          String currentPhase = canReadMilestone ? derived.phase() : "";
+          String currentStatus = canReadMilestone ? derived.status() : study.status().label();
           return new StudyView(
               study.id(),
               study.code(),
@@ -68,8 +74,8 @@ public class StudyManager {
               study.startDate(),
               plNames.getOrDefault(study.id(), ""),
               pmNames.getOrDefault(study.id(), ""),
-              derived.phase(),
-              derived.status(),
+              currentPhase,
+              currentStatus,
               study.updatedAt(),
               study.therapeuticAreaCode(),
               study.therapeuticAreaName(),
@@ -85,8 +91,10 @@ public class StudyManager {
 
   @Transactional(readOnly = true)
   public PipelineOverview overview(String username) {
-    var accessScope = accessScope(username);
+    var user = currentUser(username);
+    var accessScope = accessScope(user);
     var projects = overviewProjects.findOverviewProjects(accessScope);
+    boolean canReadMilestone = user.permissions().contains("milestone.read");
 
     // Batch-load milestones for every study in the overview (single IN query, no N+1).
     List<Long> studyIds = projects.stream()
@@ -94,15 +102,16 @@ public class StudyManager {
         .map(OverviewStudy::id)
         .toList();
     Set<Long> studyIdSet = Set.copyOf(studyIds);
-    Map<Long, List<PersistedMilestone>> milestonesByStudy = studyMilestones.findByStudyIds(studyIds)
-        .stream()
-        .collect(Collectors.groupingBy(PersistedMilestone::studyId));
+    Map<Long, List<PersistedMilestone>> milestonesByStudy = canReadMilestone
+        ? studyMilestones.findByStudyIds(studyIds).stream()
+            .collect(Collectors.groupingBy(PersistedMilestone::studyId))
+        : Map.of();
     Map<Long, String> plNames = team.findRoleMemberNames(studyIdSet, "PL");
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIdSet, "PM");
 
     // Override each study's status with its milestone-derived status where milestones exist.
     List<OverviewProject> enriched = projects.stream()
-        .map(project -> enrichProject(project, milestonesByStudy, plNames, pmNames))
+        .map(project -> enrichProject(project, milestonesByStudy, plNames, pmNames, canReadMilestone))
         .toList();
 
     Map<String, List<OverviewProject>> projectsByArea = new LinkedHashMap<>();
@@ -122,11 +131,15 @@ public class StudyManager {
       OverviewProject project,
       Map<Long, List<PersistedMilestone>> milestonesByStudy,
       Map<Long, String> plNames,
-      Map<Long, String> pmNames) {
+      Map<Long, String> pmNames,
+      boolean canReadMilestone) {
     List<OverviewStudy> enrichedStudies = project.studies().stream()
         .map(study -> {
           String plName = plNames.getOrDefault(study.id(), "");
           String pmName = pmNames.getOrDefault(study.id(), "");
+          if (!canReadMilestone) {
+            return withOwners(study, plName, pmName);
+          }
           List<PersistedMilestone> milestones = milestonesByStudy.get(study.id());
           if (milestones == null || milestones.isEmpty()) {
             return withOwners(study, plName, pmName);
@@ -155,17 +168,30 @@ public class StudyManager {
     return new OverviewStudy(
         study.id(), study.code(), study.phase(), study.status(),
         study.startDate(), study.updatedAt(),
-        study.mainStageCode(), study.mainStageLabel(), study.subStatusLabel(),
+        nullToEmpty(study.mainStageCode()),
+        nullToEmpty(study.mainStageLabel()),
+        nullToEmpty(study.subStatusLabel()),
         study.preindCompleted(), study.indCompleted(), study.globallyCompleted(),
         study.currentPhaseCompleted(), plName, pmName);
   }
 
-  private StudyAccessScope accessScope(String username) {
-    var user = users.findByUsername(username)
+  private static String nullToEmpty(String value) {
+    return value == null ? "" : value;
+  }
+
+  private UserAccount currentUser(String username) {
+    return users.findByUsername(username)
         .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "当前登录账号不存在"));
+  }
+
+  private StudyAccessScope accessScope(UserAccount user) {
     return user.dataScope() == DataScope.ALL
         ? StudyAccessScope.all()
         : StudyAccessScope.assignedTo(user.id());
+  }
+
+  private StudyAccessScope accessScope(String username) {
+    return accessScope(currentUser(username));
   }
 
   @Transactional

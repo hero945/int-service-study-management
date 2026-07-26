@@ -16,17 +16,17 @@ describe('phaseCodeToColumn', () => {
 })
 
 describe('PIPELINE_PHASE_STATUS_OPTIONS', () => {
-  it('uses DB clinical phase codes as both value and label', () => {
+  it('uses DB clinical phase codes as value and human-readable labels', () => {
     expect(PIPELINE_PHASE_STATUS_OPTIONS.map((o) => o.label)).toEqual([
-      'PRE_IND',
+      'Pre-IND',
       'IND',
-      'PHASE_1',
-      'PHASE_2',
-      'PRE_3',
-      'PHASE_3_1',
-      'PHASE_3_2',
+      'I期临床',
+      'II期临床',
+      'Pre-III',
+      'III期临床（A）',
+      'III期临床（B）',
     ])
-    expect(PIPELINE_PHASE_STATUS_OPTIONS.find((o) => o.code === 'PHASE_1')?.label).toBe('PHASE_1')
+    expect(PIPELINE_PHASE_STATUS_OPTIONS.find((o) => o.code === 'PHASE_1')?.label).toBe('I期临床')
   })
 })
 

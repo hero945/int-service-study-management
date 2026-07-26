@@ -76,6 +76,14 @@ class MilestoneAccessIntegrationTest {
   }
 
   @Test
+  void getMilestonesForUnknownStudyReturnsNotFound() throws Exception {
+    mvc.perform(get("/api/v1/studies/{id}/milestones", 999999L)
+            .with(user("admin@example.com").authorities(authority("milestone.read"))))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("STUDY_NOT_FOUND"));
+  }
+
+  @Test
   void getMilestonesWithoutReadPermissionIsForbidden() throws Exception {
     long studyId = seedStudy("MS-NO-READ");
     mvc.perform(get("/api/v1/studies/{id}/milestones", studyId)

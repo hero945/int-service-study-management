@@ -3,6 +3,7 @@ import {
   CLINICAL_PHASE_CODES,
   normalizePhase,
   originLabel,
+  phaseLabel,
   sourceLabel,
   toneForStatus,
 } from './pipeline-status'
@@ -53,5 +54,17 @@ describe('pipeline phase dictionary', () => {
     expect(originLabel('IMPORTED')).toBe('进口')
     expect(sourceLabel(undefined)).toBe('')
     expect(originLabel(undefined)).toBe('')
+  })
+
+  it('maps clinical phase codes to human-readable labels', () => {
+    expect(phaseLabel('PRE_IND')).toBe('Pre-IND')
+    expect(phaseLabel('IND')).toBe('IND')
+    expect(phaseLabel('PHASE_1')).toBe('I期临床')
+    expect(phaseLabel('PHASE_2')).toBe('II期临床')
+    expect(phaseLabel('PRE_3')).toBe('Pre-III')
+    expect(phaseLabel('PHASE_3_1')).toBe('III期临床（A）')
+    expect(phaseLabel('PHASE_3_2')).toBe('III期临床（B）')
+    expect(phaseLabel('UNKNOWN')).toBe('UNKNOWN')
+    expect(phaseLabel(undefined)).toBe('')
   })
 })
