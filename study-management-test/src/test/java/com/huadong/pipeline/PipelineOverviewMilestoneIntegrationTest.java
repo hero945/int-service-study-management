@@ -18,10 +18,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 /** End-to-end check that the pipeline overview derives each phase's status from milestones. */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class PipelineOverviewMilestoneIntegrationTest {
 
   @Autowired MockMvc mvc;

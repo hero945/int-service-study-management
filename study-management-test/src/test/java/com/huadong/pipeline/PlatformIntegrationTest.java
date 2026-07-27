@@ -21,9 +21,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class PlatformIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired UserDetailsService userDetailsService;

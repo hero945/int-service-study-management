@@ -63,13 +63,18 @@ public class MybatisPlusUserAccountRepository implements UserAccountRepository {
 
   @Override
   public List<UserAccount> findAll(String keyword, String roleCode) {
-    return findPage(1, (int) LIST_LIMIT, keyword, roleCode).data();
+    return findPageWithinLimit(1, (int) LIST_LIMIT, keyword, roleCode, (int) LIST_LIMIT).data();
   }
 
   @Override
   public UserPage findPage(int page, int pageSize, String keyword, String roleCode) {
+    return findPageWithinLimit(page, pageSize, keyword, roleCode, 100);
+  }
+
+  private UserPage findPageWithinLimit(
+      int page, int pageSize, String keyword, String roleCode, int maximumPageSize) {
     int safePage = Math.max(page, 1);
-    int safeSize = Math.min(Math.max(pageSize, 1), 100);
+    int safeSize = Math.min(Math.max(pageSize, 1), maximumPageSize);
     var query = Wrappers.<UserAccountEntity>lambdaQuery()
         .eq(UserAccountEntity::getSysDeleted, 0)
         .orderByAsc(UserAccountEntity::getId);
