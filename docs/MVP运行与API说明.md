@@ -71,7 +71,7 @@ Java 运行时、Repository、Spring Session 与 Flyway 已统一接入 `hd_plt_
 
 Java运行时、Flyway和Repository已经统一使用 `hd_plt_*` 目标模型：
 
-- [V1__hd_plt_full_schema.sql](database/V1__hd_plt_full_schema.sql)既是25表MySQL建表语句，
+- [V1__hd_plt_full_schema.sql](../study-management-service/src/main/resources/db/migration/mysql/V1__hd_plt_full_schema.sql)既是25表MySQL建表语句，
   也是打入Spring Boot JAR的Flyway V1基线。
 - V2负责预置角色、权限、角色权限关系和平台显示名称；已有旧Session表会原地改名为
   `hd_plt_spring_session*`，不会复制认证令牌到前端。

@@ -35,7 +35,7 @@ Accepted（取代ADR-004中的表前缀和早期物理模型约定）
 11. 导出实时查询数据库生成，不建立导出文件或导出任务表。
 12. 完整字段和索引以
     [数据库设计规格](../database/完整PRD数据库设计规格.md)和
-    [建表语句及Flyway V1基线](../database/V1__hd_plt_full_schema.sql)为准。
+    [建表语句及Flyway V1基线](../../study-management-service/src/main/resources/db/migration/mysql/V1__hd_plt_full_schema.sql)为准。
 
 ## 备选方案
 
@@ -65,7 +65,7 @@ Accepted（取代ADR-004中的表前缀和早期物理模型约定）
 
 ## 验证
 
-- `docs/database/V1__hd_plt_full_schema.sql` 可在空MySQL 8.0.46数据库创建25张表。
+- `study-management-service/.../db/migration/mysql/V1__hd_plt_full_schema.sql` 可在空MySQL 8.0.46数据库创建25张表。
 - 25张表均为InnoDB和`utf8mb4_0900_ai_ci`。
 - 不存在租户字段、项目状态存储字段、外键和CHECK约束。
 - Flyway 空库启动和应用集成测试已通过；重复部署及生产迁移账号最小权限仍属于上线门禁。

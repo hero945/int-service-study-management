@@ -96,13 +96,6 @@
         <directory>../frontend/dist</directory>
         <targetPath>static</targetPath>
       </resource>
-      <resource>
-        <directory>../docs/database</directory>
-        <targetPath>db/migration/mysql</targetPath>
-        <includes>
-          <include>V1__hd_plt_full_schema.sql</include>
-        </includes>
-      </resource>
     </resources>
     <plugins>
       <plugin>
