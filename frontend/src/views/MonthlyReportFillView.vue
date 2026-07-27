@@ -22,10 +22,19 @@ const editing = ref<Set<number>>(new Set())
 const saving = ref<Set<string>>(new Set())
 const deleting = ref<Set<number>>(new Set())
 const creatingFor = ref<number>()
+const createFormError = ref('')
+const editFormError = reactive<Record<number, string>>({})
 
 const studyId = computed(() => Number(route.params.studyId))
 const editForm = reactive<Record<number, MonthlyEntryUpdateInput>>({})
 const createForm = reactive({ entryDate: '', content: '' })
+
+function validateEntry(entryDate?: string, content?: string): string {
+  if (!entryDate?.trim()) return '请选择日期'
+  if (!content?.trim()) return '请填写进展内容'
+  if (content.length > 4000) return '进展内容不能超过 4000 字'
+  return ''
+}
 
 const permissions = computed(() => session.currentUser.value?.permissions ?? [])
 const canRead = computed(() => permissions.value.includes('monthly.read'))
@@ -53,6 +62,8 @@ onMounted(() => load())
 watch(month, () => {
   editing.value = new Set()
   creatingFor.value = undefined
+  createFormError.value = ''
+  for (const key of Object.keys(editFormError)) delete editFormError[Number(key)]
   historyOpen.value = new Set()
   historyLoading.value = new Set()
   for (const key of Object.keys(history)) delete history[Number(key)]
@@ -65,6 +76,7 @@ function isEditing(entryId: number) {
 function startEdit(entry: MonthlyReportEntry) {
   if (!canUpdate.value || !entry.editable) return
   editForm[entry.entryId] = { entryDate: entry.entryDate, content: entry.content }
+  delete editFormError[entry.entryId]
   editing.value = new Set([...editing.value, entry.entryId])
 }
 function cancelEdit(entryId: number) {
@@ -72,13 +84,24 @@ function cancelEdit(entryId: number) {
   next.delete(entryId)
   editing.value = next
   delete editForm[entryId]
+  delete editFormError[entryId]
 }
 async function saveEdit(entry: MonthlyReportEntry) {
   if (!canUpdate.value) return
+  const draft = editForm[entry.entryId] ?? {}
+  const validation = validateEntry(draft.entryDate, draft.content)
+  if (validation) {
+    editFormError[entry.entryId] = validation
+    return
+  }
+  delete editFormError[entry.entryId]
   const key = `edit-${entry.entryId}`
   saving.value = new Set([...saving.value, key])
   try {
-    page.value = await apiClient.updateMonthlyEntry(entry.entryId, editForm[entry.entryId] ?? {})
+    page.value = await apiClient.updateMonthlyEntry(entry.entryId, {
+      entryDate: draft.entryDate,
+      content: draft.content?.trim(),
+    })
     cancelEdit(entry.entryId)
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '保存失败'
@@ -92,19 +115,27 @@ function startCreate(line: FunctionLineReport) {
   if (!canCreate.value || !line.editable) return
   createForm.entryDate = new Date().toISOString().slice(0, 10)
   createForm.content = ''
+  createFormError.value = ''
   creatingFor.value = line.reportId
 }
 function cancelCreate() {
   creatingFor.value = undefined
+  createFormError.value = ''
 }
 async function saveCreate(line: FunctionLineReport) {
   if (!canCreate.value) return
+  const validation = validateEntry(createForm.entryDate, createForm.content)
+  if (validation) {
+    createFormError.value = validation
+    return
+  }
+  createFormError.value = ''
   const key = `create-${line.reportId}`
   saving.value = new Set([...saving.value, key])
   try {
     page.value = await apiClient.createMonthlyEntry(line.reportId, {
       entryDate: createForm.entryDate,
-      content: createForm.content,
+      content: createForm.content.trim(),
     })
     cancelCreate()
   } catch (reason) {
@@ -181,14 +212,27 @@ function goBack() { router.push('/studies') }
           <ul class="monthly-entry-list">
             <li v-for="entry in line.entries" :key="entry.entryId" class="monthly-entry">
               <template v-if="isEditing(entry.entryId)">
-                <input v-model="editForm[entry.entryId].entryDate" type="date" class="milestone-input monthly-date-input">
-                <textarea v-model="editForm[entry.entryId].content" class="monthly-textarea" rows="3" maxlength="4000"></textarea>
+                <input v-model="editForm[entry.entryId].entryDate" type="date" class="milestone-input monthly-date-input" required>
+                <textarea
+                  v-model="editForm[entry.entryId].content"
+                  class="monthly-textarea"
+                  rows="3"
+                  maxlength="4000"
+                  :aria-invalid="Boolean(editFormError[entry.entryId])"
+                  :aria-describedby="editFormError[entry.entryId] ? `monthly-edit-error-${entry.entryId}` : undefined"
+                ></textarea>
                 <div class="monthly-entry-actions">
                   <button class="text-button" type="button" :disabled="saving.has(`edit-${entry.entryId}`)" @click="saveEdit(entry)">
                     {{ saving.has(`edit-${entry.entryId}`) ? '保存中…' : '保存' }}
                   </button>
                   <button class="text-button" type="button" @click="cancelEdit(entry.entryId)">取消</button>
                 </div>
+                <p
+                  v-if="editFormError[entry.entryId]"
+                  :id="`monthly-edit-error-${entry.entryId}`"
+                  class="form-error monthly-form-error"
+                  role="alert"
+                >{{ editFormError[entry.entryId] }}</p>
               </template>
               <template v-else>
                 <span class="mono monthly-entry-date">{{ entry.entryDate }}</span>
@@ -231,14 +275,28 @@ function goBack() { router.push('/studies') }
 
           <div v-if="line.editable && canCreate" class="monthly-create">
             <template v-if="creatingFor === line.reportId">
-              <input v-model="createForm.entryDate" type="date" class="milestone-input monthly-date-input">
-              <textarea v-model="createForm.content" class="monthly-textarea" rows="3" maxlength="4000" placeholder="填写本月进展…"></textarea>
+              <input v-model="createForm.entryDate" type="date" class="milestone-input monthly-date-input" required>
+              <textarea
+                v-model="createForm.content"
+                class="monthly-textarea"
+                rows="3"
+                maxlength="4000"
+                placeholder="填写本月进展…"
+                :aria-invalid="Boolean(createFormError)"
+                :aria-describedby="createFormError ? 'monthly-create-error' : undefined"
+              ></textarea>
               <div class="monthly-entry-actions">
                 <button class="text-button" type="button" :disabled="saving.has(`create-${line.reportId}`)" @click="saveCreate(line)">
                   {{ saving.has(`create-${line.reportId}`) ? '保存中…' : '保存' }}
                 </button>
                 <button class="text-button" type="button" @click="cancelCreate">取消</button>
               </div>
+              <p
+                v-if="createFormError"
+                id="monthly-create-error"
+                class="form-error monthly-form-error"
+                role="alert"
+              >{{ createFormError }}</p>
             </template>
             <button v-else class="text-button monthly-create-toggle" type="button" @click="startCreate(line)">＋ 新增进展</button>
           </div>

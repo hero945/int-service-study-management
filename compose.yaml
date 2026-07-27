@@ -22,7 +22,7 @@ services:
 
   app:
     build: .
-    image: ghcr.io/replace-with-org/study-management:${IMAGE_TAG:-local}
+    image: ghcr.io/hero945/int-service-study-management:${IMAGE_TAG:-local}
     restart: unless-stopped
     environment:
       DB_URL: jdbc:mysql://mysql:3306/study_management?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai

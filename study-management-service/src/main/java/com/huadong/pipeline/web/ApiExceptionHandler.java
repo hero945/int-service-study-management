@@ -108,6 +108,15 @@ public class ApiExceptionHandler {
         details = Map.of();
       }
     }
+    Sentry.withScope(
+            scope -> {
+//              scope.setTag("http.method", request.getMethod());
+//              scope.setTag("http.path", request.getRequestURI());
+              User user = new User();
+              user.setUsername(currentUsername());
+              scope.setUser(user);
+              Sentry.captureException(ex);
+            });
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(new ApiError("VALIDATION_FAILED", message, details, Instant.now()));
   }

@@ -10,11 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
           cache: maven
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
       - name: Frontend build and validation
         run: npm --prefix frontend run check
       - name: Unit and integration tests

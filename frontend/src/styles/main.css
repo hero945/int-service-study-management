@@ -835,6 +835,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .monthly-create-toggle { grid-column: 1 / -1; justify-self: start; }
 .monthly-date-input { grid-column: 1; }
 .monthly-textarea { grid-column: 2; width: 100%; min-height: 64px; padding: 7px 9px; border: 1px solid #dfe3e8; border-radius: 5px; background: #fff; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
+.monthly-form-error { grid-column: 1 / -1; margin: 0; }
 .monthly-page .text-button { padding: 4px 8px; }
 
 /* 条目操作：查看态的编辑/删除按钮竖排于右侧 */
