@@ -9,8 +9,8 @@ on:
 permissions:
   contents: read
 env:
-  ACR_REGISTRY: registry.cn-hangzhou.aliyuncs.com
-  ACR_IMAGE: registry.cn-hangzhou.aliyuncs.com/huadong_project/study-management
+  ACR_REGISTRY: crpi-abxyd61kmc2rryuv.cn-hangzhou.personal.cr.aliyuncs.com
+  ACR_IMAGE: crpi-abxyd61kmc2rryuv.cn-hangzhou.personal.cr.aliyuncs.com/huadong_project/study-management
 jobs:
   image:
     name: Build and push image to ACR

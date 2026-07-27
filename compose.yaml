@@ -22,7 +22,7 @@ services:
 
   app:
     build: .
-    image: registry.cn-hangzhou.aliyuncs.com/huadong_project/study-management:${IMAGE_TAG:-master}
+    image: crpi-abxyd61kmc2rryuv.cn-hangzhou.personal.cr.aliyuncs.com/huadong_project/study-management:${IMAGE_TAG:-master}
     restart: unless-stopped
     environment:
       DB_URL: jdbc:mysql://mysql:3306/study_management?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
