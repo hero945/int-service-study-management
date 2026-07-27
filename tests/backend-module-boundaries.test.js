@@ -185,4 +185,22 @@ assert(
   'MySQL migration history must retain the already-applied V8 team matrix migration',
 );
 
+const mysqlSessionCaseMigrationPath =
+  'study-management-service/src/main/resources/db/migration/mysql/' +
+  'V19__align_spring_session_attributes_table_case.sql';
+assert(
+  fs.existsSync(path.join(root, mysqlSessionCaseMigrationPath)),
+  'MySQL migrations must align the Spring Session attributes table name on case-sensitive servers',
+);
+const mysqlSessionCaseMigration = read(mysqlSessionCaseMigrationPath);
+assert(
+  mysqlSessionCaseMigration.includes('@@lower_case_table_names = 0'),
+  'Spring Session table-case migration must run only when MySQL table names are case-sensitive',
+);
+assert(
+  mysqlSessionCaseMigration.includes('hd_plt_spring_session_attributes')
+    && mysqlSessionCaseMigration.includes('hd_plt_spring_session_ATTRIBUTES'),
+  'Spring Session table-case migration must rename the lowercase table to the JDBC runtime name',
+);
+
 console.log('PASS backend Maven modules and dependency direction');
