@@ -11,6 +11,9 @@
 .tools
 .codex
 .agents
+.cursor
+.codebuddy
+.workbuddy
 *.iml
 
 # -----------------------------------------------------------------------------
@@ -70,3 +73,11 @@ docker-compose.override.yaml
 support.js
 管线总览 Coverpage.dc.html
 管线总览 Coverpage.test.js
+临床研发管线管理系统需求规格说明书_v3.docx
+*.docx
+*.doc
+*.pdf
+*.xlsx
+*.xls
+*.pptx
+*.ppt

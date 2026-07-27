@@ -6,7 +6,7 @@ RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 COPY frontend ./
 RUN npm run build
 
-FROM maven:3.9.11-eclipse-temurin-21 AS build
+FROM maven:3.9.16-eclipse-temurin-21 AS build
 WORKDIR /workspace
 COPY pom.xml ./
 COPY study-management-api/pom.xml study-management-api/pom.xml
