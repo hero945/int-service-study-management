@@ -4,6 +4,7 @@
 **/target/
 frontend/dist/
 out/
+/study-management-service/bin/
 
 # -----------------------------------------------------------------------------
 # Node.js dependencies, caches, and test reports

@@ -10,6 +10,7 @@ spring:
       minimum-idle: ${DB_POOL_MIN:2}
   flyway:
     enabled: true
+    validate-on-migrate: false
     locations: classpath:db/migration/mysql
     baseline-on-migrate: true
     baseline-version: 1
