@@ -10,6 +10,30 @@ export interface SortColumn<T> {
   type?: SortType
 }
 
+/** v-bind 到 <th> 上的可访问排序表头属性（点击 + Enter/Space 键盘触发 + aria-sort） */
+export interface SortHeaderProps {
+  class: string
+  'aria-sort': 'ascending' | 'descending' | 'none'
+  tabindex: 0
+  onClick: () => void
+  onKeydown: (event: KeyboardEvent) => void
+}
+
+export function sortHeaderProps(direction: SortDirection | null, toggle: () => void): SortHeaderProps {
+  return {
+    class: direction === 'asc' ? 'sortable sort-asc' : direction === 'desc' ? 'sortable sort-desc' : 'sortable',
+    'aria-sort': direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none',
+    tabindex: 0,
+    onClick: toggle,
+    onKeydown: (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        toggle()
+      }
+    },
+  }
+}
+
 export interface UseClientSortOptions<T> {
   items: Ref<T[]> | ComputedRef<T[]>
   initialKey?: string
@@ -25,6 +49,8 @@ export interface UseClientSortReturn<T> {
   toggle: (key: string) => void
   setSort: (key: string | null, direction?: SortDirection | null) => void
   getDirection: (key: string) => SortDirection | null
+  /** v-bind="sortHeader('name')" 一键生成可访问排序表头 */
+  sortHeader: (key: string) => SortHeaderProps
   reset: () => void
 }
 
@@ -101,6 +127,10 @@ export function useClientSort<T>(options: UseClientSortOptions<T>): UseClientSor
     return sortKey.value === key ? sortDirection.value : null
   }
 
+  function sortHeader(key: string): SortHeaderProps {
+    return sortHeaderProps(getDirection(key), () => toggle(key))
+  }
+
   function reset() {
     sortKey.value = null
     sortDirection.value = null
@@ -135,6 +165,7 @@ export function useClientSort<T>(options: UseClientSortOptions<T>): UseClientSor
     toggle,
     setSort,
     getDirection,
+    sortHeader,
     reset,
   }
 }

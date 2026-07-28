@@ -31,6 +31,8 @@ import type {
 import {
   ORIGIN_LABELS,
   SOURCE_LABELS,
+  originLabel,
+  sourceLabel,
 } from '../domain/pipeline-status'
 import {
   EXPORT_STATUS,
@@ -38,6 +40,7 @@ import {
   deriveOverviewCompletionFlags,
   flattenMilestoneNodes,
 } from '../domain/milestone-status'
+import { deriveRiskLevel } from '../domain/risk-labels'
 
 const users: Array<CurrentUser & { password: string }> = [
   {
@@ -250,6 +253,13 @@ function deriveOverviewCompletionFromStage(
 let nextRiskId = 19
 let nextRiskActionId = 2
 
+/** find 的断言版本：mock 场景找不到即数据错误，直接抛出明确信息 */
+function mustFind<T>(items: T[], predicate: (item: T) => boolean, message: string): T {
+  const found = items.find(predicate)
+  if (!found) throw new Error(message)
+  return found
+}
+
 function actionOverdue(plannedDate: string | null | undefined, status: string): boolean {
   if (!plannedDate || status === 'COMPLETED' || status === 'CANCELLED') return false
   return plannedDate < new Date().toISOString().slice(0, 10)
@@ -381,14 +391,14 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         { milestoneCode: 'PreIND-3', milestoneName: 'PreIND ??-????', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-140), actualEndDate: d(-135), status: 'COMPLETED', deviationNote: null },
         { milestoneCode: 'PreIND-4', milestoneName: 'PreIND ??-???', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-138), actualEndDate: d(-130), status: 'COMPLETED', deviationNote: null },
         { milestoneCode: 'PreIND-5', milestoneName: 'PreIND ??-??', planV1Date: d(-148), planV2Date: d(-143), actualStartDate: d(-135), actualEndDate: d(-125), status: 'COMPLETED', deviationNote: null },
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'IND', stageName: 'IND', nodes: [
         { milestoneCode: 'IND-0', milestoneName: 'IND ??', planV1Date: d(-100), planV2Date: d(-95), actualStartDate: d(-98), actualEndDate: d(-96), status: 'COMPLETED', deviationNote: null },
         { milestoneCode: 'IND-1', milestoneName: 'IND ????', planV1Date: d(-80), planV2Date: d(-78), actualStartDate: d(-82), actualEndDate: d(-75), status: 'COMPLETED', deviationNote: 'CDE?????????' },
         { milestoneCode: 'IND-2', milestoneName: 'IND ????', planV1Date: d(-60), planV2Date: d(-58), actualStartDate: d(-62), actualEndDate: d(-55), status: 'COMPLETED', deviationNote: null },
         { milestoneCode: 'IND-3', milestoneName: 'IND ??', planV1Date: d(-50), planV2Date: d(-48), actualStartDate: d(-52), actualEndDate: d(-46), status: 'COMPLETED', deviationNote: null },
         { milestoneCode: 'IND-4', milestoneName: 'IND ??', planV1Date: d(-30), planV2Date: d(-28), actualStartDate: d(-30), actualEndDate: null, status: 'IN_PROGRESS', deviationNote: null },
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'Pre3', stageName: 'Pre3', nodes: [
         { milestoneCode: 'Pre3-0', milestoneName: 'Pre3 ??', planV1Date: d(60), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Pre3-1', milestoneName: 'Pre3 ??-????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
@@ -396,12 +406,12 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         { milestoneCode: 'Pre3-3', milestoneName: 'Pre3 ??-????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Pre3-4', milestoneName: 'Pre3 ??-???', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Pre3-5', milestoneName: 'Pre3 ??-??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'Protocol', stageName: 'Protocol', nodes: [
         { milestoneCode: 'Protocol-0', milestoneName: '??????', planV1Date: d(30), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Protocol-1', milestoneName: '?????', planV1Date: d(90), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Protocol-2', milestoneName: '????', planV1Date: d(150), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'SSU', stageName: 'SSU', nodes: [
         notStarted('SSU-0', '????????'),
         notStarted('SSU-1', '????????'),
@@ -415,16 +425,16 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         notStarted('SSU-9', '????'),
         notStarted('SSU-10', 'CDE ????'),
         notStarted('SSU-11', 'ClinicalTrial ??'),
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'Enrollment', stageName: 'Enrollment', nodes: [
         { milestoneCode: 'Enrollment-0', milestoneName: 'FPI', planV1Date: d(360), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Enrollment-1', milestoneName: 'LPI', planV1Date: d(720), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Enrollment-2', milestoneName: 'LPO', planV1Date: d(730), planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'IA', stageName: 'IA', nodes: [
         { milestoneCode: 'IA-0', milestoneName: 'IA ????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'IA-1', milestoneName: 'IA ????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'Data_Report', stageName: 'Data & Report', nodes: [
         { milestoneCode: 'Data_Report-0', milestoneName: 'DBL', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Data_Report-1', milestoneName: 'TLR??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
@@ -434,7 +444,7 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         { milestoneCode: 'Data_Report-5', milestoneName: 'CSR??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Data_Report-6', milestoneName: 'CSR??', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
         { milestoneCode: 'Data_Report-7', milestoneName: '????', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'PreNDA_BLA', stageName: 'PreNDA/BLA', nodes: [
         notStarted('PreNDA_BLA-0', 'PreNDA ??'),
         notStarted('PreNDA_BLA-1', 'PreNDA ??-????'),
@@ -442,7 +452,7 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         notStarted('PreNDA_BLA-3', 'PreNDA ??-????'),
         notStarted('PreNDA_BLA-4', 'PreNDA ??-???'),
         notStarted('PreNDA_BLA-5', 'PreNDA ??-??'),
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
       { stageCode: 'NDA_BLA', stageName: 'NDA/BLA', nodes: [
         notStarted('NDA_BLA-0', 'NDA/BLA ??'),
         notStarted('NDA_BLA-1', 'NDA/BLA ????'),
@@ -453,7 +463,7 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
         notStarted('NDA_BLA-6', 'NDA/BLA ??'),
         notStarted('NDA_BLA-7', 'NDA/BLA ??'),
         notStarted('NDA_BLA-8', 'NDA/BLA ??'),
-      ] as MilestoneNode[]},
+      ] satisfies MilestoneNode[]},
     ],
   }
 }
@@ -891,12 +901,12 @@ export function createMockApiClient(): ApiClient {
       }
     },
     async createRisk(input) {
-      const study = demoStudies.find(item => item.id === input.studyId)!
+      const study = mustFind(demoStudies, item => item.id === input.studyId, 'Study 不存在')
       const options = await this.getRiskFormOptions(input.studyId)
-      const fn = options.functions.find(item => item.id === input.functionLineId)!
-      const owner = options.owners.find(item => item.id === input.ownerUserId)!
+      const fn = mustFind(options.functions, item => item.id === input.functionLineId, '功能线不存在')
+      const owner = mustFind(options.owners, item => item.id === input.ownerUserId, 'Owner 不存在')
       const score = input.assessment.impact * input.assessment.likelihood * input.assessment.detectability
-      const level = score <= 12 ? 'LOW' : score <= 36 ? 'MEDIUM' : 'HIGH'
+      const level = deriveRiskLevel(score, options.scoringRule)
       const now = new Date().toISOString()
       const detail: RiskDetail = {
         risk: { riskCode: `RSK-${new Date().getFullYear()}-${String(nextRiskId++).padStart(6, '0')}`,
@@ -942,9 +952,9 @@ export function createMockApiClient(): ApiClient {
         if (active) throw new Error('存在未完成的控制措施，请先完成或取消后再关闭风险')
       }
       const options = await this.getRiskFormOptions(input.studyId)
-      const study = demoStudies.find(item => item.id === input.studyId)!
-      const fn = options.functions.find(item => item.id === input.functionLineId)!
-      const owner = options.owners.find(item => item.id === input.ownerUserId)!
+      const study = mustFind(demoStudies, item => item.id === input.studyId, 'Study 不存在')
+      const fn = mustFind(options.functions, item => item.id === input.functionLineId, '功能线不存在')
+      const owner = mustFind(options.owners, item => item.id === input.ownerUserId, 'Owner 不存在')
       const previousStatus = detail.risk.status
       Object.assign(detail.risk, { studyId: study.id, studyCode: study.code,
         programCode: study.programCode ?? '', projectCode: study.projectCode ?? '',
@@ -965,7 +975,7 @@ export function createMockApiClient(): ApiClient {
       }
       if (input.assessment) {
         const score = input.assessment.impact * input.assessment.likelihood * input.assessment.detectability
-        const level = score <= 12 ? 'LOW' : score <= 36 ? 'MEDIUM' : 'HIGH'
+        const level = deriveRiskLevel(score, options.scoringRule)
         Object.assign(detail.risk, { score, level })
         detail.assessments.unshift({ id: Date.now(), number: detail.assessments.length + 1,
           ...input.assessment, score, level, reason: input.assessment.reason ?? '',
@@ -985,7 +995,7 @@ export function createMockApiClient(): ApiClient {
       mockRisks.splice(index, 1)
     },
     async addRiskAction(riskCode, expectedRiskVersion, action) {
-      const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      const detail = mustFind(mockRisks, item => item.risk.riskCode === riskCode, '风险不存在')
       if (detail.risk.status === 'CLOSED') throw new Error('已关闭的风险不可再维护控制措施')
       if (detail.risk.version !== expectedRiskVersion) throw new Error('风险已被修改')
       const options = await this.getRiskFormOptions(detail.risk.studyId)
@@ -1004,9 +1014,9 @@ export function createMockApiClient(): ApiClient {
       return structuredClone(detail)
     },
     async updateRiskAction(riskCode, actionId, expectedVersion, action) {
-      const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      const detail = mustFind(mockRisks, item => item.risk.riskCode === riskCode, '风险不存在')
       if (detail.risk.status === 'CLOSED') throw new Error('已关闭的风险不可再维护控制措施')
-      const target = detail.actions.find(item => item.id === actionId)!
+      const target = mustFind(detail.actions, item => item.id === actionId, '措施不存在')
       if (target.version !== expectedVersion) throw new Error('措施已被修改')
       const from = target.status
       Object.assign(target, {
@@ -1029,7 +1039,7 @@ export function createMockApiClient(): ApiClient {
       return structuredClone(detail)
     },
     async deleteRiskAction(riskCode, actionId, expectedVersion) {
-      const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      const detail = mustFind(mockRisks, item => item.risk.riskCode === riskCode, '风险不存在')
       if (detail.risk.status === 'CLOSED') throw new Error('已关闭的风险不可再维护控制措施')
       const index = detail.actions.findIndex(item => item.id === actionId && item.version === expectedVersion)
       if (index < 0) throw new Error('措施删除失败')
@@ -1252,8 +1262,8 @@ export function createMockApiClient(): ApiClient {
     async listPipelineConfig(query = {}) {
       const keyword = query.keyword?.trim().toLowerCase() ?? ''
       const all = demoStudies.map((study) => {
-        const project = projects.find((item) => item.code === study.projectCode)!
-        const program = programs.find((item) => item.id === project.programId)!
+        const project = mustFind(projects, (item) => item.code === study.projectCode, 'Project 不存在')
+        const program = mustFind(programs, (item) => item.id === project.programId, 'Program 不存在')
         return {
           studyId: study.id,
           studyCode: study.code,
@@ -1300,8 +1310,8 @@ export function createMockApiClient(): ApiClient {
       const program: PipelineProgram = {
         id: nextProgramId++, code: input.code, productName: input.productName,
         moa: input.moa ?? null, sourceCode: input.sourceCode,
-        sourceLabel: input.sourceCode === 'SELF_DEVELOPED' ? '??' : input.sourceCode === 'IN_LICENSE' ? '??' : '??',
-        originCode: input.originCode, originLabel: input.originCode === 'DOMESTIC' ? '??' : '??',
+        sourceLabel: sourceLabel(input.sourceCode),
+        originCode: input.originCode, originLabel: originLabel(input.originCode),
         projectCount: 0, studyCount: 0, updatedAt: now(),
       }
       programs.push(program)
@@ -1375,7 +1385,11 @@ export function createMockApiClient(): ApiClient {
       study.therapeuticAreaCode = project.therapeuticAreaCode
       study.therapeuticAreaName = project.therapeuticAreaName
       study.indication = project.indication
-      return (await this.listPipelineConfig({ page: 1, pageSize: 500 })).data.find((item) => item.studyId === id)!
+      return mustFind(
+        (await this.listPipelineConfig({ page: 1, pageSize: 500 })).data,
+        (item) => item.studyId === id,
+        'Study 配置不存在',
+      )
     },
     async deleteStudyConfig(id) {
       const index = demoStudies.findIndex((item) => item.id === id)
@@ -1644,14 +1658,16 @@ function buildMockMonthlyExport(
   const groupMap = new Map<string, MonthlyExportReport['snapshotGroups'][number]>()
   for (const study of scoped) {
     const key = `${study.therapeuticAreaCode ?? ''}\0${study.therapeuticAreaName ?? ''}`
-    if (!groupMap.has(key)) {
-      groupMap.set(key, {
+    let group = groupMap.get(key)
+    if (!group) {
+      group = {
         taCode: study.therapeuticAreaCode ?? '',
         taName: study.therapeuticAreaName ?? '',
         rows: [],
-      })
+      }
+      groupMap.set(key, group)
     }
-    groupMap.get(key)!.rows.push({
+    group.rows.push({
       programCode: study.programCode ?? '',
       productName: study.productName ?? '',
       studyCode: study.code,

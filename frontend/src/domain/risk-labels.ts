@@ -1,5 +1,7 @@
 /** 风险等级 / 风险状态 / 措施状态展示文案（API 仍用英文 code） */
 
+import type { RiskLevel } from '../api/types'
+
 const RISK_LEVEL_LABELS: Record<string, string> = {
   LOW: '低风险',
   MEDIUM: '中风险',
@@ -45,14 +47,22 @@ export function riskLevelTone(level: string): 'red' | 'orange' | 'green' {
   return 'green'
 }
 
+/** 按评分与生效规则阈值推导等级 code（API/存储用英文 code） */
+export function deriveRiskLevel(
+  score: number,
+  rule: RiskScoringRuleThresholds = DEFAULT_SCORE_RULE,
+): RiskLevel {
+  if (score <= rule.lowMax) return 'LOW'
+  if (score <= rule.mediumMax) return 'MEDIUM'
+  return 'HIGH'
+}
+
 /** 按评分与生效规则阈值推导展示等级文案 */
 export function riskScoreLevelLabel(
   score: number,
   rule: RiskScoringRuleThresholds = DEFAULT_SCORE_RULE,
 ): string {
-  if (score <= rule.lowMax) return RISK_LEVEL_LABELS.LOW
-  if (score <= rule.mediumMax) return RISK_LEVEL_LABELS.MEDIUM
-  return RISK_LEVEL_LABELS.HIGH
+  return RISK_LEVEL_LABELS[deriveRiskLevel(score, rule)]
 }
 
 /** 由生效评分规则生成悬停提示文案 */

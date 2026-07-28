@@ -209,7 +209,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .user-summary, .topbar-user { display: flex; align-items: center; gap: 9px; }
 .user-summary > span:last-child, .topbar-user > span:last-child { min-width: 0; display: flex; flex-direction: column; }
 .user-summary strong, .topbar-user strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.user-summary small, .topbar-user small { margin-top: 2px; color: #969ea9; font-size: 11px; }
+.user-summary small, .topbar-user small { margin-top: 2px; color: var(--muted); font-size: 11px; }
 .topbar-user {
   border: 0;
   background: transparent;
@@ -370,7 +370,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .filter-field__label::after {
   content: "：";
   margin-left: 1px;
-  color: #a0a8b4;
+  color: var(--subtle);
 }
 .filter-select {
   min-width: 132px;
@@ -383,7 +383,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .filter-input {
   width: 172px;
 }
-.filter-input::placeholder { color: #a0a8b4; }
+.filter-input::placeholder { color: var(--subtle); }
 .filter-select:disabled {
   opacity: .55;
   cursor: not-allowed;
@@ -506,6 +506,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .pipeline-table td small { margin-top: 3px; color: var(--muted); font-size: 10.5px; }
 .pipeline-table tbody tr:not(.area-row):hover,
 .data-table tbody tr:hover { background: #f5f8fd; }
+.data-table tbody tr:focus-visible { outline: none; box-shadow: inset 0 0 0 2px rgba(30, 94, 214, .4); }
 .pipeline-id-cell { cursor: pointer; }
 .pipeline-id-cell:hover strong { color: var(--accent); }
 .cell-clickable { cursor: pointer; }
@@ -565,6 +566,12 @@ th.sortable {
 th.sortable:hover {
   color: var(--accent);
   background: #eef3fc;
+}
+th.sortable:focus-visible {
+  outline: none;
+  color: var(--accent);
+  background: #eef3fc;
+  box-shadow: inset 0 0 0 2px rgba(30, 94, 214, .45);
 }
 th.sortable::after {
   content: '';
@@ -652,7 +659,7 @@ th.sort-desc {
   padding: 0 4px;
   border: 0;
   background: transparent;
-  color: #cbd0d6;
+  color: var(--subtle);
   font-weight: 400;
   font-size: 12px;
 }
@@ -720,6 +727,7 @@ th.sort-desc {
 }
 .state-panel strong { color: var(--ink-2); font-size: 15px; }
 .state-panel--error { border-color: #f3d2d0; background: #fffafa; color: var(--red-text); }
+.state-panel--empty .state-panel__icon { color: #c3ccd8; margin-bottom: 2px; }
 .toolbar-filters { display: flex; gap: 8px; }
 .inline-search { position: relative; width: 320px; }
 .data-table { min-width: 900px; width: 100%; border-collapse: collapse; }
@@ -795,6 +803,7 @@ th.sort-desc {
   cursor: help;
   outline: none;
 }
+.risk-score:focus-visible { box-shadow: var(--shadow-focus); }
 .risk-score:hover, .risk-score:focus-visible {
   box-shadow: 0 0 0 2px rgba(30, 94, 214, .16);
 }
@@ -1322,6 +1331,7 @@ th.sort-desc {
   place-items: center;
   padding: 24px;
   background: rgba(25, 31, 42, .46);
+  animation: drawer-fade-in .15s ease-out;
 }
 .role-dialog {
   width: min(780px, 100%);
@@ -1330,6 +1340,11 @@ th.sort-desc {
   border-radius: 14px;
   background: var(--surface);
   box-shadow: 0 24px 70px rgba(20, 27, 40, .24);
+  animation: dialog-pop-in .18s ease-out;
+}
+@keyframes dialog-pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(.98); }
+  to { opacity: 1; transform: none; }
 }
 .role-dialog header, .role-dialog footer { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; }
 .role-dialog header { border-bottom: 1px solid var(--line); }
@@ -1754,7 +1769,7 @@ th.sort-desc {
 }
 .team-member--disabled .team-avatar { background: #a2a9b3; }
 .team-member > button { border: 0; background: transparent; color: #6d7785; line-height: 1; }
-.team-empty { color: #b5bbc3; }
+.team-empty { color: var(--subtle); }
 .team-add {
   border: 1px dashed #bfcce0;
   border-radius: 6px;

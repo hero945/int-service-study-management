@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { useRouter } from 'vue-router'
 import type { OverviewProject, OverviewStudy } from '../api/types'
 import { toneForStatus } from '../domain/pipeline-status'
+import { useEscapeClose } from '../composables/useEscapeClose'
 import { session } from '../session'
 
 const props = defineProps<{
@@ -15,6 +16,8 @@ const emit = defineEmits<{
   close: []
   'select-study': [study: OverviewStudy]
 }>()
+
+useEscapeClose(toRef(props, 'open'), () => emit('close'))
 
 const router = useRouter()
 const canReadMilestone = computed(() =>
@@ -49,7 +52,6 @@ function milestoneStage(study: OverviewStudy) {
       v-if="open"
       class="drawer-overlay project-studies-overlay"
       @click.self="emit('close')"
-      @keydown.escape="emit('close')"
     >
       <aside
         class="study-drawer project-studies-drawer"

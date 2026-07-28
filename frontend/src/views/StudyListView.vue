@@ -46,8 +46,7 @@ const totalPages = computed(() => result.value?.totalPages ?? 1)
 const {
   sorted: sortedStudies,
   registerMany: registerStudySortColumns,
-  toggle: toggleStudySort,
-  getDirection: studySortDirection,
+  sortHeader: studySortHeader,
 } = useClientSort({ items: studies })
 
 registerStudySortColumns([
@@ -118,15 +117,15 @@ onMounted(load)
       <div class="data-card">
         <table class="data-table">
           <thead><tr>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('ta') === 'asc', 'sort-desc': studySortDirection('ta') === 'desc' }" @click="toggleStudySort('ta')">TA</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('program') === 'asc', 'sort-desc': studySortDirection('program') === 'desc' }" @click="toggleStudySort('program')">Program</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('product') === 'asc', 'sort-desc': studySortDirection('product') === 'desc' }" @click="toggleStudySort('product')">Product</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('studyNo') === 'asc', 'sort-desc': studySortDirection('studyNo') === 'desc' }" @click="toggleStudySort('studyNo')">Study No.</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('indication') === 'asc', 'sort-desc': studySortDirection('indication') === 'desc' }" @click="toggleStudySort('indication')">适应症</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('phase') === 'asc', 'sort-desc': studySortDirection('phase') === 'desc' }" @click="toggleStudySort('phase')">里程碑阶段</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('status') === 'asc', 'sort-desc': studySortDirection('status') === 'desc' }" @click="toggleStudySort('status')">里程碑节点</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('plPm') === 'asc', 'sort-desc': studySortDirection('plPm') === 'desc' }" @click="toggleStudySort('plPm')">PL/PM</th>
-            <th class="sortable" :class="{ 'sort-asc': studySortDirection('updatedAt') === 'asc', 'sort-desc': studySortDirection('updatedAt') === 'desc' }" @click="toggleStudySort('updatedAt')">更新时间</th>
+            <th v-bind="studySortHeader('ta')">TA</th>
+            <th v-bind="studySortHeader('program')">Program</th>
+            <th v-bind="studySortHeader('product')">Product</th>
+            <th v-bind="studySortHeader('studyNo')">Study No.</th>
+            <th v-bind="studySortHeader('indication')">适应症</th>
+            <th v-bind="studySortHeader('phase')">里程碑阶段</th>
+            <th v-bind="studySortHeader('status')">里程碑节点</th>
+            <th v-bind="studySortHeader('plPm')">PL/PM</th>
+            <th v-bind="studySortHeader('updatedAt')">更新时间</th>
             <th>操作</th>
           </tr></thead>
           <tbody>

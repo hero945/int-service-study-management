@@ -68,8 +68,7 @@ const selectedProjects = computed(() => projects.value.filter((item) => item.pro
 const {
   sorted: sortedRows,
   registerMany: registerRowSortColumns,
-  toggle: toggleRowSort,
-  getDirection: rowSortDirection,
+  sortHeader: rowSortHeader,
 } = useClientSort({ items: rows })
 
 registerRowSortColumns([
@@ -88,8 +87,7 @@ registerRowSortColumns([
 const {
   sorted: sortedPrograms,
   registerMany: registerProgramSortColumns,
-  toggle: toggleProgramSort,
-  getDirection: programSortDirection,
+  sortHeader: programSortHeader,
 } = useClientSort({ items: programs })
 
 registerProgramSortColumns([
@@ -363,25 +361,25 @@ onUnmounted(() => {
       <button :class="{ active: view === 'entities' }" role="tab" type="button" @click="view = 'entities'">Program / Project 管理</button>
     </div>
     <div v-if="notice" class="config-notice" role="status">{{ notice }}<button type="button" aria-label="关闭提示" @click="notice = ''">×</button></div>
-    <div v-if="error" class="form-error config-error" role="alert">{{ error }}</div>
+    <div v-if="error" class="state-panel state-panel--error config-error" role="alert">{{ error }}</div>
 
     <template v-if="view === 'studies'">
       <div class="page-toolbar">
         <label class="config-study-search"><span class="sr-only">搜索 Study、TA 或 Program</span><input v-model="filters.keyword" type="search" placeholder="搜索 Study / TA / Program" @input="filterStudies"></label>
         <button v-if="canCreate" class="primary-button" type="button" @click="openStudy()">＋ 新增 Study</button>
       </div>
-      <PageState :loading :error="''" :empty="!rows.length">
+      <PageState :loading :empty="!rows.length">
         <div class="data-card config-table-card"><table class="data-table config-table"><thead><tr>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('source') === 'asc', 'sort-desc': rowSortDirection('source') === 'desc' }" @click="toggleRowSort('source')">Source</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('origin') === 'asc', 'sort-desc': rowSortDirection('origin') === 'desc' }" @click="toggleRowSort('origin')">Origin</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('product') === 'asc', 'sort-desc': rowSortDirection('product') === 'desc' }" @click="toggleRowSort('product')">Product</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('program') === 'asc', 'sort-desc': rowSortDirection('program') === 'desc' }" @click="toggleRowSort('program')">Program</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('moa') === 'asc', 'sort-desc': rowSortDirection('moa') === 'desc' }" @click="toggleRowSort('moa')">MOA</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('project') === 'asc', 'sort-desc': rowSortDirection('project') === 'desc' }" @click="toggleRowSort('project')">Project</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('ta') === 'asc', 'sort-desc': rowSortDirection('ta') === 'desc' }" @click="toggleRowSort('ta')">TA</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('indication') === 'asc', 'sort-desc': rowSortDirection('indication') === 'desc' }" @click="toggleRowSort('indication')">Indication</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('studyNo') === 'asc', 'sort-desc': rowSortDirection('studyNo') === 'desc' }" @click="toggleRowSort('studyNo')">Study No.</th>
-          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('phaseStatus') === 'asc', 'sort-desc': rowSortDirection('phaseStatus') === 'desc' }" @click="toggleRowSort('phaseStatus')">Phase Status</th>
+          <th v-bind="rowSortHeader('source')">Source</th>
+          <th v-bind="rowSortHeader('origin')">Origin</th>
+          <th v-bind="rowSortHeader('product')">Product</th>
+          <th v-bind="rowSortHeader('program')">Program</th>
+          <th v-bind="rowSortHeader('moa')">MOA</th>
+          <th v-bind="rowSortHeader('project')">Project</th>
+          <th v-bind="rowSortHeader('ta')">TA</th>
+          <th v-bind="rowSortHeader('indication')">Indication</th>
+          <th v-bind="rowSortHeader('studyNo')">Study No.</th>
+          <th v-bind="rowSortHeader('phaseStatus')">Phase Status</th>
           <th>操作</th>
         </tr></thead><tbody><tr v-for="row in sortedRows" :key="row.studyId">
           <td>{{ row.sourceLabel }}</td><td>{{ row.originLabel }}</td><td>{{ row.productName }}</td><td class="mono">{{ row.programCode }}</td>
@@ -404,13 +402,13 @@ onUnmounted(() => {
 
     <template v-else>
       <div class="entity-toolbar"><div><strong>Program 管理</strong><span>Project 在对应 Program 的管理抽屉中维护。</span></div><button v-if="canCreate" class="primary-button" type="button" @click="openProgram()">＋ 新增 Program</button></div>
-      <PageState :loading :error="''" :empty="!programs.length">
+      <PageState :loading :empty="!programs.length">
         <div class="data-card"><table class="data-table entity-program-table"><thead><tr>
-          <th class="sortable" :class="{ 'sort-asc': programSortDirection('program') === 'asc', 'sort-desc': programSortDirection('program') === 'desc' }" @click="toggleProgramSort('program')">Program</th>
-          <th class="sortable" :class="{ 'sort-asc': programSortDirection('source') === 'asc', 'sort-desc': programSortDirection('source') === 'desc' }" @click="toggleProgramSort('source')">Source</th>
-          <th class="sortable" :class="{ 'sort-asc': programSortDirection('origin') === 'asc', 'sort-desc': programSortDirection('origin') === 'desc' }" @click="toggleProgramSort('origin')">Origin</th>
-          <th class="sortable" :class="{ 'sort-asc': programSortDirection('product') === 'asc', 'sort-desc': programSortDirection('product') === 'desc' }" @click="toggleProgramSort('product')">Product</th>
-          <th class="sortable" :class="{ 'sort-asc': programSortDirection('moa') === 'asc', 'sort-desc': programSortDirection('moa') === 'desc' }" @click="toggleProgramSort('moa')">MOA</th>
+          <th v-bind="programSortHeader('program')">Program</th>
+          <th v-bind="programSortHeader('source')">Source</th>
+          <th v-bind="programSortHeader('origin')">Origin</th>
+          <th v-bind="programSortHeader('product')">Product</th>
+          <th v-bind="programSortHeader('moa')">MOA</th>
           <th>操作</th>
         </tr></thead><tbody>
           <tr v-for="program in sortedPrograms" :key="program.id"><td class="mono strong">{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('program', program.id, program.code)">删除</button></td></tr>

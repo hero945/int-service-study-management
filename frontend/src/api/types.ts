@@ -164,8 +164,9 @@ export interface RiskAction {
   overdue: boolean
 }
 
+export type RiskActivityType = 'ASSESSMENT' | 'STATUS' | 'ACTION'
 export interface RiskActivity {
-  type: 'ASSESSMENT' | 'STATUS' | 'ACTION' | string
+  type: RiskActivityType
   title: string
   detail: string
   at: string

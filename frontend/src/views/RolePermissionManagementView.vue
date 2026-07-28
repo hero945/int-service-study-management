@@ -10,6 +10,7 @@ import type {
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { useClientSort } from '../composables/useClientSort'
+import { useEscapeClose } from '../composables/useEscapeClose'
 import { useNotice } from '../composables/useNotice'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
@@ -78,8 +79,7 @@ const totalPages = computed(() => Math.max(result.value?.totalPages ?? 1, 1))
 const {
   sorted: sortedRoles,
   registerMany: registerRoleSortColumns,
-  toggle: toggleRoleSort,
-  getDirection: roleSortDirection,
+  sortHeader: roleSortHeader,
 } = useClientSort({ items: roles })
 
 registerRoleSortColumns([
@@ -138,6 +138,8 @@ function openEdit(role: PlatformRole) {
 function closeDialog() {
   if (!saving.value) dialogOpen.value = false
 }
+
+useEscapeClose(dialogOpen, closeDialog)
 
 function toggleGroup(group: PlatformPermission[], checked: boolean) {
   const codes = new Set(form.value.permissionCodes)
@@ -245,11 +247,11 @@ onMounted(async () => {
       <div class="data-card role-table-card">
         <table class="data-table role-table">
           <thead><tr>
-            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('roleCode') === 'asc', 'sort-desc': roleSortDirection('roleCode') === 'desc' }" @click="toggleRoleSort('roleCode')">角色</th>
-            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('dataScope') === 'asc', 'sort-desc': roleSortDirection('dataScope') === 'desc' }" @click="toggleRoleSort('dataScope')">数据范围</th>
-            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('permissions') === 'asc', 'sort-desc': roleSortDirection('permissions') === 'desc' }" @click="toggleRoleSort('permissions')">权限</th>
-            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('assignedUsers') === 'asc', 'sort-desc': roleSortDirection('assignedUsers') === 'desc' }" @click="toggleRoleSort('assignedUsers')">关联账号</th>
-            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('status') === 'asc', 'sort-desc': roleSortDirection('status') === 'desc' }" @click="toggleRoleSort('status')">状态</th>
+            <th v-bind="roleSortHeader('roleCode')">角色</th>
+            <th v-bind="roleSortHeader('dataScope')">数据范围</th>
+            <th v-bind="roleSortHeader('permissions')">权限</th>
+            <th v-bind="roleSortHeader('assignedUsers')">关联账号</th>
+            <th v-bind="roleSortHeader('status')">状态</th>
             <th>操作</th>
           </tr></thead>
           <tbody>

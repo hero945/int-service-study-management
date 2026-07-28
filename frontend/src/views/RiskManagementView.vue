@@ -61,7 +61,7 @@ const {
   }),
 })
 
-const { sortKey, sortDirection, toggle: toggleSort, sortClass } = useServerSort<RiskSortKey>({
+const { sortKey, sortDirection, sortHeader } = useServerSort<RiskSortKey>({
   initialKey: 'updatedAt',
   initialDirection: 'desc',
   defaultDirection: (key) => (key === 'updatedAt' ? 'desc' : 'asc'),
@@ -191,17 +191,17 @@ onMounted(async () => {
         <table class="data-table risk-table">
           <thead>
             <tr>
-              <th :class="sortClass('riskCode')" @click="toggleSort('riskCode')">Risk ID</th>
-              <th :class="sortClass('studyCode')" @click="toggleSort('studyCode')">Study No.</th>
+              <th v-bind="sortHeader('riskCode')">Risk ID</th>
+              <th v-bind="sortHeader('studyCode')">Study No.</th>
               <th>Program / Project</th>
               <th>功能线</th>
               <th>风险描述</th>
               <th>Owner</th>
-              <th :class="sortClass('score')" @click="toggleSort('score')">评分</th>
-              <th :class="sortClass('level')" @click="toggleSort('level')">等级</th>
+              <th v-bind="sortHeader('score')">评分</th>
+              <th v-bind="sortHeader('level')">等级</th>
               <th>措施</th>
               <th>Status</th>
-              <th :class="sortClass('updatedAt')" @click="toggleSort('updatedAt')">更新时间</th>
+              <th v-bind="sortHeader('updatedAt')">更新时间</th>
             </tr>
           </thead>
           <tbody>
@@ -211,6 +211,7 @@ onMounted(async () => {
               tabindex="0"
               @click="openRisk(risk)"
               @keydown.enter="openRisk(risk)"
+              @keydown.space.prevent="openRisk(risk)"
             >
               <td>
                 <button class="risk-link mono" type="button" @click.stop="openRisk(risk)">{{ risk.riskCode }}</button>

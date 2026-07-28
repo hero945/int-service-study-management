@@ -9,6 +9,7 @@ import type {
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { useClientSort } from '../composables/useClientSort'
+import { useEscapeClose } from '../composables/useEscapeClose'
 import { useNotice } from '../composables/useNotice'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
@@ -76,8 +77,7 @@ const totalPages = computed(() => Math.max(result.value?.userPage.totalPages ?? 
 const {
   sorted: sortedUsers,
   registerMany: registerUserSortColumns,
-  toggle: toggleUserSort,
-  getDirection: userSortDirection,
+  sortHeader: userSortHeader,
 } = useClientSort({ items: users })
 
 registerUserSortColumns([
@@ -186,6 +186,11 @@ function closeResetConfirm() {
   resetTargetName.value = ''
 }
 
+useEscapeClose(dialogOpen, closeDialog)
+useEscapeClose(assignDialogOpen, closeAssignDialog)
+useEscapeClose(toggleConfirmOpen, closeToggleConfirm)
+useEscapeClose(resetConfirmOpen, closeResetConfirm)
+
 async function executeResetPassword() {
   if (resetTargetId.value === null) return
   saving.value = true
@@ -280,12 +285,12 @@ onUnmounted(() => {
         <table class="data-table">
           <thead>
             <tr>
-              <th class="sortable" :class="{ 'sort-asc': userSortDirection('name') === 'asc', 'sort-desc': userSortDirection('name') === 'desc' }" @click="toggleUserSort('name')">姓名</th>
-              <th class="sortable" :class="{ 'sort-asc': userSortDirection('username') === 'asc', 'sort-desc': userSortDirection('username') === 'desc' }" @click="toggleUserSort('username')">登录邮箱</th>
-              <th class="sortable" :class="{ 'sort-asc': userSortDirection('role') === 'asc', 'sort-desc': userSortDirection('role') === 'desc' }" @click="toggleUserSort('role')">角色</th>
-              <th class="sortable" :class="{ 'sort-asc': userSortDirection('scopeMode') === 'asc', 'sort-desc': userSortDirection('scopeMode') === 'desc' }" @click="toggleUserSort('scopeMode')">范围模式</th>
-              <th class="sortable" :class="{ 'sort-asc': userSortDirection('visibleScope') === 'asc', 'sort-desc': userSortDirection('visibleScope') === 'desc' }" @click="toggleUserSort('visibleScope')">可见范围</th>
-              <th class="sortable" :class="{ 'sort-asc': userSortDirection('status') === 'asc', 'sort-desc': userSortDirection('status') === 'desc' }" @click="toggleUserSort('status')">状态</th>
+              <th v-bind="userSortHeader('name')">姓名</th>
+              <th v-bind="userSortHeader('username')">登录邮箱</th>
+              <th v-bind="userSortHeader('role')">角色</th>
+              <th v-bind="userSortHeader('scopeMode')">范围模式</th>
+              <th v-bind="userSortHeader('visibleScope')">可见范围</th>
+              <th v-bind="userSortHeader('status')">状态</th>
               <th class="account-actions-col">操作</th>
             </tr>
           </thead>

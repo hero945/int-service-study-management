@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { apiClient } from '../api/client'
-import { PASSWORD_RULE_HINT, validateNewPassword } from '../domain/password-rules'
+import ChangePasswordDialog from '../components/ChangePasswordDialog.vue'
 import { riskBadge } from '../risk-badge'
 import { session } from '../session'
 
@@ -24,13 +23,6 @@ const roleLabel = computed(() => {
 
 const menuOpen = ref(false)
 const passwordDialogOpen = ref(false)
-const passwordSaving = ref(false)
-const passwordError = ref('')
-const passwordForm = ref({
-  currentPassword: '',
-  newPassword: '',
-  confirmPassword: '',
-})
 
 onMounted(() => {
   if (user.value?.permissions.includes('risk.page.view')) {
@@ -92,47 +84,7 @@ async function logout() {
 
 function openPasswordDialog() {
   menuOpen.value = false
-  passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
-  passwordError.value = ''
   passwordDialogOpen.value = true
-}
-
-function closePasswordDialog() {
-  if (passwordSaving.value) return
-  passwordDialogOpen.value = false
-}
-
-async function submitPasswordChange() {
-  passwordError.value = ''
-  if (!passwordForm.value.currentPassword) {
-    passwordError.value = '请输入当前密码'
-    return
-  }
-  const ruleError = validateNewPassword(passwordForm.value.newPassword)
-  if (ruleError) {
-    passwordError.value = ruleError
-    return
-  }
-  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-    passwordError.value = '两次输入的新密码不一致'
-    return
-  }
-  if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
-    passwordError.value = '新密码不能与当前密码相同'
-    return
-  }
-  passwordSaving.value = true
-  try {
-    await apiClient.changePassword({
-      currentPassword: passwordForm.value.currentPassword,
-      newPassword: passwordForm.value.newPassword,
-    })
-    passwordDialogOpen.value = false
-  } catch (reason) {
-    passwordError.value = reason instanceof Error ? reason.message : '修改密码失败'
-  } finally {
-    passwordSaving.value = false
-  }
 }
 </script>
 
@@ -189,39 +141,6 @@ async function submitPasswordChange() {
       <RouterView />
     </main>
 
-    <Teleport to="body">
-      <div v-if="passwordDialogOpen" class="dialog-backdrop" @click.self="closePasswordDialog">
-        <form class="role-dialog role-dialog--sm" @submit.prevent="submitPasswordChange">
-          <header>
-            <div>
-              <h2>修改密码</h2>
-              <p>{{ PASSWORD_RULE_HINT }}</p>
-            </div>
-            <button type="button" aria-label="关闭" @click="closePasswordDialog">×</button>
-          </header>
-          <div class="role-form-grid role-form-grid--single">
-            <label>
-              当前密码
-              <input v-model="passwordForm.currentPassword" type="password" autocomplete="current-password" maxlength="128">
-            </label>
-            <label>
-              新密码
-              <input v-model="passwordForm.newPassword" type="password" autocomplete="new-password" maxlength="128">
-            </label>
-            <label>
-              确认新密码
-              <input v-model="passwordForm.confirmPassword" type="password" autocomplete="new-password" maxlength="128">
-            </label>
-          </div>
-          <p v-if="passwordError" class="form-error dialog-form-error" role="alert">{{ passwordError }}</p>
-          <footer>
-            <button class="secondary-button" type="button" @click="closePasswordDialog">取消</button>
-            <button class="primary-button" type="submit" :disabled="passwordSaving">
-              {{ passwordSaving ? '保存中…' : '确认修改' }}
-            </button>
-          </footer>
-        </form>
-      </div>
-    </Teleport>
+    <ChangePasswordDialog :open="passwordDialogOpen" @close="passwordDialogOpen = false" />
   </div>
 </template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { Study, MilestonePage, RiskPage, TeamMatrixPage } from '../api/types'
@@ -7,6 +7,7 @@ import PageState from '../components/PageState.vue'
 import { formatIsoDate } from '../domain/date-format'
 import { milestoneNodeStatusClass, milestoneNodeStatusLabel } from '../domain/milestone-status'
 import { riskLevelLabel, riskLevelTone, riskStatusLabel } from '../domain/risk-labels'
+import { useEscapeClose } from '../composables/useEscapeClose'
 import { usePermissions } from '../composables/usePermissions'
 
 const props = defineProps<{
@@ -16,6 +17,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
+
+useEscapeClose(toRef(props, 'open'), () => emit('close'))
 
 type TabKey = 'milestone' | 'team' | 'risk'
 const activeTab = ref<TabKey>('milestone')
@@ -137,7 +140,7 @@ const tabs = computed(() => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="drawer-overlay" @click.self="emit('close')" @keydown.escape="emit('close')">
+    <div v-if="open" class="drawer-overlay" @click.self="emit('close')">
       <aside class="study-drawer" role="dialog" aria-modal="true" :aria-label="study?.code ?? 'Study 详情'">
         <!-- header -->
         <header class="drawer-header">

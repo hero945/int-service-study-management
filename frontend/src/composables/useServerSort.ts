@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import type { SortDirection } from './useClientSort'
+import { sortHeaderProps, type SortDirection, type SortHeaderProps } from './useClientSort'
 
 export interface UseServerSortOptions<K extends string> {
   initialKey: K
@@ -17,6 +17,8 @@ export interface UseServerSortReturn<K extends string> {
   toggle: (key: K) => void
   /** 表头 class：'sortable' | 'sortable sort-asc' | 'sortable sort-desc' */
   sortClass: (key: K) => string
+  /** v-bind="sortHeader('score')" 一键生成可访问排序表头 */
+  sortHeader: (key: K) => SortHeaderProps
 }
 
 /**
@@ -42,5 +44,9 @@ export function useServerSort<K extends string>(options: UseServerSortOptions<K>
     return sortDirection.value === 'asc' ? 'sortable sort-asc' : 'sortable sort-desc'
   }
 
-  return { sortKey, sortDirection, toggle, sortClass }
+  function sortHeader(key: K): SortHeaderProps {
+    return sortHeaderProps(sortKey.value === key ? sortDirection.value : null, () => toggle(key))
+  }
+
+  return { sortKey, sortDirection, toggle, sortClass, sortHeader }
 }

@@ -131,18 +131,39 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | undefined)
   unauthorizedHandler = handler
 }
 
-function toExportParams(query: MonthlyExportQuery): string {
+type QueryValue = string | number | boolean | null | undefined
+
+/** 统一构建查询串：跳过 undefined/null/空字符串/false，数组展开为重复参数，true 序列化为 'true' */
+function toSearchParams(query: Record<string, QueryValue | QueryValue[]>): string {
   const parameters = new URLSearchParams()
-  parameters.set('startDate', query.startDate)
-  parameters.set('endDate', query.endDate)
-  parameters.set('scopeType', query.scopeType)
-  for (const id of query.taIds ?? []) {
-    parameters.append('taIds', String(id))
-  }
-  for (const id of query.programIds ?? []) {
-    parameters.append('programIds', String(id))
+  for (const [key, value] of Object.entries(query)) {
+    if (value == null || value === '' || value === false) continue
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item != null && item !== '') parameters.append(key, String(item))
+      }
+      continue
+    }
+    parameters.set(key, String(value))
   }
   return parameters.toString()
+}
+
+/** 带 ? 前缀的查询串；无参数时返回空串 */
+function querySuffix(query: Record<string, QueryValue | QueryValue[]>): string {
+  const stringified = toSearchParams(query)
+  return stringified ? `?${stringified}` : ''
+}
+
+function toExportParams(query: MonthlyExportQuery, format?: MonthlyExportFormat): string {
+  return toSearchParams({
+    startDate: query.startDate,
+    endDate: query.endDate,
+    scopeType: query.scopeType,
+    taIds: query.taIds,
+    programIds: query.programIds,
+    format,
+  })
 }
 
 export function createHttpApiClient(): ApiClient {
@@ -197,34 +218,32 @@ export function createHttpApiClient(): ApiClient {
     },
     getPipelineOverview: () =>
       request<PipelineOverview>('/api/v1/clinical-pipeline/overview'),
-    listStudies: (query = {}) => {
-      const parameters = new URLSearchParams()
-      parameters.set('page', String(query.page ?? 1))
-      parameters.set('pageSize', String(query.pageSize ?? 10))
-      if (query.therapeuticArea) parameters.set('therapeuticArea', query.therapeuticArea)
-      if (query.program) parameters.set('program', query.program)
-      if (query.milestoneStatus) parameters.set('milestoneStatus', query.milestoneStatus)
-      return request<StudyPage>(`/api/v1/clinical-pipeline/studies?${parameters}`)
-    },
-    listRisks: (query = {}) => {
-      const parameters = new URLSearchParams()
-      parameters.set('page', String(query.page ?? 1))
-      parameters.set('pageSize', String(query.pageSize ?? 10))
-      parameters.set('sortBy', query.sortBy ?? 'updatedAt')
-      parameters.set('sortOrder', query.sortOrder ?? 'desc')
-      if (query.query) parameters.set('query', query.query)
-      if (query.functionCode) parameters.set('functionCode', query.functionCode)
-      if (query.status) parameters.set('status', query.status)
-      if (query.level) parameters.set('level', query.level)
-      if (query.studyId) parameters.set('studyId', String(query.studyId))
-      if (query.ownerUserId) parameters.set('ownerUserId', String(query.ownerUserId))
-      if (query.overdueOnly) parameters.set('overdueOnly', 'true')
-      return request<RiskPage>(`/api/v1/risk-management/risks?${parameters}`)
-    },
+    listStudies: (query = {}) =>
+      request<StudyPage>(`/api/v1/clinical-pipeline/studies?${toSearchParams({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 10,
+        therapeuticArea: query.therapeuticArea,
+        program: query.program,
+        milestoneStatus: query.milestoneStatus,
+      })}`),
+    listRisks: (query = {}) =>
+      request<RiskPage>(`/api/v1/risk-management/risks?${toSearchParams({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 10,
+        sortBy: query.sortBy ?? 'updatedAt',
+        sortOrder: query.sortOrder ?? 'desc',
+        query: query.query,
+        functionCode: query.functionCode,
+        status: query.status,
+        level: query.level,
+        studyId: query.studyId,
+        ownerUserId: query.ownerUserId,
+        overdueOnly: query.overdueOnly,
+      })}`),
     getRisk: (riskCode) => request<RiskDetail>(
       `/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}`),
     getRiskFormOptions: (studyId) => request<RiskFormOptions>(
-      `/api/v1/risk-management/form-options${studyId ? `?studyId=${studyId}` : ''}`),
+      `/api/v1/risk-management/form-options${querySuffix({ studyId })}`),
     async createRisk(input) {
       await refreshCsrf()
       return request<RiskDetail>('/api/v1/risk-management/risks', {
@@ -239,7 +258,7 @@ export function createHttpApiClient(): ApiClient {
     },
     async deleteRisk(riskCode, expectedVersion) {
       await refreshCsrf()
-      return request(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}?expectedVersion=${expectedVersion}`, { method: 'DELETE' })
+      return request(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}${querySuffix({ expectedVersion })}`, { method: 'DELETE' })
     },
     async addRiskAction(riskCode, expectedRiskVersion, action) {
       await refreshCsrf()
@@ -255,7 +274,7 @@ export function createHttpApiClient(): ApiClient {
     },
     async deleteRiskAction(riskCode, actionId, expectedVersion) {
       await refreshCsrf()
-      return request<RiskDetail>(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}/actions/${actionId}?expectedVersion=${expectedVersion}`, { method: 'DELETE' })
+      return request<RiskDetail>(`/api/v1/risk-management/risks/${encodeURIComponent(riskCode)}/actions/${actionId}${querySuffix({ expectedVersion })}`, { method: 'DELETE' })
     },
     getMilestones: (studyId) =>
       request<MilestonePage>(`/api/v1/studies/${studyId}/milestones`),
@@ -269,11 +288,11 @@ export function createHttpApiClient(): ApiClient {
       request<StageProjection>(`/api/v1/studies/${studyId}/stage-projection`),
     listMonthlyReports: (month) =>
       request<MonthlyReport[]>(
-        `/api/v1/monthly-reports${month ? `?month=${encodeURIComponent(month)}` : ''}`,
+        `/api/v1/monthly-reports${querySuffix({ month })}`,
       ),
     getMonthlyReports: (studyId, month) =>
       request<MonthlyReportPage>(
-        `/api/v1/studies/${studyId}/monthly-reports?month=${encodeURIComponent(month)}`,
+        `/api/v1/studies/${studyId}/monthly-reports?${toSearchParams({ month })}`,
       ),
     async createMonthlyEntry(reportId, input) {
       await refreshCsrf()
@@ -293,12 +312,12 @@ export function createHttpApiClient(): ApiClient {
     },
     getMonthlyReportHistory: (studyId, functionLineId, month) =>
       request<FunctionLineHistory>(
-        `/api/v1/studies/${studyId}/monthly-reports/history?functionLineId=${functionLineId}&month=${encodeURIComponent(month)}`),
+        `/api/v1/studies/${studyId}/monthly-reports/history?${toSearchParams({ functionLineId, month })}`),
     previewMonthlyExport: (query) =>
       request<MonthlyExportReport>(`/api/v1/reports/monthly/preview?${toExportParams(query)}`),
     async downloadMonthlyExport(query, format) {
       const response = await fetch(
-        `/api/v1/reports/monthly/export?${toExportParams(query)}&format=${encodeURIComponent(format)}`,
+        `/api/v1/reports/monthly/export?${toExportParams(query, format)}`,
       )
       if (!response.ok) {
         const text = await response.text()
@@ -330,14 +349,13 @@ export function createHttpApiClient(): ApiClient {
       anchor.remove()
       URL.revokeObjectURL(url)
     },
-    listTeamMatrix: (query = {}) => {
-      const parameters = new URLSearchParams()
-      parameters.set('page', String(query.page ?? 1))
-      parameters.set('pageSize', String(query.pageSize ?? 10))
-      if (query.studyQuery) parameters.set('studyQuery', query.studyQuery)
-      if (query.roleQuery) parameters.set('roleQuery', query.roleQuery)
-      return request<TeamMatrixPage>(`/api/v1/team-matrix?${parameters}`)
-    },
+    listTeamMatrix: (query = {}) =>
+      request<TeamMatrixPage>(`/api/v1/team-matrix?${toSearchParams({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 10,
+        studyQuery: query.studyQuery,
+        roleQuery: query.roleQuery,
+      })}`),
     getStudyTeam: (studyId) =>
       request<TeamMatrixPage>(`/api/v1/studies/${studyId}/team`),
     async replaceTeamAssignments(input) {
@@ -347,17 +365,16 @@ export function createHttpApiClient(): ApiClient {
         body: JSON.stringify(input),
       })
     },
-    listPipelineConfig: (query = {}) => {
-      const parameters = new URLSearchParams()
-      parameters.set('page', String(query.page ?? 1))
-      parameters.set('pageSize', String(query.pageSize ?? 10))
-      if (query.keyword) parameters.set('keyword', query.keyword)
-      return request<PipelineConfigPage>(`/api/v1/clinical-pipeline/pipeline-config?${parameters}`)
-    },
+    listPipelineConfig: (query = {}) =>
+      request<PipelineConfigPage>(`/api/v1/clinical-pipeline/pipeline-config?${toSearchParams({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 10,
+        keyword: query.keyword,
+      })}`),
     listTherapeuticAreas: () =>
       request<TherapeuticArea[]>('/api/v1/clinical-pipeline/therapeutic-areas'),
     listPrograms: (keyword = '') =>
-      request<PipelineProgram[]>(`/api/v1/clinical-pipeline/programs${keyword ? `?keyword=${encodeURIComponent(keyword)}` : ''}`),
+      request<PipelineProgram[]>(`/api/v1/clinical-pipeline/programs${querySuffix({ keyword })}`),
     async createProgram(input) {
       await refreshCsrf()
       return request<PipelineProgram>('/api/v1/clinical-pipeline/programs', {
@@ -374,13 +391,8 @@ export function createHttpApiClient(): ApiClient {
       await refreshCsrf()
       await request<void>(`/api/v1/clinical-pipeline/programs/${id}`, { method: 'DELETE' })
     },
-    listProjects: (programId, keyword = '') => {
-      const parameters = new URLSearchParams()
-      if (programId) parameters.set('programId', String(programId))
-      if (keyword) parameters.set('keyword', keyword)
-      const query = parameters.toString()
-      return request<PipelineProject[]>(`/api/v1/clinical-pipeline/projects${query ? `?${query}` : ''}`)
-    },
+    listProjects: (programId, keyword = '') =>
+      request<PipelineProject[]>(`/api/v1/clinical-pipeline/projects${querySuffix({ programId, keyword })}`),
     async createProject(input) {
       await refreshCsrf()
       return request<PipelineProject>('/api/v1/clinical-pipeline/projects', {
@@ -413,14 +425,13 @@ export function createHttpApiClient(): ApiClient {
       await refreshCsrf()
       await request<void>(`/api/v1/clinical-pipeline/studies/${id}`, { method: 'DELETE' })
     },
-    listUsers: (query = {}) => {
-      const params = new URLSearchParams()
-      params.set('page', String(query.page ?? 1))
-      params.set('pageSize', String(query.pageSize ?? 10))
-      if (query.keyword) params.set('keyword', query.keyword)
-      if (query.roleCode) params.set('roleCode', query.roleCode)
-      return request<UserPage>(`/api/v1/platform/users?${params}`)
-    },
+    listUsers: (query = {}) =>
+      request<UserPage>(`/api/v1/platform/users?${toSearchParams({
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 10,
+        keyword: query.keyword,
+        roleCode: query.roleCode,
+      })}`),
     async createUser(input) {
       await refreshCsrf()
       await request<void>('/api/v1/platform/users', {
@@ -459,14 +470,13 @@ export function createHttpApiClient(): ApiClient {
         body: JSON.stringify(input),
       })
     },
-    listRoles: (filters = {}) => {
-      const parameters = new URLSearchParams()
-      parameters.set('page', String(filters.page ?? 1))
-      parameters.set('pageSize', String(filters.pageSize ?? 10))
-      if (filters.keyword) parameters.set('keyword', filters.keyword)
-      if (filters.status) parameters.set('status', filters.status)
-      return request<RolePage>(`/api/v1/platform/roles?${parameters}`)
-    },
+    listRoles: (filters = {}) =>
+      request<RolePage>(`/api/v1/platform/roles?${toSearchParams({
+        page: filters.page ?? 1,
+        pageSize: filters.pageSize ?? 10,
+        keyword: filters.keyword,
+        status: filters.status,
+      })}`),
     listPermissions: () =>
       request<PlatformPermission[]>('/api/v1/platform/permissions'),
     async createRole(input) {
