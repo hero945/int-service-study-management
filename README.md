@@ -41,7 +41,39 @@ Copy-Item .env.example .env
 docker compose up -d --build
 ```
 
-应用仅监听本机 `http://127.0.0.1:8080`。生产环境必须由 HTTPS 负载均衡器或反向代理转发，并把 `.env` 替换为云秘密管理服务。
+Compose 会启动两个相同的应用容器：
+
+- `app1`：`http://127.0.0.1:8081`
+- `app2`：`http://127.0.0.1:8082`
+
+每个容器限制为 1 CPU、1536 MB 内存，JVM 最大堆为 896 MB。生产环境由宿主机
+Nginx 在两个回环地址之间负载均衡，并把 `.env` 替换为云秘密管理服务。在
+Nginx 的 `http` 上下文（通常是 `/etc/nginx/conf.d/` 下的文件）定义：
+
+```nginx
+upstream study_management_backend {
+    least_conn;
+    server 127.0.0.1:8081 max_fails=3 fail_timeout=10s;
+    server 127.0.0.1:8082 max_fails=3 fail_timeout=10s;
+    keepalive 32;
+}
+```
+
+再把下面的 `location` 放进现有 HTTPS `server` 块：
+
+```nginx
+location / {
+    proxy_pass http://study_management_backend;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+修改 Nginx 后先执行 `nginx -t`，通过后再执行 `systemctl reload nginx`。两个应用
+实例共用数据库 Session，不要求 Nginx 使用粘性会话。
 
 开启本机监控：
 
@@ -49,7 +81,8 @@ docker compose up -d --build
 docker compose --profile monitoring up -d
 ```
 
-- 平台：`http://127.0.0.1:8080`
+- 应用实例 1：`http://127.0.0.1:8081`
+- 应用实例 2：`http://127.0.0.1:8082`
 - Prometheus：`http://127.0.0.1:9091`
 - Grafana：`http://127.0.0.1:3000`
 - Sentry：在 `.env` 配置 `SENTRY_DSN` 后启用未预期异常上报（留空则不上报）

@@ -1,39 +1,56 @@
 name: study-management
+
+x-app-common: &app-common
+  build: .
+  image: crpi-abxyd61kmc2rryuv.cn-hangzhou.personal.cr.aliyuncs.com/huadong_project/study-management:${IMAGE_TAG:-master}
+  restart: unless-stopped
+  mem_limit: 1536m
+  cpus: 1.0
+  environment:
+    DB_URL: jdbc:mysql://${DB_HOST:-host.docker.internal}:${DB_PORT:-3306}/${DB_NAME:-study_management}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    DB_USERNAME: ${DB_USERNAME:-study_app}
+    DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+    BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+    BOOTSTRAP_ADMIN_DISPLAY_NAME: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:-系统管理员}
+    SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+    MANAGEMENT_PORT: 9090
+    SENTRY_DSN: ${SENTRY_DSN:-}
+    SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local}
+    SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+    JAVA_TOOL_OPTIONS: >-
+      -XX:+UseG1GC
+      -Xms256m
+      -Xmx896m
+      -Xss512k
+      -XX:+ExitOnOutOfMemoryError
+    TZ: Asia/Shanghai
+  expose: ["9090"]
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  healthcheck:
+    test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9090; printf \"GET /actuator/health/readiness HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
+    interval: 15s
+    timeout: 5s
+    retries: 8
+    start_period: 45s
+  read_only: true
+  tmpfs:
+    - /tmp:size=128m,mode=1777
+  security_opt:
+    - no-new-privileges:true
+  networks: [frontend, monitoring]
+
 services:
-  app:
-    build: .
-    image: crpi-abxyd61kmc2rryuv.cn-hangzhou.personal.cr.aliyuncs.com/huadong_project/study-management:${IMAGE_TAG:-master}
-    restart: unless-stopped
-    environment:
-      DB_URL: jdbc:mysql://${DB_HOST:-host.docker.internal}:${DB_PORT:-3306}/${DB_NAME:-study_management}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-      DB_USERNAME: ${DB_USERNAME:-study_app}
-      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
-      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
-      BOOTSTRAP_ADMIN_DISPLAY_NAME: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:-系统管理员}
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
-      MANAGEMENT_PORT: 9090
-      SENTRY_DSN: ${SENTRY_DSN:-}
-      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-local}
-      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
-      TZ: Asia/Shanghai
+  app1:
+    <<: *app-common
     ports:
-      - "127.0.0.1:8080:8080"
-    expose: ["9090"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9090; printf \"GET /actuator/health/readiness HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; grep -q \"200\" <&3'"]
-      interval: 15s
-      timeout: 5s
-      retries: 8
-      start_period: 45s
-    read_only: true
-    tmpfs:
-      - /tmp:size=128m,mode=1777
-    security_opt:
-      - no-new-privileges:true
-    networks: [frontend, monitoring]
+      - "127.0.0.1:8081:8080"
+
+  app2:
+    <<: *app-common
+    ports:
+      - "127.0.0.1:8082:8080"
 
   prometheus:
     image: prom/prometheus:v3.5.0

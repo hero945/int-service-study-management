@@ -10,11 +10,8 @@ import type {
   TherapeuticArea,
 } from '../api/types'
 import MonthlyExportPreview from '../components/MonthlyExportPreview.vue'
+import { todayIso } from '../domain/date-format'
 import { session } from '../session'
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 function firstDayOfMonthIso() {
   const now = new Date()

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { apiClient } from '../api/client'
 import type {
   PlatformPermission,
@@ -7,29 +7,21 @@ import type {
   RoleInput,
   RoleStatus,
 } from '../api/types'
-import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
+import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
-import { session } from '../session'
 import { useClientSort } from '../composables/useClientSort'
+import { useNotice } from '../composables/useNotice'
+import { usePagedList } from '../composables/usePagedList'
+import { usePermissions } from '../composables/usePermissions'
 
-const roles = ref<PlatformRole[]>([])
 const permissions = ref<PlatformPermission[]>([])
-const loading = ref(true)
 const saving = ref(false)
-const error = ref('')
-const notice = ref('')
-const keyword = ref('')
-const status = ref<'' | RoleStatus>('')
-const page = ref(1)
-const pageSize = ref(DEFAULT_PAGE_SIZE)
-const totalPages = ref(1)
-const totalItems = ref(0)
+const filters = reactive({ keyword: '', status: '' as '' | RoleStatus })
 const dialogOpen = ref(false)
 const editingRole = ref<PlatformRole>()
 const formError = ref('')
 const form = ref<RoleInput>(emptyForm())
 const collapsedModules = ref<Set<string>>(new Set())
-let noticeTimer: ReturnType<typeof setTimeout> | undefined
 
 const MODULE_LABELS: Record<string, string> = {
   pipeline: '管线总览',
@@ -45,10 +37,10 @@ const MODULE_LABELS: Record<string, string> = {
   setting: '系统设置',
 }
 
-const userPermissions = computed(() => session.currentUser.value?.permissions ?? [])
-const canCreate = computed(() => userPermissions.value.includes('role.create'))
-const canUpdate = computed(() => userPermissions.value.includes('role.update'))
-const canDelete = computed(() => userPermissions.value.includes('role.delete'))
+const { can } = usePermissions()
+const canCreate = can('role.create')
+const canUpdate = can('role.update')
+const canDelete = can('role.delete')
 const permissionGroups = computed(() => {
   const groups = new Map<string, PlatformPermission[]>()
   for (const permission of permissions.value) {
@@ -58,6 +50,30 @@ const permissionGroups = computed(() => {
   }
   return [...groups.entries()]
 })
+
+const { notice, showNotice, hideNotice } = useNotice()
+
+const {
+  result, loading, error, page, pageSize,
+  load, applyFilters, changePage, changePageSize,
+} = usePagedList({
+  filters,
+  errorMessage: '角色列表加载失败',
+  fetcher: (q) => apiClient.listRoles({
+    page: q.page,
+    pageSize: q.pageSize,
+    keyword: q.keyword.trim() || undefined,
+    status: q.status || undefined,
+  }),
+  onLoaded: (r) => {
+    page.value = r.page
+    pageSize.value = r.pageSize
+  },
+})
+
+const roles = computed(() => result.value?.data ?? [])
+const totalItems = computed(() => result.value?.totalItems ?? 0)
+const totalPages = computed(() => Math.max(result.value?.totalPages ?? 1, 1))
 
 const {
   sorted: sortedRoles,
@@ -97,50 +113,6 @@ function emptyForm(): RoleInput {
     status: 'ACTIVE',
     permissionCodes: [],
   }
-}
-
-function hideNotice() {
-  notice.value = ''
-  if (noticeTimer) {
-    clearTimeout(noticeTimer)
-    noticeTimer = undefined
-  }
-}
-
-function showNotice(message: string) {
-  hideNotice()
-  notice.value = message
-  noticeTimer = setTimeout(() => {
-    notice.value = ''
-    noticeTimer = undefined
-  }, 4_000)
-}
-
-async function loadRoles(targetPage = 1) {
-  loading.value = true
-  error.value = ''
-  try {
-    const result = await apiClient.listRoles({
-      page: targetPage,
-      pageSize: pageSize.value,
-      keyword: keyword.value.trim() || undefined,
-      status: status.value || undefined,
-    })
-    roles.value = result.data
-    page.value = result.page
-    pageSize.value = result.pageSize
-    totalPages.value = Math.max(result.totalPages, 1)
-    totalItems.value = result.totalItems
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '角色列表加载失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-function changePageSize(nextSize: number) {
-  pageSize.value = nextSize
-  void loadRoles(1)
 }
 
 function openCreate() {
@@ -206,7 +178,7 @@ async function submitRole() {
       dialogOpen.value = false
       showNotice('角色已新增')
     }
-    await loadRoles(page.value)
+    await load()
   } catch (reason) {
     formError.value = reason instanceof Error ? reason.message : '角色保存失败'
   } finally {
@@ -221,7 +193,7 @@ async function removeRole(role: PlatformRole) {
   try {
     await apiClient.deleteRole(role.id)
     showNotice('角色已删除')
-    await loadRoles(page.value)
+    await load()
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '角色删除失败'
   }
@@ -230,14 +202,12 @@ async function removeRole(role: PlatformRole) {
 onMounted(async () => {
   try {
     permissions.value = await apiClient.listPermissions()
-    await loadRoles()
+    await load()
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '权限字典加载失败'
     loading.value = false
   }
 })
-
-onUnmounted(hideNotice)
 </script>
 
 <template>
@@ -246,17 +216,17 @@ onUnmounted(hideNotice)
       <div class="toolbar-filters">
         <label class="inline-search">
           <span aria-hidden="true">⌕</span>
-          <input v-model="keyword" type="search" placeholder="搜索角色编码或说明" @keyup.enter="loadRoles()">
+          <input v-model="filters.keyword" type="search" placeholder="搜索角色编码或说明" @keyup.enter="applyFilters">
         </label>
         <label>
           状态
-          <select v-model="status" @change="loadRoles()">
+          <select v-model="filters.status" @change="applyFilters">
             <option value="">全部</option>
             <option value="ACTIVE">启用</option>
             <option value="DISABLED">停用</option>
           </select>
         </label>
-        <button class="secondary-button" type="button" @click="loadRoles()">查询</button>
+        <button class="secondary-button" type="button" @click="applyFilters">查询</button>
       </div>
       <div class="role-toolbar__actions">
         <span>共 {{ totalItems }} 个角色</span>
@@ -316,7 +286,7 @@ onUnmounted(hideNotice)
       :page-size="pageSize"
       :total-pages="totalPages"
       aria-label="角色列表分页"
-      @update:page="loadRoles"
+      @update:page="changePage"
       @update:page-size="changePageSize"
     />
 

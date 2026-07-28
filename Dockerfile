@@ -33,4 +33,4 @@ WORKDIR /app
 COPY --from=build --chown=appuser:appuser /workspace/study-management-service/target/study-management-service-*-exec.jar app.jar
 USER 10001
 EXPOSE 8080 9090
-ENTRYPOINT ["java","-XX:MaxRAMPercentage=75","-Djava.security.egd=file:/dev/urandom","-jar","/app/app.jar"]
+ENTRYPOINT ["java","-Djava.security.egd=file:/dev/urandom","-jar","/app/app.jar"]

@@ -3,9 +3,10 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { RiskFormOptions, RiskLevel, RiskPage, RiskStatus, RiskSummary } from '../api/types'
-import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
+import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import RiskEditorDrawer from '../components/RiskEditorDrawer.vue'
+import { formatDateTime } from '../domain/date-format'
 import {
   riskActionSummaryLabel,
   riskLevelLabel,
@@ -13,14 +14,13 @@ import {
   riskScoreRuleLines,
   riskStatusLabel,
 } from '../domain/risk-labels'
-import { session } from '../session'
+import { usePagedList } from '../composables/usePagedList'
+import { usePermissions } from '../composables/usePermissions'
+import { useServerSort } from '../composables/useServerSort'
 
 const route = useRoute()
 const router = useRouter()
-const result = ref<RiskPage>()
 const formOptions = ref<RiskFormOptions>()
-const loading = ref(true)
-const error = ref('')
 const drawerOpen = ref(false)
 const selectedRiskCode = ref<string>()
 const filters = reactive({
@@ -30,49 +30,55 @@ const filters = reactive({
   level: '' as RiskLevel | '',
   studyId: undefined as number | undefined,
   overdueOnly: false,
-  sortBy: 'updatedAt' as 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate',
-  sortOrder: 'desc' as 'asc' | 'desc',
-  page: 1,
-  pageSize: DEFAULT_PAGE_SIZE,
 })
 const scoreTip = ref<{ left: number; top: number } | null>(null)
 
-const permissions = computed(() => session.currentUser.value?.permissions ?? [])
-const canCreate = computed(() => permissions.value.includes('risk.create'))
+const { can } = usePermissions()
+const canCreate = can('risk.create')
 const functionOptions = computed(() => formOptions.value?.functions ?? [])
 const studyOptions = computed(() => formOptions.value?.studies ?? [])
 const scoreRuleLines = computed(() => riskScoreRuleLines(formOptions.value?.scoringRule))
+
+type RiskSortKey = 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate'
+
+const {
+  result, loading, error,
+  load, applyFilters, changePage, changePageSize,
+} = usePagedList({
+  filters,
+  errorMessage: '风险数据加载失败',
+  fetcher: (q): Promise<RiskPage> => apiClient.listRisks({
+    query: q.query || undefined,
+    functionCode: q.functionCode || undefined,
+    status: q.status || undefined,
+    level: q.level || undefined,
+    studyId: q.studyId,
+    overdueOnly: q.overdueOnly || undefined,
+    sortBy: sortKey.value,
+    sortOrder: sortDirection.value,
+    page: q.page,
+    pageSize: q.pageSize,
+  }),
+})
+
+const { sortKey, sortDirection, toggle: toggleSort, sortClass } = useServerSort<RiskSortKey>({
+  initialKey: 'updatedAt',
+  initialDirection: 'desc',
+  defaultDirection: (key) => (key === 'updatedAt' ? 'desc' : 'asc'),
+  onChange: applyFilters,
+})
+
 const risks = computed(() => result.value?.data ?? [])
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    const [page, options] = await Promise.all([
-      apiClient.listRisks({
-        query: filters.query || undefined,
-        functionCode: filters.functionCode || undefined,
-        status: filters.status || undefined,
-        level: filters.level || undefined,
-        studyId: filters.studyId,
-        overdueOnly: filters.overdueOnly || undefined,
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder,
-        page: filters.page,
-        pageSize: filters.pageSize,
-      }),
-      formOptions.value ? Promise.resolve(formOptions.value) : apiClient.getRiskFormOptions(),
-    ])
-    result.value = page
-    formOptions.value = options
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '风险数据加载失败'
-  } finally {
-    loading.value = false
-  }
+async function loadWithOptions() {
+  await Promise.all([
+    load(),
+    formOptions.value
+      ? Promise.resolve()
+      : apiClient.getRiskFormOptions().then((options) => { formOptions.value = options }),
+  ])
 }
 
-function applyFilters() { filters.page = 1; void load() }
 function quickFilter(type: 'total' | 'open' | 'high' | 'medium') {
   filters.status = type === 'open' ? 'OPEN' : ''
   filters.level = type === 'high' ? 'HIGH' : type === 'medium' ? 'MEDIUM' : ''
@@ -90,30 +96,6 @@ function closeDrawer() {
   }
 }
 async function saved() { closeDrawer(); await load() }
-function changePage(page: number) {
-  filters.page = page
-  void load()
-}
-function changePageSize(pageSize: number) {
-  filters.pageSize = pageSize
-  filters.page = 1
-  void load()
-}
-
-function toggleSort(column: typeof filters.sortBy) {
-  if (filters.sortBy === column) {
-    filters.sortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc'
-  } else {
-    filters.sortBy = column
-    filters.sortOrder = column === 'updatedAt' ? 'desc' : 'asc'
-  }
-  applyFilters()
-}
-
-function sortClass(column: typeof filters.sortBy) {
-  if (filters.sortBy !== column) return 'sortable'
-  return filters.sortOrder === 'asc' ? 'sortable sort-asc' : 'sortable sort-desc'
-}
 
 function showScoreTip(event: FocusEvent | MouseEvent) {
   const el = event.currentTarget as HTMLElement | null
@@ -126,17 +108,6 @@ function showScoreTip(event: FocusEvent | MouseEvent) {
 }
 function hideScoreTip() { scoreTip.value = null }
 
-function formatUpdatedAt(value: string) {
-  try {
-    return new Date(value).toLocaleString('zh-CN', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-    })
-  } catch {
-    return value
-  }
-}
-
 function openFromQuery() {
   const code = typeof route.query.riskCode === 'string' ? route.query.riskCode : ''
   if (code) {
@@ -147,7 +118,7 @@ function openFromQuery() {
 
 watch(() => route.query.riskCode, () => openFromQuery())
 onMounted(async () => {
-  await load()
+  await loadWithOptions()
   openFromQuery()
 })
 </script>
@@ -279,7 +250,7 @@ onMounted(async () => {
                   {{ riskStatusLabel(risk.status) }}
                 </span>
               </td>
-              <td class="mono">{{ formatUpdatedAt(risk.updatedAt) }}</td>
+              <td class="mono">{{ formatDateTime(risk.updatedAt) }}</td>
             </tr>
           </tbody>
         </table>

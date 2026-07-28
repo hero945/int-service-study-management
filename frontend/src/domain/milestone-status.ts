@@ -78,3 +78,13 @@ export function flattenMilestoneNodes(
     })),
   )
 }
+
+/** 单个里程碑节点状态的中文标签（MilestoneView / StudyDetailDrawer 共用） */
+export function milestoneNodeStatusLabel(status: string): string {
+  return { NOT_STARTED: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成' }[status] ?? status
+}
+
+/** 单个里程碑节点状态的着色 class（green/blue/''） */
+export function milestoneNodeStatusClass(status: string): string {
+  return status === 'COMPLETED' ? 'green' : status === 'IN_PROGRESS' ? 'blue' : ''
+}

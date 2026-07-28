@@ -1,35 +1,45 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ApiError, apiClient } from '../api/client'
 import type {
   PlatformUser,
   TeamMatrixMember,
-  TeamMatrixPage,
 } from '../api/types'
 import PageState from '../components/PageState.vue'
-import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
+import ListPagination from '../components/ListPagination.vue'
+import { usePagedList } from '../composables/usePagedList'
+import { usePermissions } from '../composables/usePermissions'
 import { session } from '../session'
 
-const matrix = ref<TeamMatrixPage>()
 const users = ref<PlatformUser[]>([])
-const loading = ref(true)
 const saving = ref(false)
-const error = ref('')
 const notice = ref('')
-const studyQuery = ref('')
-const roleQuery = ref('')
-const page = ref(1)
-const pageSize = ref(DEFAULT_PAGE_SIZE)
+const filters = reactive({ studyQuery: '', roleQuery: '' })
 const editMode = ref(false)
 const picker = ref<{ studyId: number; roleCode: string }>()
 const drafts = ref(new Map<string, TeamMatrixMember[]>())
 
-const permissions = computed(() => session.currentUser.value?.permissions ?? [])
-const canEdit = computed(() =>
-  permissions.value.includes('team.edit_mode') &&
-  permissions.value.includes('team.update'))
+const { can } = usePermissions()
+const canEditMode = can('team.edit_mode')
+const canUpdateTeam = can('team.update')
+const canEdit = computed(() => canEditMode.value && canUpdateTeam.value)
 const enabledUsers = computed(() => users.value.filter(user => user.enabled))
 const hasChanges = computed(() => drafts.value.size > 0)
+
+const {
+  result: matrix, loading, error,
+  load, applyFilters: applyListFilters,
+  changePage: changeListPage, changePageSize: changeListPageSize,
+} = usePagedList({
+  filters,
+  errorMessage: '团队矩阵加载失败',
+  fetcher: (q) => apiClient.listTeamMatrix({
+    studyQuery: q.studyQuery,
+    roleQuery: q.roleQuery,
+    page: q.page,
+    pageSize: q.pageSize,
+  }),
+})
 
 function cellKey(studyId: number, roleCode: string) {
   return `${studyId}|${roleCode}`
@@ -56,40 +66,20 @@ function setDraft(studyId: number, roleCode: string, members: TeamMatrixMember[]
   drafts.value = next
 }
 
-async function loadMatrix() {
-  loading.value = true
-  error.value = ''
-  try {
-    matrix.value = await apiClient.listTeamMatrix({
-      studyQuery: studyQuery.value,
-      roleQuery: roleQuery.value,
-      page: page.value,
-      pageSize: pageSize.value,
-    })
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '团队矩阵加载失败'
-  } finally {
-    loading.value = false
-  }
+// 翻页/改筛选会丢弃未保存的草稿，先退出编辑态
+function applyFilters() {
+  cancelEdit()
+  applyListFilters()
 }
 
-async function applyFilters() {
-  page.value = 1
+function changePage(nextPage: number) {
   cancelEdit()
-  await loadMatrix()
+  changeListPage(nextPage)
 }
 
-async function changePage(nextPage: number) {
-  page.value = nextPage
+function changePageSize(nextSize: number) {
   cancelEdit()
-  await loadMatrix()
-}
-
-async function changePageSize(nextSize: number) {
-  pageSize.value = nextSize
-  page.value = 1
-  cancelEdit()
-  await loadMatrix()
+  changeListPageSize(nextSize)
 }
 
 async function startEdit() {
@@ -178,7 +168,7 @@ async function save() {
     await apiClient.replaceTeamAssignments({ studies })
     notice.value = '团队矩阵已保存，成员数据范围已即时更新。'
     cancelEdit()
-    await loadMatrix()
+    await load()
   } catch (reason) {
     error.value = reason instanceof ApiError && reason.code === 'TEAM_VERSION_CONFLICT'
       ? '团队矩阵已被其他用户修改，请刷新后重新编辑。'
@@ -188,7 +178,7 @@ async function save() {
   }
 }
 
-onMounted(loadMatrix)
+onMounted(load)
 </script>
 
 <template>
@@ -197,11 +187,11 @@ onMounted(loadMatrix)
       <div class="toolbar-filters">
         <label>
           <span class="sr-only">搜索 Study 或适应症</span>
-          <input v-model="studyQuery" type="search" class="filter-input" placeholder="搜索 Study / 适应症">
+          <input v-model="filters.studyQuery" type="search" class="filter-input" placeholder="搜索 Study / 适应症">
         </label>
         <label>
           <span class="sr-only">搜索角色或功能线</span>
-          <input v-model="roleQuery" type="search" class="filter-input" placeholder="搜索角色 / 功能线">
+          <input v-model="filters.roleQuery" type="search" class="filter-input" placeholder="搜索角色 / 功能线">
         </label>
         <button class="secondary-button" type="submit">搜索</button>
       </div>

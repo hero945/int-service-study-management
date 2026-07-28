@@ -5,11 +5,12 @@ import type {
   PipelineConfigRow, PipelineProgram, PipelineProject, ProgramInput,
   ProgramUpdateInput, ProjectInput, ProjectUpdateInput, TherapeuticArea,
 } from '../api/types'
-import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
+import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
-import { session } from '../session'
 import { useClientSort } from '../composables/useClientSort'
+import { usePagedList } from '../composables/usePagedList'
+import { usePermissions } from '../composables/usePermissions'
 
 const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
 
@@ -17,14 +18,11 @@ type ViewMode = 'studies' | 'entities'
 type EntityKind = 'program' | 'project'
 
 const view = ref<ViewMode>('studies')
-const rows = ref<PipelineConfigRow[]>([])
 const programs = ref<PipelineProgram[]>([])
 const projects = ref<PipelineProject[]>([])
 const therapeuticAreas = ref<TherapeuticArea[]>([])
 const selectedProgramId = ref<number>()
 const projectDrawerOpen = ref(false)
-const loading = ref(true)
-const error = ref('')
 const notice = ref('')
 const saving = ref(false)
 const entityDialog = ref<EntityKind>()
@@ -35,16 +33,35 @@ const editingStudy = ref<PipelineConfigRow>()
 const returnToStudyAfterCreate = ref(false)
 const studyProgramDetails = ref<HTMLDetailsElement>()
 const studyProjectDetails = ref<HTMLDetailsElement>()
-const studyQuery = ref('')
-const studyPage = ref(1)
-const studyPageSize = ref(DEFAULT_PAGE_SIZE)
-const studyTotalItems = ref(0)
-const studyTotalPages = ref(1)
+const filters = reactive({ keyword: '' })
 
-const permissions = computed(() => session.currentUser.value?.permissions ?? [])
-const canCreate = computed(() => permissions.value.includes('config.create'))
-const canUpdate = computed(() => permissions.value.includes('config.update'))
-const canDelete = computed(() => permissions.value.includes('config.delete'))
+const { can } = usePermissions()
+const canCreate = can('config.create')
+const canUpdate = can('config.update')
+const canDelete = can('config.delete')
+
+const {
+  result, loading, error,
+  page: studyPage, pageSize: studyPageSize,
+  load, applyFilters,
+  changePage: goToStudyPage, changePageSize: changeStudyPageSize,
+} = usePagedList({
+  filters,
+  errorMessage: 'Study 列表加载失败',
+  fetcher: (q) => apiClient.listPipelineConfig({
+    keyword: q.keyword.trim() || undefined,
+    page: q.page,
+    pageSize: q.pageSize,
+  }),
+  onLoaded: (r) => {
+    studyPage.value = r.page
+    studyPageSize.value = r.pageSize
+  },
+})
+
+const rows = computed(() => result.value?.data ?? [])
+const studyTotalItems = computed(() => result.value?.totalItems ?? 0)
+const studyTotalPages = computed(() => Math.max(result.value?.totalPages ?? 1, 1))
 const selectedProgram = computed(() => programs.value.find((item) => item.id === selectedProgramId.value))
 const selectedProjects = computed(() => projects.value.filter((item) => item.programId === selectedProgramId.value))
 
@@ -91,19 +108,6 @@ const projectForm = reactive<ProjectInput>({
 })
 const studyForm = reactive({ code: '', programId: 0, projectId: 0, phaseStatusCode: 'PRE_IND' })
 
-async function loadStudyRows() {
-  const result = await apiClient.listPipelineConfig({
-    keyword: studyQuery.value.trim() || undefined,
-    page: studyPage.value,
-    pageSize: studyPageSize.value,
-  })
-  rows.value = result.data
-  studyPage.value = result.page
-  studyPageSize.value = result.pageSize
-  studyTotalItems.value = result.totalItems
-  studyTotalPages.value = Math.max(result.totalPages, 1)
-}
-
 async function loadAll() {
   loading.value = true
   error.value = ''
@@ -112,7 +116,6 @@ async function loadAll() {
       apiClient.listPrograms(), apiClient.listProjects(),
       apiClient.listTherapeuticAreas(),
     ])
-    await loadStudyRows()
     programs.value = nextPrograms
     projects.value = nextProjects
     therapeuticAreas.value = nextAreas
@@ -120,9 +123,9 @@ async function loadAll() {
       selectedProgramId.value = undefined
       projectDrawerOpen.value = false
     }
+    await load()
   } catch (reason) {
     error.value = messageOf(reason, '管线配置加载失败')
-  } finally {
     loading.value = false
   }
 }
@@ -248,28 +251,8 @@ function onDocumentPointerDown(event: PointerEvent) {
 
 const studySearchTimer = ref<ReturnType<typeof setTimeout>>()
 function filterStudies() {
-  studyPage.value = 1
   if (studySearchTimer.value) clearTimeout(studySearchTimer.value)
-  studySearchTimer.value = setTimeout(() => {
-    void loadStudyRows().catch((reason) => {
-      error.value = messageOf(reason, 'Study 列表加载失败')
-    })
-  }, 300)
-}
-
-function goToStudyPage(page: number) {
-  studyPage.value = page
-  void loadStudyRows().catch((reason) => {
-    error.value = messageOf(reason, 'Study 列表加载失败')
-  })
-}
-
-function changeStudyPageSize(nextSize: number) {
-  studyPageSize.value = nextSize
-  studyPage.value = 1
-  void loadStudyRows().catch((reason) => {
-    error.value = messageOf(reason, 'Study 列表加载失败')
-  })
+  studySearchTimer.value = setTimeout(applyFilters, 300)
 }
 
 function quickCreateProgram() {
@@ -384,7 +367,7 @@ onUnmounted(() => {
 
     <template v-if="view === 'studies'">
       <div class="page-toolbar">
-        <label class="config-study-search"><span class="sr-only">搜索 Study、TA 或 Program</span><input v-model="studyQuery" type="search" placeholder="搜索 Study / TA / Program" @input="filterStudies"></label>
+        <label class="config-study-search"><span class="sr-only">搜索 Study、TA 或 Program</span><input v-model="filters.keyword" type="search" placeholder="搜索 Study / TA / Program" @input="filterStudies"></label>
         <button v-if="canCreate" class="primary-button" type="button" @click="openStudy()">＋ 新增 Study</button>
       </div>
       <PageState :loading :error="''" :empty="!rows.length">

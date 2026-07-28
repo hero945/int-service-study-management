@@ -4,8 +4,10 @@ import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { Study, MilestonePage, RiskPage, TeamMatrixPage } from '../api/types'
 import PageState from '../components/PageState.vue'
+import { formatIsoDate } from '../domain/date-format'
+import { milestoneNodeStatusClass, milestoneNodeStatusLabel } from '../domain/milestone-status'
 import { riskLevelLabel, riskLevelTone, riskStatusLabel } from '../domain/risk-labels'
-import { session } from '../session'
+import { usePermissions } from '../composables/usePermissions'
 
 const props = defineProps<{
   open: boolean
@@ -17,15 +19,10 @@ const router = useRouter()
 
 type TabKey = 'milestone' | 'team' | 'risk'
 const activeTab = ref<TabKey>('milestone')
-const canReadMilestone = computed(() =>
-  session.currentUser.value?.permissions.includes('milestone.read') ?? false,
-)
-const canReadStudy = computed(() =>
-  session.currentUser.value?.permissions.includes('study.read') ?? false,
-)
-const canReadRisk = computed(() =>
-  session.currentUser.value?.permissions.includes('risk.read') ?? false,
-)
+const { can } = usePermissions()
+const canReadMilestone = can('milestone.read')
+const canReadStudy = can('study.read')
+const canReadRisk = can('risk.read')
 
 // ── per-tab state ──
 const milestoneLoading = ref(false)
@@ -105,10 +102,10 @@ function loadRisks() {
 
 // ── helpers ──
 function msStatus(s: string) {
-  return { NOT_STARTED: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成' }[s] ?? s
+  return milestoneNodeStatusLabel(s)
 }
 function msStatusClass(s: string) {
-  return s === 'COMPLETED' ? 'green' : s === 'IN_PROGRESS' ? 'blue' : ''
+  return milestoneNodeStatusClass(s)
 }
 
 // 团队角色模板：先渲染所有角色，再用当前 study 的后端数据填充（空角色显示「暂无成员」）
@@ -154,7 +151,7 @@ const tabs = computed(() => {
         <div v-if="study" class="drawer-meta">
           <span v-if="study.program" class="drawer-tag">{{ study.program }}</span>
           <span v-if="study.project" class="drawer-tag drawer-tag--muted">{{ study.project }}</span>
-          <span class="drawer-meta__date">最近更新 {{ study.updatedAt.slice(0, 10) }}</span>
+          <span class="drawer-meta__date">最近更新 {{ formatIsoDate(study.updatedAt) }}</span>
         </div>
 
         <!-- tabs -->

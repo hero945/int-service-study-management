@@ -2,39 +2,46 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
-import type { Study, StudyPage } from '../api/types'
-import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
+import type { Study } from '../api/types'
+import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
-import { session } from '../session'
 import { ALL_MILESTONE_SUB_STATUSES } from '../domain/milestone-filters'
+import { TA_OPTIONS } from '../domain/therapeutic-areas'
+import { plPmLabel } from '../domain/study-labels'
+import { formatDate } from '../domain/date-format'
 import { useClientSort } from '../composables/useClientSort'
+import { usePagedList } from '../composables/usePagedList'
+import { usePermissions } from '../composables/usePermissions'
 
 const router = useRouter()
-const canReadMonthly = computed(() =>
-  session.currentUser.value?.permissions.includes('monthly.read') ?? false,
-)
-const canReadMilestone = computed(() =>
-  session.currentUser.value?.permissions.includes('milestone.read') ?? false,
-)
+const { can } = usePermissions()
+const canReadMonthly = can('monthly.read')
+const canReadMilestone = can('milestone.read')
 
-const result = ref<StudyPage>()
-const loading = ref(true)
-const error = ref('')
-const filters = reactive({ ta: '', program: '', status: '', page: 1, pageSize: DEFAULT_PAGE_SIZE })
-
-const TA_OPTIONS = ['肿瘤', '自身免疫', '代谢与心血管', '呼吸系统', '感染性疾病', '神经科学']
+const filters = reactive({ ta: '', program: '', status: '' })
 const statusOptions = ALL_MILESTONE_SUB_STATUSES
+
+const {
+  result, loading, error, page, pageSize,
+  load, applyFilters, changePage, changePageSize,
+} = usePagedList({
+  filters,
+  errorMessage: '研究数据加载失败',
+  fetcher: (q) => apiClient.listStudies({
+    therapeuticArea: q.ta || undefined,
+    program: q.program || undefined,
+    milestoneStatus: q.status || undefined,
+    page: q.page,
+    pageSize: q.pageSize,
+  }),
+  // Keep local page in sync if backend clamps out-of-range page.
+  onLoaded: (r) => { page.value = r.page },
+})
 
 const studies = computed(() => result.value?.data ?? [])
 const total = computed(() => result.value?.total ?? 0)
-const page = computed(() => result.value?.page ?? filters.page)
-const pageSize = computed(() => result.value?.pageSize ?? filters.pageSize)
 const totalPages = computed(() => result.value?.totalPages ?? 1)
-
-function plPm(study: Study): string {
-  return [study.plName, study.pmName].filter(Boolean).join(' / ')
-}
 
 const {
   sorted: sortedStudies,
@@ -51,7 +58,7 @@ registerStudySortColumns([
   { key: 'indication', resolver: (s) => s.indication, type: 'string' },
   { key: 'phase', resolver: (s) => s.currentPhase, type: 'string' },
   { key: 'status', resolver: (s) => s.currentStatus, type: 'string' },
-  { key: 'plPm', resolver: (s) => plPm(s), type: 'string' },
+  { key: 'plPm', resolver: (s) => plPmLabel(s), type: 'string' },
   { key: 'updatedAt', resolver: (s) => s.updatedAt, type: 'date' },
 ])
 
@@ -73,43 +80,6 @@ function goMilestones(studyId: number) {
 
 function goMonthlyReport(studyId: number) {
   router.push(`/studies/${studyId}/monthly-report`)
-}
-
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
-    result.value = await apiClient.listStudies({
-      therapeuticArea: filters.ta || undefined,
-      program: filters.program || undefined,
-      milestoneStatus: filters.status || undefined,
-      page: filters.page,
-      pageSize: filters.pageSize,
-    })
-    // Keep local page in sync if backend clamps out-of-range page.
-    filters.page = result.value.page
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '研究数据加载失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-function applyFilters() {
-  filters.page = 1
-  void load()
-}
-
-function changePage(next: number) {
-  if (next < 1 || next > totalPages.value) return
-  filters.page = next
-  void load()
-}
-
-function changePageSize(nextSize: number) {
-  filters.pageSize = nextSize
-  filters.page = 1
-  void load()
 }
 
 watch(() => [filters.ta, filters.status], applyFilters)
@@ -168,8 +138,8 @@ onMounted(load)
               <td>{{ study.indication }}</td>
               <td>{{ study.currentPhase || '—' }}</td>
               <td>{{ study.currentStatus || '—' }}</td>
-              <td>{{ plPm(study) || '—' }}</td>
-              <td>{{ study.updatedAt ? new Date(study.updatedAt).toLocaleDateString('zh-CN') : '—' }}</td>
+              <td>{{ plPmLabel(study) || '—' }}</td>
+              <td>{{ formatDate(study.updatedAt) }}</td>
               <td class="actions">
                 <button
                   v-if="canReadMilestone"

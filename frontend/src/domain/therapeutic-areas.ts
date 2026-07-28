@@ -1,7 +1,10 @@
 /**
- * 治疗领域（TA）在管线总览等处的展示颜色映射。
- * 以色块/圆点形式区分不同 TA，未知编码回退到默认棕色。
+ * 治疗领域（TA）的唯一真相源：筛选选项、展示颜色、CSS 类名。
+ * 未知编码回退到默认棕色（.area-dot）。
  */
+
+/** TA 中文名筛选选项（Study 列表 / 管线总览共用） */
+export const TA_OPTIONS = ['肿瘤', '自身免疫', '代谢与心血管', '呼吸系统', '感染性疾病', '神经科学'] as const
 
 export const THERAPEUTIC_AREA_COLORS: Record<string, string> = {
   ONCOLOGY: '#d64545',

@@ -92,7 +92,7 @@ function milestoneStage(study: OverviewStudy) {
               >{{ study.subStatusLabel }}</span>
               <span
                 class="project-study-tag"
-                :class="`project-study-tag--${toneForStatus(study.statusTone)}`"
+                :class="`chip-tone--${toneForStatus(study.statusTone)}`"
               >{{ study.statusLabel || study.status }}</span>
             </div>
           </article>
@@ -104,7 +104,8 @@ function milestoneStage(study: OverviewStudy) {
 
 <style scoped>
 .project-studies-overlay {
-  z-index: 900;
+  /* 低于 Study 详情抽屉（.drawer-overlay 用 --z-drawer），保证从列表打开详情时详情在上层 */
+  z-index: var(--z-backdrop);
 }
 .project-studies-header {
   align-items: flex-start;
@@ -166,9 +167,9 @@ function milestoneStage(study: OverviewStudy) {
 }
 .project-study-ms-btn {
   flex-shrink: 0;
-  border: 1px solid #1e5ed6;
-  background: #fff;
-  color: #1e5ed6;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
   border-radius: 6px;
   padding: 4px 9px;
   font: inherit;
@@ -218,31 +219,5 @@ function milestoneStage(study: OverviewStudy) {
   background: #f3f7ff;
   color: #2a5088;
   border-color: #d5e2f5;
-}
-.project-study-tag--blue {
-  background: #fff;
-  color: #1d5fd1;
-  border-color: #b7cff5;
-}
-.project-study-tag--green {
-  background: #e5f4eb;
-  color: #177245;
-  border-color: #d0e3d8;
-}
-.project-study-tag--orange {
-  background: #fff0dc;
-  color: #a85e0c;
-  border-color: #efd4ad;
-}
-.project-study-tag--red {
-  background: #fce7e6;
-  color: #bf3630;
-  border-color: #efc4c1;
-}
-.project-study-tag--empty {
-  background: #f3f5f8;
-  color: #8a929e;
-  border-color: #e4e7ec;
-  font-weight: 500;
 }
 </style>

@@ -20,7 +20,7 @@ import PageState from '../components/PageState.vue'
 import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 import { session } from '../session'
-import { areaDotClass } from '../domain/therapeutic-area-colors'
+import { areaDotClass, TA_OPTIONS } from '../domain/therapeutic-areas'
 
 // 后端已按 TA 聚合的 project，附带 TA 信息便于筛选
 interface ProjectRow extends OverviewProject {
@@ -38,8 +38,6 @@ interface HoverTip {
   x: number
   y: number
 }
-
-const TA_OPTIONS = ['肿瘤', '自身免疫', '代谢与心血管', '呼吸系统', '感染性疾病', '神经科学']
 
 const router = useRouter()
 const phases = CLINICAL_PHASE_CODES

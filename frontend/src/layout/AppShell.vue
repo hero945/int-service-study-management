@@ -191,7 +191,7 @@ async function submitPasswordChange() {
 
     <Teleport to="body">
       <div v-if="passwordDialogOpen" class="dialog-backdrop" @click.self="closePasswordDialog">
-        <form class="role-dialog" style="width: min(440px, 100%);" @submit.prevent="submitPasswordChange">
+        <form class="role-dialog role-dialog--sm" @submit.prevent="submitPasswordChange">
           <header>
             <div>
               <h2>修改密码</h2>
@@ -199,7 +199,7 @@ async function submitPasswordChange() {
             </div>
             <button type="button" aria-label="关闭" @click="closePasswordDialog">×</button>
           </header>
-          <div class="role-form-grid" style="grid-template-columns: 1fr;">
+          <div class="role-form-grid role-form-grid--single">
             <label>
               当前密码
               <input v-model="passwordForm.currentPassword" type="password" autocomplete="current-password" maxlength="128">
@@ -213,7 +213,7 @@ async function submitPasswordChange() {
               <input v-model="passwordForm.confirmPassword" type="password" autocomplete="new-password" maxlength="128">
             </label>
           </div>
-          <p v-if="passwordError" class="form-error" role="alert" style="margin: 0 22px 14px;">{{ passwordError }}</p>
+          <p v-if="passwordError" class="form-error dialog-form-error" role="alert">{{ passwordError }}</p>
           <footer>
             <button class="secondary-button" type="button" @click="closePasswordDialog">取消</button>
             <button class="primary-button" type="submit" :disabled="passwordSaving">

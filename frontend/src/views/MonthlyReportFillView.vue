@@ -10,7 +10,8 @@ import type {
   MonthlyReportPage,
 } from '../api/types'
 import PageState from '../components/PageState.vue'
-import { session } from '../session'
+import { formatIsoMinute, todayIso } from '../domain/date-format'
+import { usePermissions } from '../composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,11 +37,11 @@ function validateEntry(entryDate?: string, content?: string): string {
   return ''
 }
 
-const permissions = computed(() => session.currentUser.value?.permissions ?? [])
-const canRead = computed(() => permissions.value.includes('monthly.read'))
-const canCreate = computed(() => permissions.value.includes('monthly.create'))
-const canUpdate = computed(() => permissions.value.includes('monthly.update'))
-const canDelete = computed(() => permissions.value.includes('monthly.update'))
+const { can } = usePermissions()
+const canRead = can('monthly.read')
+const canCreate = can('monthly.create')
+const canUpdate = can('monthly.update')
+const canDelete = can('monthly.update')
 
 // 历史面板状态（按 reportId 维度）
 const historyOpen = ref<Set<number>>(new Set())
@@ -113,7 +114,7 @@ async function saveEdit(entry: MonthlyReportEntry) {
 }
 function startCreate(line: FunctionLineReport) {
   if (!canCreate.value || !line.editable) return
-  createForm.entryDate = new Date().toISOString().slice(0, 10)
+  createForm.entryDate = todayIso()
   createForm.content = ''
   createFormError.value = ''
   creatingFor.value = line.reportId
@@ -237,7 +238,7 @@ function goBack() { router.push('/studies') }
               <template v-else>
                 <span class="mono monthly-entry-date">{{ entry.entryDate }}</span>
                 <p class="monthly-entry-content">{{ entry.content }}</p>
-                <span class="monthly-entry-meta">{{ entry.updatedBy }} · {{ entry.updatedAt.slice(0, 16).replace('T', ' ') }}</span>
+                <span class="monthly-entry-meta">{{ entry.updatedBy }} · {{ formatIsoMinute(entry.updatedAt) }}</span>
                 <div class="monthly-entry-view-actions">
                   <button v-if="entry.editable && canUpdate" class="text-button monthly-entry-edit" type="button" @click="startEdit(entry)">编辑</button>
                   <button v-if="entry.editable && canDelete" class="danger-button" type="button"

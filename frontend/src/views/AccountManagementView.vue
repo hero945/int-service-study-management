@@ -1,28 +1,20 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { apiClient } from '../api/client'
 import type {
   CreateUserInput,
   PlatformRole,
   PlatformUser,
 } from '../api/types'
-import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
+import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
-import { session } from '../session'
 import { useClientSort } from '../composables/useClientSort'
+import { useNotice } from '../composables/useNotice'
+import { usePagedList } from '../composables/usePagedList'
+import { usePermissions } from '../composables/usePermissions'
 
-const users = ref<PlatformUser[]>([])
-const roles = ref<PlatformRole[]>([])
-const loading = ref(true)
 const saving = ref(false)
-const error = ref('')
-const notice = ref('')
-const keyword = ref('')
-const roleFilter = ref('')
-const page = ref(1)
-const pageSize = ref(DEFAULT_PAGE_SIZE)
-const totalItems = ref(0)
-const totalPages = ref(1)
+const filters = reactive({ keyword: '', roleFilter: '' })
 
 const dialogOpen = ref(false)
 const formError = ref('')
@@ -37,8 +29,6 @@ const resetConfirmOpen = ref(false)
 const resetTargetId = ref<number | null>(null)
 const resetTargetName = ref('')
 
-let noticeTimer: ReturnType<typeof setTimeout> | undefined
-
 const form = ref({
   username: '',
   displayName: '',
@@ -47,10 +37,41 @@ const form = ref({
 
 const DEFAULT_PASSWORD = 'Hd123456'
 
-const userPermissions = computed(() => session.currentUser.value?.permissions ?? [])
-const canCreate = computed(() => userPermissions.value.includes('account.create'))
-const canUpdate = computed(() => userPermissions.value.includes('account.update'))
-const canAssignRoles = computed(() => userPermissions.value.includes('account.assignRole'))
+const { can } = usePermissions()
+const canCreate = can('account.create')
+const canUpdate = can('account.update')
+const canAssignRoles = can('account.assignRole')
+
+const { notice, showNotice } = useNotice()
+
+const {
+  result, loading, error, page, pageSize,
+  load, applyFilters, changePage, changePageSize,
+} = usePagedList({
+  filters,
+  errorMessage: '数据加载失败',
+  fetcher: async (q) => {
+    const [userPage, rolePage] = await Promise.all([
+      apiClient.listUsers({
+        keyword: q.keyword,
+        roleCode: q.roleFilter || undefined,
+        page: q.page,
+        pageSize: q.pageSize,
+      }),
+      apiClient.listRoles({ page: 1, pageSize: 100 }),
+    ])
+    return { userPage, roles: rolePage.data }
+  },
+  onLoaded: (r) => {
+    page.value = r.userPage.page
+    pageSize.value = r.userPage.pageSize
+  },
+})
+
+const users = computed(() => result.value?.userPage.data ?? [])
+const roles = computed<PlatformRole[]>(() => result.value?.roles ?? [])
+const totalItems = computed(() => result.value?.userPage.totalItems ?? 0)
+const totalPages = computed(() => Math.max(result.value?.userPage.totalPages ?? 1, 1))
 
 const {
   sorted: sortedUsers,
@@ -68,70 +89,11 @@ registerUserSortColumns([
   { key: 'status', resolver: (u) => (u.enabled ? '启用' : '停用'), type: 'string' },
 ])
 
-function hideNotice() {
-  notice.value = ''
-  if (noticeTimer) {
-    clearTimeout(noticeTimer)
-    noticeTimer = undefined
-  }
-}
-
-function showNotice(message: string) {
-  hideNotice()
-  notice.value = message
-  noticeTimer = setTimeout(() => { notice.value = '' }, 5000)
-}
-
-async function loadData() {
-  loading.value = true
-  error.value = ''
-  try {
-    const [userPage, rolePage] = await Promise.all([
-      apiClient.listUsers({
-        keyword: keyword.value,
-        roleCode: roleFilter.value || undefined,
-        page: page.value,
-        pageSize: pageSize.value,
-      }),
-      apiClient.listRoles({ page: 1, pageSize: 100 }),
-    ])
-    users.value = userPage.data
-    page.value = userPage.page
-    pageSize.value = userPage.pageSize
-    totalItems.value = userPage.totalItems
-    totalPages.value = Math.max(userPage.totalPages, 1)
-    roles.value = rolePage.data
-  } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '数据加载失败'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function doSearch() {
-  page.value = 1
-  await loadData()
-}
-
 const searchTimer = ref<ReturnType<typeof setTimeout>>()
 function onKeywordInput(value: string) {
-  keyword.value = value
+  filters.keyword = value
   if (searchTimer.value) clearTimeout(searchTimer.value)
-  searchTimer.value = setTimeout(() => {
-    page.value = 1
-    void loadData()
-  }, 300)
-}
-
-function changePage(next: number) {
-  page.value = next
-  void loadData()
-}
-
-function changePageSize(nextSize: number) {
-  pageSize.value = nextSize
-  page.value = 1
-  void loadData()
+  searchTimer.value = setTimeout(applyFilters, 300)
 }
 
 function openCreateDialog() {
@@ -162,7 +124,7 @@ async function submitForm() {
     await apiClient.createUser(input)
     showNotice('账号创建成功')
     closeDialog()
-    await loadData()
+    await load()
   } catch (reason) {
     formError.value = reason instanceof Error ? reason.message : '保存失败'
   } finally {
@@ -191,7 +153,7 @@ async function submitAssignRoles() {
     await apiClient.assignRoles(assignUserId.value, { roleCodes: selectedRoleCodes.value })
     showNotice('角色分配已更新')
     closeAssignDialog()
-    await loadData()
+    await load()
   } catch (reason) {
     formError.value = reason instanceof Error ? reason.message : '角色分配失败'
   } finally {
@@ -248,7 +210,7 @@ async function executeToggle() {
     })
     showNotice(toggleTargetEnabled.value ? '账号已停用' : '账号已启用')
     closeToggleConfirm()
-    await loadData()
+    await load()
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : '操作失败'
   } finally {
@@ -274,9 +236,8 @@ function visibleScopeLabel(user: PlatformUser): string {
   return `${user.visibleStudyCount} 个 Study`
 }
 
-onMounted(() => loadData())
+onMounted(() => load())
 onUnmounted(() => {
-  if (noticeTimer) clearTimeout(noticeTimer)
   if (searchTimer.value) clearTimeout(searchTimer.value)
 })
 </script>
@@ -287,13 +248,13 @@ onUnmounted(() => {
       <div class="toolbar-filters">
         <div class="inline-search">
           <input
-            v-model="keyword"
+            v-model="filters.keyword"
             type="search"
             placeholder="搜索姓名或登录邮箱…"
             @input="onKeywordInput(($event.target as HTMLInputElement).value)"
           />
         </div>
-        <select v-model="roleFilter" aria-label="按角色筛选" @change="doSearch">
+        <select v-model="filters.roleFilter" aria-label="按角色筛选" @change="applyFilters">
           <option value="">全部角色</option>
           <option
             v-for="role in roles"
@@ -325,26 +286,24 @@ onUnmounted(() => {
               <th class="sortable" :class="{ 'sort-asc': userSortDirection('scopeMode') === 'asc', 'sort-desc': userSortDirection('scopeMode') === 'desc' }" @click="toggleUserSort('scopeMode')">范围模式</th>
               <th class="sortable" :class="{ 'sort-asc': userSortDirection('visibleScope') === 'asc', 'sort-desc': userSortDirection('visibleScope') === 'desc' }" @click="toggleUserSort('visibleScope')">可见范围</th>
               <th class="sortable" :class="{ 'sort-asc': userSortDirection('status') === 'asc', 'sort-desc': userSortDirection('status') === 'desc' }" @click="toggleUserSort('status')">状态</th>
-              <th style="width: 200px;">操作</th>
+              <th class="account-actions-col">操作</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="user in sortedUsers" :key="user.id">
               <td class="strong">{{ user.displayName }}</td>
               <td class="mono">{{ user.username }}</td>
-              <td>
+              <td class="chip-stack">
                 <span
                   v-for="(desc, i) in user.roleDescriptions"
                   :key="user.roles[i]"
                   class="status-chip status-chip--blue"
-                  style="margin-right: 4px;"
                 >{{ desc }}</span>
                 <span
                   v-if="!user.roleDescriptions.length"
                   v-for="role in user.roles"
                   :key="role"
                   class="status-chip status-chip--blue"
-                  style="margin-right: 4px;"
                 >{{ role }}</span>
               </td>
               <td>
@@ -403,7 +362,7 @@ onUnmounted(() => {
     <!-- 新增账号弹窗 -->
     <Teleport to="body">
       <div v-if="dialogOpen" class="dialog-backdrop" @click.self="closeDialog">
-        <div class="role-dialog" style="width: min(520px, 100%);">
+        <div class="role-dialog role-dialog--md">
           <header>
             <div>
               <h2>新增账号</h2>
@@ -437,7 +396,7 @@ onUnmounted(() => {
                 readonly
                 title="初始密码由系统自动赋予，管理员不可修改"
               />
-              <small style="margin-top: 4px; color: var(--muted); font-size: 11px;">
+              <small class="dialog-hint">
                 系统默认赋予初始密码，管理员不可修改；用户登录后可自行修改密码
               </small>
             </label>
@@ -463,7 +422,7 @@ onUnmounted(() => {
               </div>
             </label>
           </div>
-          <div v-if="formError" class="form-error" style="margin: 0 22px 14px;">{{ formError }}</div>
+          <div v-if="formError" class="form-error dialog-form-error">{{ formError }}</div>
           <footer>
             <button class="secondary-button" type="button" @click="closeDialog">取消</button>
             <button class="primary-button" type="button" :disabled="saving" @click="submitForm">
@@ -475,7 +434,7 @@ onUnmounted(() => {
 
       <!-- 分配角色弹窗 -->
       <div v-if="assignDialogOpen" class="dialog-backdrop" @click.self="closeAssignDialog">
-        <div class="role-dialog" style="width: min(480px, 100%);">
+        <div class="role-dialog role-dialog--sm">
           <header>
             <div>
               <h2>分配角色</h2>
@@ -483,7 +442,7 @@ onUnmounted(() => {
             </div>
             <button type="button" @click="closeAssignDialog" aria-label="关闭">&#x2715;</button>
           </header>
-          <div style="padding: 18px 22px;">
+          <div class="dialog-body">
             <div class="role-check-options">
               <label
                 v-for="role in roles"
@@ -499,7 +458,7 @@ onUnmounted(() => {
               </label>
             </div>
           </div>
-          <div v-if="formError" class="form-error" style="margin: 0 22px 14px;">{{ formError }}</div>
+          <div v-if="formError" class="form-error dialog-form-error">{{ formError }}</div>
           <footer>
             <button class="secondary-button" type="button" @click="closeAssignDialog">取消</button>
             <button
@@ -514,7 +473,7 @@ onUnmounted(() => {
 
       <!-- 停用/启用确认弹窗 -->
       <div v-if="toggleConfirmOpen" class="dialog-backdrop" @click.self="closeToggleConfirm">
-        <div class="role-dialog" style="width: min(400px, 100%);">
+        <div class="role-dialog role-dialog--xs">
           <header>
             <div>
               <h2>{{ toggleTargetEnabled ? '确认停用' : '确认启用' }}</h2>
@@ -522,8 +481,8 @@ onUnmounted(() => {
             </div>
             <button type="button" @click="closeToggleConfirm" aria-label="关闭">&#x2715;</button>
           </header>
-          <div style="padding: 18px 22px;">
-            <p style="margin: 0; color: #3b424e; font-size: 13px;">
+          <div class="dialog-body">
+            <p class="dialog-text">
               确定要{{ toggleTargetEnabled ? '停用' : '启用' }}账号 <strong>{{ toggleTargetName }}</strong> 吗？
             </p>
           </div>
@@ -531,8 +490,8 @@ onUnmounted(() => {
             <button class="secondary-button" type="button" @click="closeToggleConfirm">取消</button>
             <button
               class="primary-button"
+              :class="{ 'danger-solid-button': toggleTargetEnabled }"
               type="button"
-              :style="toggleTargetEnabled ? 'background: #ef4444; border-color: #ef4444;' : ''"
               :disabled="saving"
               @click="executeToggle"
             >{{ saving ? '处理中…' : (toggleTargetEnabled ? '确认停用' : '确认启用') }}</button>
@@ -542,7 +501,7 @@ onUnmounted(() => {
 
       <!-- 重置密码确认弹窗 -->
       <div v-if="resetConfirmOpen" class="dialog-backdrop" @click.self="closeResetConfirm">
-        <div class="role-dialog" style="width: min(400px, 100%);">
+        <div class="role-dialog role-dialog--xs">
           <header>
             <div>
               <h2>确认重置密码</h2>
@@ -550,8 +509,8 @@ onUnmounted(() => {
             </div>
             <button type="button" @click="closeResetConfirm" aria-label="关闭">&#x2715;</button>
           </header>
-          <div style="padding: 18px 22px;">
-            <p style="margin: 0; color: #3b424e; font-size: 13px;">
+          <div class="dialog-body">
+            <p class="dialog-text">
               确定将账号 <strong>{{ resetTargetName }}</strong> 的密码重置为
               <strong class="mono">{{ DEFAULT_PASSWORD }}</strong> 吗？
               该用户的现有登录会话将被强制退出。

@@ -4,7 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { MilestoneNode, MilestonePage, MilestoneUpdateInput, StageProjection } from '../api/types'
 import PageState from '../components/PageState.vue'
-import { session } from '../session'
+import { milestoneNodeStatusClass, milestoneNodeStatusLabel } from '../domain/milestone-status'
+import { usePermissions } from '../composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
@@ -18,8 +19,8 @@ const saving = ref<Set<string>>(new Set())
 const studyId = computed(() => Number(route.params.studyId))
 const editForm = reactive<Record<string, MilestoneUpdateInput>>({})
 
-const permissions = computed(() => session.currentUser.value?.permissions ?? [])
-const canEdit = computed(() => permissions.value.includes('milestone.update'))
+const { can } = usePermissions()
+const canEdit = can('milestone.update')
 
 async function load(showLoading = true) {
   if (!studyId.value) { router.push('/studies'); return }
@@ -40,10 +41,10 @@ async function load(showLoading = true) {
 onMounted(() => load())
 
 function statusLabel(status: string) {
-  return { NOT_STARTED: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成' }[status] ?? status
+  return milestoneNodeStatusLabel(status)
 }
 function statusClass(status: string) {
-  return status === 'COMPLETED' ? 'green' : status === 'IN_PROGRESS' ? 'blue' : ''
+  return milestoneNodeStatusClass(status)
 }
 
 function isEditing(milestoneCode: string) {

@@ -13,7 +13,8 @@ import {
   riskStatusLabel,
 } from '../domain/risk-labels'
 import { riskBadge } from '../risk-badge'
-import { session } from '../session'
+import { todayIso } from '../domain/date-format'
+import { usePermissions } from '../composables/usePermissions'
 
 const props = defineProps<{ open: boolean; riskCode?: string }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
@@ -37,7 +38,7 @@ const dirty = ref(false)
 const snapshot = ref('')
 const form = reactive({
   studyId: 0, functionLineId: 0, ownerUserId: 0,
-  description: '', registeredDate: new Date().toISOString().slice(0, 10),
+  description: '', registeredDate: todayIso(),
   status: 'OPEN' as RiskStatus, statusReason: '',
   impact: 1, likelihood: 1, detectability: 1, assessmentReason: '',
 })
@@ -46,7 +47,7 @@ const actionForm = reactive<RiskActionInput>({
   status: 'OPEN', completionNote: '', changeReason: '',
 })
 
-const permissions = computed(() => session.currentUser.value?.permissions ?? [])
+const { permissions } = usePermissions()
 const canUpdate = computed(() => props.riskCode
   ? permissions.value.includes('risk.update')
   : permissions.value.includes('risk.create'))
@@ -110,7 +111,7 @@ async function initialize() {
     } else {
       Object.assign(form, {
         studyId: initial.studies[0]?.id ?? 0, functionLineId: 0, ownerUserId: 0,
-        description: '', registeredDate: new Date().toISOString().slice(0, 10),
+        description: '', registeredDate: todayIso(),
         status: 'OPEN', statusReason: '', impact: 1, likelihood: 1, detectability: 1,
         assessmentReason: '首次评估',
       })
