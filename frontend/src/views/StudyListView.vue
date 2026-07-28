@@ -8,6 +8,7 @@ import PageState from '../components/PageState.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 import { session } from '../session'
 import { ALL_MILESTONE_SUB_STATUSES } from '../domain/milestone-filters'
+import { useClientSort } from '../composables/useClientSort'
 
 const router = useRouter()
 const canReadMonthly = computed(() =>
@@ -34,6 +35,25 @@ const totalPages = computed(() => result.value?.totalPages ?? 1)
 function plPm(study: Study): string {
   return [study.plName, study.pmName].filter(Boolean).join(' / ')
 }
+
+const {
+  sorted: sortedStudies,
+  registerMany: registerStudySortColumns,
+  toggle: toggleStudySort,
+  getDirection: studySortDirection,
+} = useClientSort({ items: studies })
+
+registerStudySortColumns([
+  { key: 'ta', resolver: (s) => s.therapeuticAreaName || s.therapeuticArea || s.therapeuticAreaCode, type: 'string' },
+  { key: 'program', resolver: (s) => s.programCode || s.program, type: 'string' },
+  { key: 'product', resolver: (s) => s.productName || s.product, type: 'string' },
+  { key: 'studyNo', resolver: (s) => s.code, type: 'string' },
+  { key: 'indication', resolver: (s) => s.indication, type: 'string' },
+  { key: 'phase', resolver: (s) => s.currentPhase, type: 'string' },
+  { key: 'status', resolver: (s) => s.currentStatus, type: 'string' },
+  { key: 'plPm', resolver: (s) => plPm(s), type: 'string' },
+  { key: 'updatedAt', resolver: (s) => s.updatedAt, type: 'date' },
+])
 
 const drawerOpen = ref(false)
 const selectedStudy = ref<Study | null>(null)
@@ -128,19 +148,19 @@ onMounted(load)
       <div class="data-card">
         <table class="data-table">
           <thead><tr>
-            <th>TA</th>
-            <th>Program</th>
-            <th>Product</th>
-            <th>Study No.</th>
-            <th>适应症</th>
-            <th>里程碑阶段</th>
-            <th>里程碑节点</th>
-            <th>PL/PM</th>
-            <th>更新时间</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('ta') === 'asc', 'sort-desc': studySortDirection('ta') === 'desc' }" @click="toggleStudySort('ta')">TA</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('program') === 'asc', 'sort-desc': studySortDirection('program') === 'desc' }" @click="toggleStudySort('program')">Program</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('product') === 'asc', 'sort-desc': studySortDirection('product') === 'desc' }" @click="toggleStudySort('product')">Product</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('studyNo') === 'asc', 'sort-desc': studySortDirection('studyNo') === 'desc' }" @click="toggleStudySort('studyNo')">Study No.</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('indication') === 'asc', 'sort-desc': studySortDirection('indication') === 'desc' }" @click="toggleStudySort('indication')">适应症</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('phase') === 'asc', 'sort-desc': studySortDirection('phase') === 'desc' }" @click="toggleStudySort('phase')">里程碑阶段</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('status') === 'asc', 'sort-desc': studySortDirection('status') === 'desc' }" @click="toggleStudySort('status')">里程碑节点</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('plPm') === 'asc', 'sort-desc': studySortDirection('plPm') === 'desc' }" @click="toggleStudySort('plPm')">PL/PM</th>
+            <th class="sortable" :class="{ 'sort-asc': studySortDirection('updatedAt') === 'asc', 'sort-desc': studySortDirection('updatedAt') === 'desc' }" @click="toggleStudySort('updatedAt')">更新时间</th>
             <th>操作</th>
           </tr></thead>
           <tbody>
-            <tr v-for="study in studies" :key="study.id" class="study-row--clickable" @click="openDrawer(study)">
+            <tr v-for="study in sortedStudies" :key="study.id" class="study-row--clickable" @click="openDrawer(study)">
               <td>{{ study.therapeuticAreaName || study.therapeuticArea || study.therapeuticAreaCode || '—' }}</td>
               <td class="mono">{{ study.programCode || study.program || '—' }}</td>
               <td class="mono">{{ study.productName || study.product || '—' }}</td>

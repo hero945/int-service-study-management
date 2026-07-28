@@ -404,7 +404,7 @@ export interface MonthlyExportReport {
   openRisks: MonthlyExportRiskItem[]
 }
 
-export type MonthlyExportFormat = 'html' | 'csv' | 'xlsx'
+export type MonthlyExportFormat = 'html' | 'xlsx'
 
 export interface TeamMatrixStudy {
   studyId: number

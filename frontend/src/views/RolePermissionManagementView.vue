@@ -10,6 +10,7 @@ import type {
 import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { session } from '../session'
+import { useClientSort } from '../composables/useClientSort'
 
 const roles = ref<PlatformRole[]>([])
 const permissions = ref<PlatformPermission[]>([])
@@ -57,6 +58,21 @@ const permissionGroups = computed(() => {
   }
   return [...groups.entries()]
 })
+
+const {
+  sorted: sortedRoles,
+  registerMany: registerRoleSortColumns,
+  toggle: toggleRoleSort,
+  getDirection: roleSortDirection,
+} = useClientSort({ items: roles })
+
+registerRoleSortColumns([
+  { key: 'roleCode', resolver: (r) => r.roleCode, type: 'string' },
+  { key: 'dataScope', resolver: (r) => r.dataScopeMode, type: 'string' },
+  { key: 'permissions', resolver: (r) => r.permissionCodes.length, type: 'number' },
+  { key: 'assignedUsers', resolver: (r) => r.assignedUserCount, type: 'number' },
+  { key: 'status', resolver: (r) => (r.status === 'ACTIVE' ? '启用' : '停用'), type: 'string' },
+])
 
 function moduleLabel(moduleCode: string) {
   return MODULE_LABELS[moduleCode] ?? moduleCode
@@ -258,9 +274,16 @@ onUnmounted(hideNotice)
     >
       <div class="data-card role-table-card">
         <table class="data-table role-table">
-          <thead><tr><th>角色</th><th>数据范围</th><th>权限</th><th>关联账号</th><th>状态</th><th>操作</th></tr></thead>
+          <thead><tr>
+            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('roleCode') === 'asc', 'sort-desc': roleSortDirection('roleCode') === 'desc' }" @click="toggleRoleSort('roleCode')">角色</th>
+            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('dataScope') === 'asc', 'sort-desc': roleSortDirection('dataScope') === 'desc' }" @click="toggleRoleSort('dataScope')">数据范围</th>
+            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('permissions') === 'asc', 'sort-desc': roleSortDirection('permissions') === 'desc' }" @click="toggleRoleSort('permissions')">权限</th>
+            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('assignedUsers') === 'asc', 'sort-desc': roleSortDirection('assignedUsers') === 'desc' }" @click="toggleRoleSort('assignedUsers')">关联账号</th>
+            <th class="sortable" :class="{ 'sort-asc': roleSortDirection('status') === 'asc', 'sort-desc': roleSortDirection('status') === 'desc' }" @click="toggleRoleSort('status')">状态</th>
+            <th>操作</th>
+          </tr></thead>
           <tbody>
-            <tr v-for="role in roles" :key="role.id">
+            <tr v-for="role in sortedRoles" :key="role.id">
               <td>
                 <div class="role-name"><strong class="mono">{{ role.roleCode }}</strong><span v-if="role.systemRole">系统</span></div>
                 <small>{{ role.roleDescription || '暂无说明' }}</small>

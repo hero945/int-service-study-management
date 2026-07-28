@@ -1606,26 +1606,15 @@ function deriveMockStatus(study: Study): string {
 }
 
 function mockExportBlob(report: MonthlyExportReport, format: MonthlyExportFormat): Blob {
-  if (format === 'csv') {
-    const lines = [
-      '????,????,TA,Program,Study,?????,?????,????,????',
-      ...report.progress.map((item) =>
-        [report.meta.startDate, report.meta.endDate, item.taName, item.programCode,
-          item.studyCode, item.functionCode, item.functionName, item.entryDate, item.content]
-          .map((value) => `"${String(value).replaceAll('"', '""')}"`)
-          .join(',')),
-    ]
-    return new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8' })
-  }
   if (format === 'xlsx') {
     return new Blob([JSON.stringify(report)], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     })
   }
-  const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>??????????</title></head>
-<body><h1>??????????</h1>
-<p>${report.meta.startDate} ? ${report.meta.endDate} ? ${report.meta.scopeLabels.join('?')}</p>
-<p>Study ${report.summary.total} ? ?? ${report.progress.length} ? Open ?? ${report.summary.openRiskCount}</p>
+  const html = `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>\u7814\u53D1\u7BA1\u7EBF\u6708\u62A5</title></head>
+<body><h1>\u7814\u53D1\u7BA1\u7EBF\u6708\u62A5</h1>
+<p>${report.meta.startDate} \u81F3 ${report.meta.endDate}\uFF0C\u8303\u56F4\uFF1A${report.meta.scopeLabels.join('\u3001')}</p>
+<p>Study ${report.summary.total} \u4E2A\uFF0C\u8FDB\u5C55 ${report.progress.length} \u6761\uFF0COpen \u98CE\u9669 ${report.summary.openRiskCount}</p>
 </body></html>`
   return new Blob([html], { type: 'text/html;charset=utf-8' })
 }

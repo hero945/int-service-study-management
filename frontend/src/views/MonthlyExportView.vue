@@ -118,18 +118,6 @@ async function download(format: MonthlyExportFormat) {
   }
 }
 
-function printReport() {
-  if (!canExport.value) {
-    error.value = '当前账号无导出权限'
-    return
-  }
-  if (!report.value) {
-    error.value = '请先生成月报预览'
-    return
-  }
-  window.print()
-}
-
 function toggleId(list: number[], id: number) {
   return list.includes(id) ? list.filter((item) => item !== id) : [...list, id]
 }
@@ -206,12 +194,6 @@ function toggleId(list: number[], id: number) {
         <div v-if="report && canExport" class="export-actions">
           <button class="secondary-button" type="button" :disabled="exporting" @click="download('html')">
             下载 HTML
-          </button>
-          <button class="secondary-button" type="button" @click="printReport">
-            打印 / PDF
-          </button>
-          <button class="secondary-button" type="button" :disabled="exporting" @click="download('csv')">
-            进展 CSV
           </button>
           <button class="secondary-button" type="button" :disabled="exporting" @click="download('xlsx')">
             全量 Excel

@@ -9,6 +9,7 @@ import type {
 import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import { session } from '../session'
+import { useClientSort } from '../composables/useClientSort'
 
 const users = ref<PlatformUser[]>([])
 const roles = ref<PlatformRole[]>([])
@@ -50,6 +51,22 @@ const userPermissions = computed(() => session.currentUser.value?.permissions ??
 const canCreate = computed(() => userPermissions.value.includes('account.create'))
 const canUpdate = computed(() => userPermissions.value.includes('account.update'))
 const canAssignRoles = computed(() => userPermissions.value.includes('account.assignRole'))
+
+const {
+  sorted: sortedUsers,
+  registerMany: registerUserSortColumns,
+  toggle: toggleUserSort,
+  getDirection: userSortDirection,
+} = useClientSort({ items: users })
+
+registerUserSortColumns([
+  { key: 'name', resolver: (u) => u.displayName, type: 'string' },
+  { key: 'username', resolver: (u) => u.username, type: 'string' },
+  { key: 'role', resolver: (u) => u.roleDescriptions.join(' ') || u.roles.join(' '), type: 'string' },
+  { key: 'scopeMode', resolver: (u) => u.dataScope, type: 'string' },
+  { key: 'visibleScope', resolver: (u) => u.visibleStudyCount, type: 'number' },
+  { key: 'status', resolver: (u) => (u.enabled ? '启用' : '停用'), type: 'string' },
+])
 
 function hideNotice() {
   notice.value = ''
@@ -302,17 +319,17 @@ onUnmounted(() => {
         <table class="data-table">
           <thead>
             <tr>
-              <th>姓名</th>
-              <th>登录邮箱</th>
-              <th>角色</th>
-              <th>范围模式</th>
-              <th>可见范围</th>
-              <th>状态</th>
+              <th class="sortable" :class="{ 'sort-asc': userSortDirection('name') === 'asc', 'sort-desc': userSortDirection('name') === 'desc' }" @click="toggleUserSort('name')">姓名</th>
+              <th class="sortable" :class="{ 'sort-asc': userSortDirection('username') === 'asc', 'sort-desc': userSortDirection('username') === 'desc' }" @click="toggleUserSort('username')">登录邮箱</th>
+              <th class="sortable" :class="{ 'sort-asc': userSortDirection('role') === 'asc', 'sort-desc': userSortDirection('role') === 'desc' }" @click="toggleUserSort('role')">角色</th>
+              <th class="sortable" :class="{ 'sort-asc': userSortDirection('scopeMode') === 'asc', 'sort-desc': userSortDirection('scopeMode') === 'desc' }" @click="toggleUserSort('scopeMode')">范围模式</th>
+              <th class="sortable" :class="{ 'sort-asc': userSortDirection('visibleScope') === 'asc', 'sort-desc': userSortDirection('visibleScope') === 'desc' }" @click="toggleUserSort('visibleScope')">可见范围</th>
+              <th class="sortable" :class="{ 'sort-asc': userSortDirection('status') === 'asc', 'sort-desc': userSortDirection('status') === 'desc' }" @click="toggleUserSort('status')">状态</th>
               <th style="width: 200px;">操作</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in users" :key="user.id">
+            <tr v-for="user in sortedUsers" :key="user.id">
               <td class="strong">{{ user.displayName }}</td>
               <td class="mono">{{ user.username }}</td>
               <td>

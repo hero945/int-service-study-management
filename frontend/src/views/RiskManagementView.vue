@@ -12,6 +12,7 @@ import {
   riskStatusLabel,
 } from '../domain/risk-labels'
 import { session } from '../session'
+import { useClientSort } from '../composables/useClientSort'
 
 const result = ref<RiskPage>()
 const formOptions = ref<RiskFormOptions>()
@@ -24,8 +25,6 @@ const filters = reactive({
   functionCode: '',
   status: '' as RiskStatus | '',
   level: '' as RiskLevel | '',
-  sortBy: 'updatedAt' as const,
-  sortOrder: 'desc' as const,
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
 })
@@ -37,6 +36,28 @@ const functionOptions = computed(() => formOptions.value?.functions ?? [])
 const scoreRuleLines = computed(() =>
   riskScoreRuleLines(formOptions.value?.scoringRule),
 )
+
+const risks = computed(() => result.value?.data ?? [])
+const {
+  sorted: sortedRisks,
+  registerMany: registerRiskSortColumns,
+  toggle: toggleRiskSort,
+  getDirection: riskSortDirection,
+} = useClientSort({ items: risks })
+
+registerRiskSortColumns([
+  { key: 'riskCode', resolver: (r) => r.riskCode, type: 'string' },
+  { key: 'studyCode', resolver: (r) => r.studyCode, type: 'string' },
+  { key: 'program', resolver: (r) => r.programCode, type: 'string' },
+  { key: 'functionLine', resolver: (r) => r.functionName, type: 'string' },
+  { key: 'description', resolver: (r) => r.description, type: 'string' },
+  { key: 'owner', resolver: (r) => r.ownerName, type: 'string' },
+  { key: 'score', resolver: (r) => r.score, type: 'number' },
+  { key: 'level', resolver: (r) => r.level, type: 'string' },
+  { key: 'actions', resolver: (r) => r.actionCount, type: 'number' },
+  { key: 'status', resolver: (r) => r.status, type: 'string' },
+  { key: 'updatedAt', resolver: (r) => r.updatedAt, type: 'date' },
+])
 
 async function load() {
   loading.value = true
@@ -121,8 +142,19 @@ onMounted(load)
     <PageState :loading :error :empty="!result?.data.length" empty-title="暂无风险记录">
       <div class="data-card risk-table-card">
         <table class="data-table risk-table">
-          <thead><tr><th>Risk ID</th><th>Study No.</th><th>Program / Project</th><th>功能线</th><th>风险描述</th><th>Owner</th><th>评分</th><th>等级</th><th>措施</th><th>Status</th></tr></thead>
-          <tbody><tr v-for="risk in result?.data" :key="risk.riskCode" tabindex="0" @click="openRisk(risk)" @keydown.enter="openRisk(risk)">
+          <thead><tr>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('riskCode') === 'asc', 'sort-desc': riskSortDirection('riskCode') === 'desc' }" @click="toggleRiskSort('riskCode')">Risk ID</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('studyCode') === 'asc', 'sort-desc': riskSortDirection('studyCode') === 'desc' }" @click="toggleRiskSort('studyCode')">Study No.</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('program') === 'asc', 'sort-desc': riskSortDirection('program') === 'desc' }" @click="toggleRiskSort('program')">Program / Project</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('functionLine') === 'asc', 'sort-desc': riskSortDirection('functionLine') === 'desc' }" @click="toggleRiskSort('functionLine')">功能线</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('description') === 'asc', 'sort-desc': riskSortDirection('description') === 'desc' }" @click="toggleRiskSort('description')">风险描述</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('owner') === 'asc', 'sort-desc': riskSortDirection('owner') === 'desc' }" @click="toggleRiskSort('owner')">Owner</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('score') === 'asc', 'sort-desc': riskSortDirection('score') === 'desc' }" @click="toggleRiskSort('score')">评分</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('level') === 'asc', 'sort-desc': riskSortDirection('level') === 'desc' }" @click="toggleRiskSort('level')">等级</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('actions') === 'asc', 'sort-desc': riskSortDirection('actions') === 'desc' }" @click="toggleRiskSort('actions')">措施</th>
+            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('status') === 'asc', 'sort-desc': riskSortDirection('status') === 'desc' }" @click="toggleRiskSort('status')">Status</th>
+          </tr></thead>
+          <tbody><tr v-for="risk in sortedRisks" :key="risk.riskCode" tabindex="0" @click="openRisk(risk)" @keydown.enter="openRisk(risk)">
             <td><button class="risk-link mono" type="button" @click.stop="openRisk(risk)">{{ risk.riskCode }}</button></td>
             <td class="mono">{{ risk.studyCode }}</td><td><strong>{{ risk.programCode }}</strong><small>{{ risk.projectCode }}</small></td><td>{{ risk.functionName }}</td><td class="risk-description">{{ risk.description }}</td><td>{{ risk.ownerName }}</td>
             <td>

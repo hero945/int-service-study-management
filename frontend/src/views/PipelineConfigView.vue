@@ -9,6 +9,7 @@ import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.
 import PageState from '../components/PageState.vue'
 import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
 import { session } from '../session'
+import { useClientSort } from '../composables/useClientSort'
 
 const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
 
@@ -46,6 +47,41 @@ const canUpdate = computed(() => permissions.value.includes('config.update'))
 const canDelete = computed(() => permissions.value.includes('config.delete'))
 const selectedProgram = computed(() => programs.value.find((item) => item.id === selectedProgramId.value))
 const selectedProjects = computed(() => projects.value.filter((item) => item.programId === selectedProgramId.value))
+
+const {
+  sorted: sortedRows,
+  registerMany: registerRowSortColumns,
+  toggle: toggleRowSort,
+  getDirection: rowSortDirection,
+} = useClientSort({ items: rows })
+
+registerRowSortColumns([
+  { key: 'source', resolver: (r) => r.sourceLabel, type: 'string' },
+  { key: 'origin', resolver: (r) => r.originLabel, type: 'string' },
+  { key: 'product', resolver: (r) => r.productName, type: 'string' },
+  { key: 'program', resolver: (r) => r.programCode, type: 'string' },
+  { key: 'moa', resolver: (r) => r.moa, type: 'string' },
+  { key: 'project', resolver: (r) => r.projectCode, type: 'string' },
+  { key: 'ta', resolver: (r) => r.therapeuticAreaName, type: 'string' },
+  { key: 'indication', resolver: (r) => r.indication, type: 'string' },
+  { key: 'studyNo', resolver: (r) => r.studyCode, type: 'string' },
+  { key: 'phaseStatus', resolver: (r) => r.phaseStatusCode, type: 'string' },
+])
+
+const {
+  sorted: sortedPrograms,
+  registerMany: registerProgramSortColumns,
+  toggle: toggleProgramSort,
+  getDirection: programSortDirection,
+} = useClientSort({ items: programs })
+
+registerProgramSortColumns([
+  { key: 'program', resolver: (p) => p.code, type: 'string' },
+  { key: 'source', resolver: (p) => p.sourceLabel, type: 'string' },
+  { key: 'origin', resolver: (p) => p.originLabel, type: 'string' },
+  { key: 'product', resolver: (p) => p.productName, type: 'string' },
+  { key: 'moa', resolver: (p) => p.moa, type: 'string' },
+])
 
 const programForm = reactive<ProgramInput>({
   code: '', productName: '', moa: '', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC',
@@ -353,8 +389,18 @@ onUnmounted(() => {
       </div>
       <PageState :loading :error="''" :empty="!rows.length">
         <div class="data-card config-table-card"><table class="data-table config-table"><thead><tr>
-          <th>Source</th><th>Origin</th><th>Product</th><th>Program</th><th>MOA</th><th>Project</th><th>TA</th><th>Indication</th><th>Study No.</th><th>Phase Status</th><th>操作</th>
-        </tr></thead><tbody><tr v-for="row in rows" :key="row.studyId">
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('source') === 'asc', 'sort-desc': rowSortDirection('source') === 'desc' }" @click="toggleRowSort('source')">Source</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('origin') === 'asc', 'sort-desc': rowSortDirection('origin') === 'desc' }" @click="toggleRowSort('origin')">Origin</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('product') === 'asc', 'sort-desc': rowSortDirection('product') === 'desc' }" @click="toggleRowSort('product')">Product</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('program') === 'asc', 'sort-desc': rowSortDirection('program') === 'desc' }" @click="toggleRowSort('program')">Program</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('moa') === 'asc', 'sort-desc': rowSortDirection('moa') === 'desc' }" @click="toggleRowSort('moa')">MOA</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('project') === 'asc', 'sort-desc': rowSortDirection('project') === 'desc' }" @click="toggleRowSort('project')">Project</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('ta') === 'asc', 'sort-desc': rowSortDirection('ta') === 'desc' }" @click="toggleRowSort('ta')">TA</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('indication') === 'asc', 'sort-desc': rowSortDirection('indication') === 'desc' }" @click="toggleRowSort('indication')">Indication</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('studyNo') === 'asc', 'sort-desc': rowSortDirection('studyNo') === 'desc' }" @click="toggleRowSort('studyNo')">Study No.</th>
+          <th class="sortable" :class="{ 'sort-asc': rowSortDirection('phaseStatus') === 'asc', 'sort-desc': rowSortDirection('phaseStatus') === 'desc' }" @click="toggleRowSort('phaseStatus')">Phase Status</th>
+          <th>操作</th>
+        </tr></thead><tbody><tr v-for="row in sortedRows" :key="row.studyId">
           <td>{{ row.sourceLabel }}</td><td>{{ row.originLabel }}</td><td>{{ row.productName }}</td><td class="mono">{{ row.programCode }}</td>
           <td>{{ row.moa || '—' }}</td><td class="mono">{{ row.projectCode }}</td><td>{{ row.therapeuticAreaName }}</td><td>{{ row.indication }}</td>
           <td class="mono">{{ row.studyCode }}</td><td><span class="status-chip status-chip--blue">{{ row.phaseStatusCode }}</span></td>
@@ -376,8 +422,15 @@ onUnmounted(() => {
     <template v-else>
       <div class="entity-toolbar"><div><strong>Program 管理</strong><span>Project 在对应 Program 的管理抽屉中维护。</span></div><button v-if="canCreate" class="primary-button" type="button" @click="openProgram()">＋ 新增 Program</button></div>
       <PageState :loading :error="''" :empty="!programs.length">
-        <div class="data-card"><table class="data-table entity-program-table"><thead><tr><th>Program</th><th>Source</th><th>Origin</th><th>Product</th><th>MOA</th><th>操作</th></tr></thead><tbody>
-          <tr v-for="program in programs" :key="program.id"><td class="mono strong">{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('program', program.id, program.code)">删除</button></td></tr>
+        <div class="data-card"><table class="data-table entity-program-table"><thead><tr>
+          <th class="sortable" :class="{ 'sort-asc': programSortDirection('program') === 'asc', 'sort-desc': programSortDirection('program') === 'desc' }" @click="toggleProgramSort('program')">Program</th>
+          <th class="sortable" :class="{ 'sort-asc': programSortDirection('source') === 'asc', 'sort-desc': programSortDirection('source') === 'desc' }" @click="toggleProgramSort('source')">Source</th>
+          <th class="sortable" :class="{ 'sort-asc': programSortDirection('origin') === 'asc', 'sort-desc': programSortDirection('origin') === 'desc' }" @click="toggleProgramSort('origin')">Origin</th>
+          <th class="sortable" :class="{ 'sort-asc': programSortDirection('product') === 'asc', 'sort-desc': programSortDirection('product') === 'desc' }" @click="toggleProgramSort('product')">Product</th>
+          <th class="sortable" :class="{ 'sort-asc': programSortDirection('moa') === 'asc', 'sort-desc': programSortDirection('moa') === 'desc' }" @click="toggleProgramSort('moa')">MOA</th>
+          <th>操作</th>
+        </tr></thead><tbody>
+          <tr v-for="program in sortedPrograms" :key="program.id"><td class="mono strong">{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('program', program.id, program.code)">删除</button></td></tr>
         </tbody></table></div>
       </PageState>
     </template>

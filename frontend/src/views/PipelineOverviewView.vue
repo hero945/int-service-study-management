@@ -20,6 +20,7 @@ import PageState from '../components/PageState.vue'
 import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 import { session } from '../session'
+import { areaDotClass } from '../domain/therapeutic-area-colors'
 
 // 后端已按 TA 聚合的 project，附带 TA 信息便于筛选
 interface ProjectRow extends OverviewProject {
@@ -95,17 +96,21 @@ const filteredProjects = computed(() => allProjects.value.filter((project) => {
 
 // 筛选后按 TA 重新分组展示
 const areaGroups = computed(() => {
-  const map = new Map<string, ProjectRow[]>()
+  const map = new Map<string, { therapeuticAreaCode: string; therapeuticAreaName: string; projects: ProjectRow[] }>()
   for (const project of filteredProjects.value) {
-    const key = project.therapeuticAreaName || '其他'
-    const list = map.get(key)
-    if (list) list.push(project)
-    else map.set(key, [project])
+    const key = project.therapeuticAreaCode || 'OTHER'
+    const existing = map.get(key)
+    if (existing) {
+      existing.projects.push(project)
+    } else {
+      map.set(key, {
+        therapeuticAreaCode: key,
+        therapeuticAreaName: project.therapeuticAreaName || '其他',
+        projects: [project],
+      })
+    }
   }
-  return [...map.entries()].map(([therapeuticAreaName, projects]) => ({
-    therapeuticAreaName,
-    projects,
-  }))
+  return [...map.values()]
 })
 const resultCount = computed(() => filteredProjects.value.length)
 
@@ -272,7 +277,7 @@ onMounted(async () => {
           <tbody v-for="area in areaGroups" :key="area.therapeuticAreaName">
             <tr class="area-row">
               <td colspan="3" class="area-row-sticky">
-                <span class="area-dot"></span>{{ area.therapeuticAreaName }}
+                <span class="area-dot" :class="areaDotClass(area.therapeuticAreaCode)"></span>{{ area.therapeuticAreaName }}
                 <small>{{ area.projects.length }} 个项目</small>
               </td>
               <td v-for="phase in phases" :key="`area-${phase}`" class="area-row-fill"></td>

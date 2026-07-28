@@ -510,6 +510,53 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   background: #c06514;
   vertical-align: 1px;
 }
+.area-dot--oncology { background: #d64545; }
+.area-dot--autoimmune { background: #2c74e0; }
+.area-dot--metabolic-cardiovascular { background: #27a159; }
+.area-dot--respiratory { background: #8a4bd8; }
+.area-dot--infectious-disease { background: #e08a2b; }
+.area-dot--neuroscience { background: #0f8a9e; }
+
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s ease, background-color .15s ease;
+}
+th.sortable:hover {
+  color: var(--accent);
+  background: #eef3fc;
+}
+th.sortable::after {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 12px;
+  margin-left: 6px;
+  vertical-align: -1.5px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='12' viewBox='0 0 9 12'%3E%3Cpath d='M4.5 1 8 5H1z' fill='%23a7aeba'/%3E%3Cpath d='M4.5 11 1 7h7z' fill='%23a7aeba'/%3E%3C/svg%3E");
+  opacity: 0;
+  transition: opacity .15s ease;
+}
+th.sortable:hover::after {
+  opacity: 1;
+}
+th.sort-asc::after,
+th.sort-desc::after {
+  opacity: 1;
+}
+th.sort-asc::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='12' viewBox='0 0 9 12'%3E%3Cpath d='M4.5 1 8 5H1z' fill='%231e5ed6'/%3E%3Cpath d='M4.5 11 1 7h7z' fill='%23c3c9d2'/%3E%3C/svg%3E");
+}
+th.sort-desc::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='12' viewBox='0 0 9 12'%3E%3Cpath d='M4.5 1 8 5H1z' fill='%23c3c9d2'/%3E%3Cpath d='M4.5 11 1 7h7z' fill='%231e5ed6'/%3E%3C/svg%3E");
+}
+th.sort-asc,
+th.sort-desc {
+  color: var(--accent);
+}
 .mono { font-family: "IBM Plex Mono", "Cascadia Mono", monospace; letter-spacing: -.01em; }
 .strong { font-weight: 600; color: #2a303b !important; }
 .status-chip {
