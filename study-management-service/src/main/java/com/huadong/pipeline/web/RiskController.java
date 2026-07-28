@@ -35,13 +35,15 @@ public class RiskController {
       @RequestParam(defaultValue = "") String status,
       @RequestParam(defaultValue = "") String level,
       @RequestParam(required = false) Long studyId,
+      @RequestParam(required = false) Long ownerUserId,
+      @RequestParam(required = false) Boolean overdueOnly,
       @RequestParam(defaultValue = "updatedAt") String sortBy,
       @RequestParam(defaultValue = "desc") String sortOrder,
       @RequestParam(defaultValue = "1") @Min(1) int page,
       @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
       Principal principal) {
     return api.list(principal.getName(), query, functionCode, status, level,
-        studyId, sortBy, sortOrder, page, pageSize);
+        studyId, ownerUserId, overdueOnly, sortBy, sortOrder, page, pageSize);
   }
 
   @GetMapping("/risks/{riskCode}")

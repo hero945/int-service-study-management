@@ -7,11 +7,12 @@ import com.huadong.pipeline.domain.risk.RiskRepository;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.sql.Date;
 import java.sql.PreparedStatement;
-import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,28 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcRiskRepository implements RiskRepository {
+  private static final String SUMMARY_SELECT = """
+      SELECT r.risk_code, r.study_id, r.study_code_snapshot,
+        r.program_code_snapshot, r.project_code_snapshot,
+        r.function_line_code_snapshot, r.function_line_name_snapshot,
+        r.risk_description, r.owner_user_id, r.owner_name_snapshot,
+        r.current_score, r.current_level_code, r.status_code,
+        (SELECT COUNT(*) FROM hd_plt_risk_action a
+           WHERE a.risk_id = r.id AND a.sys_deleted = 0) action_count,
+        (SELECT COUNT(*) FROM hd_plt_risk_action a
+           WHERE a.risk_id = r.id AND a.sys_deleted = 0
+             AND a.status_code IN ('OPEN','IN_PROGRESS')) open_action_count,
+        (SELECT COUNT(*) FROM hd_plt_risk_action a
+           WHERE a.risk_id = r.id AND a.sys_deleted = 0
+             AND a.status_code IN ('OPEN','IN_PROGRESS')
+             AND a.planned_date IS NOT NULL AND a.planned_date < CURRENT_DATE) overdue_action_count,
+        (SELECT MIN(a.planned_date) FROM hd_plt_risk_action a
+           WHERE a.risk_id = r.id AND a.sys_deleted = 0
+             AND a.status_code IN ('OPEN','IN_PROGRESS')
+             AND a.planned_date IS NOT NULL) next_planned_date,
+        r.row_version, r.sys_update_time
+      """;
+
   @Autowired
   private JdbcTemplate jdbc;
 
@@ -50,9 +73,22 @@ public class JdbcRiskRepository implements RiskRepository {
       filtered.append(" AND r.study_id = ?");
       args.add(query.studyId());
     }
+    if (query.ownerUserId() != null) {
+      filtered.append(" AND r.owner_user_id = ?");
+      args.add(query.ownerUserId());
+    }
+    if (Boolean.TRUE.equals(query.overdueOnly())) {
+      filtered.append("""
+           AND EXISTS (
+             SELECT 1 FROM hd_plt_risk_action oa
+             WHERE oa.risk_id = r.id AND oa.sys_deleted = 0
+               AND oa.status_code IN ('OPEN','IN_PROGRESS')
+               AND oa.planned_date IS NOT NULL AND oa.planned_date < CURRENT_DATE)
+          """);
+    }
     long total = jdbc.queryForObject(
         "SELECT COUNT(DISTINCT r.id) " + filtered, Long.class, args.toArray());
-    String sort = switch (query.sortBy()) {
+    String sort = switch (query.sortBy() == null ? "" : query.sortBy()) {
       case "riskCode" -> "r.risk_code";
       case "studyCode" -> "r.study_code_snapshot";
       case "score" -> "r.current_score";
@@ -63,16 +99,8 @@ public class JdbcRiskRepository implements RiskRepository {
     String order = "asc".equalsIgnoreCase(query.sortOrder()) ? "ASC" : "DESC";
     args.add(query.pageSize());
     args.add((query.page() - 1) * query.pageSize());
-    List<RiskSummary> data = jdbc.query("""
-        SELECT r.risk_code, r.study_id, r.study_code_snapshot,
-          r.program_code_snapshot, r.project_code_snapshot,
-          r.function_line_code_snapshot, r.function_line_name_snapshot,
-          r.risk_description, r.owner_user_id, r.owner_name_snapshot,
-          r.current_score, r.current_level_code, r.status_code,
-          (SELECT COUNT(*) FROM hd_plt_risk_action a
-             WHERE a.risk_id = r.id AND a.sys_deleted = 0) action_count,
-          r.row_version, r.sys_update_time
-        """ + filtered + " ORDER BY " + sort + " " + order + ", r.id DESC LIMIT ? OFFSET ?",
+    List<RiskSummary> data = jdbc.query(
+        SUMMARY_SELECT + filtered + " ORDER BY " + sort + " " + order + ", r.id DESC LIMIT ? OFFSET ?",
         (rs, row) -> summary(rs), args.toArray());
     return new RiskPage(data, stats, query.page(), query.pageSize(), total);
   }
@@ -88,15 +116,8 @@ public class JdbcRiskRepository implements RiskRepository {
       placeholders.add("?");
       args.add(studyId);
     }
-    StringBuilder sql = new StringBuilder("""
-        SELECT r.risk_code, r.study_id, r.study_code_snapshot,
-          r.program_code_snapshot, r.project_code_snapshot,
-          r.function_line_code_snapshot, r.function_line_name_snapshot,
-          r.risk_description, r.owner_user_id, r.owner_name_snapshot,
-          r.current_score, r.current_level_code, r.status_code,
-          (SELECT COUNT(*) FROM hd_plt_risk_action a
-             WHERE a.risk_id = r.id AND a.sys_deleted = 0) action_count,
-          r.row_version, r.sys_update_time
+    StringBuilder sql = new StringBuilder(SUMMARY_SELECT);
+    sql.append("""
         FROM hd_plt_risk r
         WHERE r.sys_deleted = 0 AND r.status_code = 'OPEN'
           AND r.study_id IN (""");
@@ -111,22 +132,23 @@ public class JdbcRiskRepository implements RiskRepository {
     var args = new ArrayList<Object>();
     args.add(riskCode);
     String scopeSql = scopeClause(scope, args, "r.study_id");
-    List<RiskDetail> results = jdbc.query("""
-        SELECT r.id, r.risk_code, r.study_id, r.study_code_snapshot,
-          r.program_code_snapshot, r.project_code_snapshot,
-          r.function_line_code_snapshot, r.function_line_name_snapshot,
-          r.risk_description, r.owner_user_id, r.owner_name_snapshot,
-          r.current_score, r.current_level_code, r.status_code,
-          (SELECT COUNT(*) FROM hd_plt_risk_action a
-             WHERE a.risk_id = r.id AND a.sys_deleted = 0) action_count,
-          r.row_version, r.sys_update_time, r.registered_date, r.close_reason
-        FROM hd_plt_risk r WHERE r.risk_code = ? AND r.sys_deleted = 0
-        """ + scopeSql, (rs, row) -> {
-          long id = rs.getLong("id");
+    List<long[]> ids = new ArrayList<>();
+    List<RiskDetail> headers = jdbc.query(SUMMARY_SELECT
+        + ", r.id, r.registered_date, r.close_reason, r.closed_time"
+        + " FROM hd_plt_risk r WHERE r.risk_code = ? AND r.sys_deleted = 0"
+        + scopeSql, (rs, row) -> {
+          ids.add(new long[]{rs.getLong("id")});
+          Timestamp closed = rs.getTimestamp("closed_time");
           return new RiskDetail(summary(rs), rs.getDate("registered_date").toLocalDate(),
-              rs.getString("close_reason"), assessments(id), actions(id));
+              nullToEmpty(rs.getString("close_reason")),
+              closed == null ? null : closed.toInstant(),
+              List.of(), List.of(), List.of());
         }, args.toArray());
-    return results.stream().findFirst();
+    if (headers.isEmpty()) return Optional.empty();
+    RiskDetail header = headers.get(0);
+    long id = ids.get(0)[0];
+    return Optional.of(new RiskDetail(header.risk(), header.registeredDate(), header.closeReason(),
+        header.closedTime(), assessments(id), actions(id), activities(id)));
   }
 
   @Override
@@ -267,7 +289,11 @@ public class JdbcRiskRepository implements RiskRepository {
     jdbc.update("UPDATE hd_plt_risk SET risk_code = ? WHERE id = ?", code, id);
     long assessmentId = insertAssessment(id, assessment, operator.username());
     jdbc.update("UPDATE hd_plt_risk SET latest_assessment_id = ? WHERE id = ?", assessmentId, id);
-    for (CreateAction action : actions) insertAction(id, action, operator.username());
+    for (CreateAction action : actions) {
+      long actionId = insertAction(id, action, operator.username());
+      insertActionHistory(actionId, id, "CREATE", null, action.status(),
+          actionSnapshot(action), null, operator.username());
+    }
     audit(operator, "RISK_CREATE", "hd_plt_risk", id, code);
     return findDetail(StudyAccessScope.all(), code).orElseThrow();
   }
@@ -292,6 +318,10 @@ public class JdbcRiskRepository implements RiskRepository {
         data.description(), Date.valueOf(data.registeredDate()), data.closing(), data.closing(),
         data.statusReason(), data.status(), operator.username(), id, expectedVersion);
     if (changed == 0) throw conflict();
+    if (data.statusChanged()) {
+      insertStatusHistory(id, data.fromStatus(), data.status(), data.statusReason(),
+          operator.username());
+    }
     if (assessment != null) {
       long assessmentId = insertAssessment(id, assessment, operator.username());
       jdbc.update("""
@@ -324,8 +354,10 @@ public class JdbcRiskRepository implements RiskRepository {
                               StudyAccessScope scope, Operator operator) {
     long id = riskId(riskCode, scope);
     bumpRisk(id, expectedRiskVersion, operator.username());
-    insertAction(id, action, operator.username());
-    audit(operator, "RISK_ACTION_CREATE", "hd_plt_risk_action", id, riskCode);
+    long actionId = insertAction(id, action, operator.username());
+    insertActionHistory(actionId, id, "CREATE", null, action.status(),
+        actionSnapshot(action), null, operator.username());
+    audit(operator, "RISK_ACTION_CREATE", "hd_plt_risk_action", actionId, riskCode);
     return findDetail(scope, riskCode).orElseThrow();
   }
 
@@ -333,6 +365,11 @@ public class JdbcRiskRepository implements RiskRepository {
   public RiskDetail updateAction(String riskCode, long actionId, long expectedActionVersion,
                                  UpdateAction action, StudyAccessScope scope, Operator operator) {
     long riskId = riskId(riskCode, scope);
+    String fromStatus = jdbc.query("""
+        SELECT status_code FROM hd_plt_risk_action
+        WHERE id=? AND risk_id=? AND sys_deleted=0
+        """, (rs, row) -> rs.getString(1), actionId, riskId).stream().findFirst()
+        .orElseThrow(() -> new BusinessException("RISK_ACTION_NOT_FOUND", "风险措施不存在"));
     int changed = jdbc.update("""
         UPDATE hd_plt_risk_action SET action_description=?, owner_user_id=?,
           owner_email_snapshot=?, owner_name_snapshot=?, planned_date=?, completed_date=?,
@@ -346,6 +383,9 @@ public class JdbcRiskRepository implements RiskRepository {
     if (changed == 0) throw conflict();
     jdbc.update("UPDATE hd_plt_risk SET row_version=row_version+1, sys_update_by=? WHERE id=?",
         operator.username(), riskId);
+    String changeType = action.reopen() ? "REOPEN" : "UPDATE";
+    insertActionHistory(actionId, riskId, changeType, fromStatus, action.status(),
+        updateSnapshot(action), action.changeReason(), operator.username());
     audit(operator, "RISK_ACTION_UPDATE", "hd_plt_risk_action", actionId, riskCode);
     return findDetail(scope, riskCode).orElseThrow();
   }
@@ -354,6 +394,11 @@ public class JdbcRiskRepository implements RiskRepository {
   public RiskDetail deleteAction(String riskCode, long actionId, long expectedActionVersion,
                                  StudyAccessScope scope, Operator operator) {
     long riskId = riskId(riskCode, scope);
+    String fromStatus = jdbc.query("""
+        SELECT status_code FROM hd_plt_risk_action
+        WHERE id=? AND risk_id=? AND sys_deleted=0
+        """, (rs, row) -> rs.getString(1), actionId, riskId).stream().findFirst()
+        .orElseThrow(() -> new BusinessException("RISK_ACTION_NOT_FOUND", "风险措施不存在"));
     int changed = jdbc.update("""
         UPDATE hd_plt_risk_action SET sys_deleted=1, row_version=row_version+1,
           sys_update_by=?, sys_update_time=CURRENT_TIMESTAMP
@@ -362,6 +407,8 @@ public class JdbcRiskRepository implements RiskRepository {
     if (changed == 0) throw conflict();
     jdbc.update("UPDATE hd_plt_risk SET row_version=row_version+1, sys_update_by=? WHERE id=?",
         operator.username(), riskId);
+    insertActionHistory(actionId, riskId, "DELETE", fromStatus, fromStatus, null, null,
+        operator.username());
     audit(operator, "RISK_ACTION_DELETE", "hd_plt_risk_action", actionId, riskCode);
     return findDetail(scope, riskCode).orElseThrow();
   }
@@ -393,13 +440,17 @@ public class JdbcRiskRepository implements RiskRepository {
   }
 
   private RiskSummary summary(java.sql.ResultSet rs) throws java.sql.SQLException {
+    Date next = rs.getDate("next_planned_date");
     return new RiskSummary(rs.getString("risk_code"), rs.getLong("study_id"),
         rs.getString("study_code_snapshot"), rs.getString("program_code_snapshot"),
         rs.getString("project_code_snapshot"), rs.getString("function_line_code_snapshot"),
         rs.getString("function_line_name_snapshot"), rs.getString("risk_description"),
         rs.getLong("owner_user_id"), rs.getString("owner_name_snapshot"),
         rs.getInt("current_score"), RiskLevel.valueOf(rs.getString("current_level_code")),
-        rs.getString("status_code"), rs.getInt("action_count"), rs.getLong("row_version"),
+        rs.getString("status_code"), rs.getInt("action_count"),
+        rs.getInt("open_action_count"), rs.getInt("overdue_action_count"),
+        next == null ? null : next.toLocalDate(),
+        rs.getLong("row_version"),
         rs.getTimestamp("sys_update_time").toInstant());
   }
 
@@ -415,13 +466,126 @@ public class JdbcRiskRepository implements RiskRepository {
   }
 
   private List<ActionView> actions(long riskId) {
+    LocalDate today = LocalDate.now();
     return jdbc.query("""
         SELECT id, action_description, owner_user_id, owner_name_snapshot,
           planned_date, completed_date, status_code, completion_note, row_version
         FROM hd_plt_risk_action WHERE risk_id=? AND sys_deleted=0 ORDER BY id
-        """, (rs, row) -> new ActionView(rs.getLong(1), rs.getString(2), rs.getLong(3),
-            rs.getString(4), localDate(rs.getDate(5)), localDate(rs.getDate(6)),
-            rs.getString(7), rs.getString(8), rs.getLong(9)), riskId);
+        """, (rs, row) -> {
+          LocalDate planned = localDate(rs.getDate(5));
+          String status = rs.getString(7);
+          boolean overdue = planned != null && planned.isBefore(today)
+              && ("OPEN".equals(status) || "IN_PROGRESS".equals(status));
+          return new ActionView(rs.getLong(1), rs.getString(2), rs.getLong(3),
+              rs.getString(4), planned, localDate(rs.getDate(6)),
+              status, nullToEmpty(rs.getString(8)), rs.getLong(9), overdue);
+        }, riskId);
+  }
+
+  private List<ActivityView> activities(long riskId) {
+    List<ActivityView> items = new ArrayList<>();
+    for (AssessmentView assessment : assessments(riskId)) {
+      items.add(new ActivityView("ASSESSMENT",
+          "第 %d 次评估 · %d 分 · %s".formatted(
+              assessment.number(), assessment.score(), assessment.level().name()),
+          "%d × %d × %d · %s".formatted(assessment.impact(), assessment.likelihood(),
+              assessment.detectability(),
+              present(assessment.reason()) ? assessment.reason() : "未填写评估原因"),
+          assessment.assessedAt(), assessment.assessedBy()));
+    }
+    List<ActivityView> statusItems = jdbc.query("""
+        SELECT from_status, to_status, reason, changed_by, changed_time
+        FROM hd_plt_risk_status_history WHERE risk_id=? ORDER BY changed_time DESC, id DESC
+        """, (rs, row) -> {
+          Timestamp changed = rs.getTimestamp("changed_time");
+          return new ActivityView("STATUS",
+              "风险状态（%s → %s）".formatted(
+                  statusLabel(rs.getString("from_status")),
+                  statusLabel(rs.getString("to_status"))),
+              nullToEmpty(rs.getString("reason")),
+              changed == null ? Instant.EPOCH : changed.toInstant(),
+              nullToEmpty(rs.getString("changed_by")));
+        }, riskId);
+    items.addAll(statusItems);
+    List<ActivityView> actionItems = jdbc.query("""
+        SELECT change_type, from_status, to_status, snapshot_json, reason, changed_by, changed_time
+        FROM hd_plt_risk_action_history WHERE risk_id=? ORDER BY changed_time DESC, id DESC
+        """, (rs, row) -> {
+          String type = nullToEmpty(rs.getString("change_type"));
+          String from = rs.getString("from_status");
+          String to = rs.getString("to_status");
+          String title = switch (type) {
+            case "CREATE" -> "新增控制措施";
+            case "DELETE" -> "删除控制措施";
+            case "REOPEN" -> "重新打开措施（%s → %s）".formatted(
+                statusLabel(from), statusLabel(to));
+            default -> (from != null && from.equals(to))
+                ? "更新措施内容"
+                : "更新措施状态（%s → %s）".formatted(statusLabel(from), statusLabel(to));
+          };
+          String detail = actionHistoryDetail(
+              rs.getString("snapshot_json"), rs.getString("reason"));
+          Timestamp changed = rs.getTimestamp("changed_time");
+          return new ActivityView("ACTION", title, detail,
+              changed == null ? Instant.EPOCH : changed.toInstant(),
+              nullToEmpty(rs.getString("changed_by")));
+        }, riskId);
+    items.addAll(actionItems);
+    items.sort(Comparator.comparing(ActivityView::at).reversed());
+    return items;
+  }
+
+  private static String actionHistoryDetail(String snapshot, String reason) {
+    if (present(snapshot)) return snapshot.trim();
+    if (present(reason)) return reason.trim();
+    return "";
+  }
+
+  private static String statusLabel(String status) {
+    if (status == null || status.isBlank()) return "-";
+    return switch (status) {
+      case "OPEN" -> "未开始";
+      case "IN_PROGRESS" -> "进行中";
+      case "COMPLETED" -> "已完成";
+      case "CANCELLED" -> "已取消";
+      case "CLOSED" -> "已关闭";
+      default -> status;
+    };
+  }
+
+  private static String formatActionSnapshot(String snapshot) {
+    if (!present(snapshot)) return "";
+    String description = extractJson(snapshot, "description");
+    String owner = extractJson(snapshot, "owner");
+    String planned = extractJson(snapshot, "plannedDate");
+    String status = extractJson(snapshot, "status");
+    String note = extractJson(snapshot, "note");
+    StringJoiner parts = new StringJoiner("；");
+    if (present(description)) parts.add(description);
+    if (present(owner)) parts.add("责任人 " + owner);
+    if (present(planned)) parts.add("计划 " + planned);
+    if (present(status)) parts.add(statusLabel(status));
+    if (present(note)) parts.add("说明 " + note);
+    String formatted = parts.toString();
+    return formatted.isBlank() ? snapshot.trim() : formatted;
+  }
+
+  private static String extractJson(String json, String key) {
+    String marker = "\"" + key + "\":\"";
+    int start = json.indexOf(marker);
+    if (start < 0) return "";
+    start += marker.length();
+    StringBuilder value = new StringBuilder();
+    for (int i = start; i < json.length(); i++) {
+      char ch = json.charAt(i);
+      if (ch == '\\' && i + 1 < json.length()) {
+        value.append(json.charAt(++i));
+        continue;
+      }
+      if (ch == '"') break;
+      value.append(ch);
+    }
+    return value.toString();
   }
 
   private long insertAssessment(long riskId, Assessment assessment, String operator) {
@@ -447,16 +611,52 @@ public class JdbcRiskRepository implements RiskRepository {
     return key.getKey().longValue();
   }
 
-  private void insertAction(long riskId, CreateAction action, String operator) {
+  private long insertAction(long riskId, CreateAction action, String operator) {
+    var key = new GeneratedKeyHolder();
+    jdbc.update(connection -> {
+      PreparedStatement ps = connection.prepareStatement("""
+          INSERT INTO hd_plt_risk_action(
+            risk_id, action_description, owner_user_id, owner_email_snapshot,
+            owner_name_snapshot, planned_date, completed_date, status_code,
+            completion_note, sys_create_by, sys_update_by)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?)
+          """, new String[]{"id"});
+      ps.setLong(1, riskId);
+      ps.setString(2, action.description());
+      ps.setLong(3, action.owner().id());
+      ps.setString(4, action.owner().email());
+      ps.setString(5, action.owner().displayName());
+      Date planned = date(action.plannedDate());
+      if (planned == null) ps.setNull(6, java.sql.Types.DATE); else ps.setDate(6, planned);
+      Date completed = date(action.completedDate());
+      if (completed == null) ps.setNull(7, java.sql.Types.DATE); else ps.setDate(7, completed);
+      ps.setString(8, action.status());
+      ps.setString(9, action.completionNote());
+      ps.setString(10, operator);
+      ps.setString(11, operator);
+      return ps;
+    }, key);
+    return key.getKey().longValue();
+  }
+
+  private void insertStatusHistory(long riskId, String fromStatus, String toStatus,
+                                   String reason, String operator) {
     jdbc.update("""
-        INSERT INTO hd_plt_risk_action(
-          risk_id, action_description, owner_user_id, owner_email_snapshot,
-          owner_name_snapshot, planned_date, completed_date, status_code,
-          completion_note, sys_create_by, sys_update_by)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
-        """, riskId, action.description(), action.owner().id(), action.owner().email(),
-        action.owner().displayName(), date(action.plannedDate()), date(action.completedDate()),
-        action.status(), action.completionNote(), operator, operator);
+        INSERT INTO hd_plt_risk_status_history(
+          risk_id, from_status, to_status, reason, changed_by)
+        VALUES (?,?,?,?,?)
+        """, riskId, fromStatus, toStatus, reason, operator);
+  }
+
+  private void insertActionHistory(long actionId, long riskId, String changeType,
+                                   String fromStatus, String toStatus, String snapshot,
+                                   String reason, String operator) {
+    jdbc.update("""
+        INSERT INTO hd_plt_risk_action_history(
+          action_id, risk_id, change_type, from_status, to_status,
+          snapshot_json, reason, changed_by)
+        VALUES (?,?,?,?,?,?,?,?)
+        """, actionId, riskId, changeType, fromStatus, toStatus, snapshot, reason, operator);
   }
 
   private long riskId(String riskCode, StudyAccessScope scope) {
@@ -484,10 +684,38 @@ public class JdbcRiskRepository implements RiskRepository {
         """, operator.id(), operator.username(), action, table, id, code);
   }
 
+  private static String actionSnapshot(CreateAction action) {
+    return actionSnapshot(action.description(), action.owner().displayName(),
+        action.plannedDate(), action.status(), action.completionNote());
+  }
+
+  private static String updateSnapshot(UpdateAction action) {
+    return actionSnapshot(action.description(), action.owner().displayName(),
+        action.plannedDate(), action.status(), action.completionNote());
+  }
+
+  private static String actionSnapshot(String description, String owner, LocalDate plannedDate,
+                                       String status, String completionNote) {
+    StringJoiner parts = new StringJoiner(",");
+    parts.add("\"description\":\"" + escape(description) + "\"");
+    parts.add("\"owner\":\"" + escape(owner) + "\"");
+    parts.add("\"plannedDate\":\"" + (plannedDate == null ? "" : plannedDate) + "\"");
+    parts.add("\"status\":\"" + escape(status) + "\"");
+    if (present(completionNote)) {
+      parts.add("\"note\":\"" + escape(completionNote) + "\"");
+    }
+    return "{" + parts + "}";
+  }
+
+  private static String escape(String value) {
+    return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"");
+  }
+
   private static BusinessException conflict() {
     return new BusinessException("RISK_VERSION_CONFLICT", "风险已被其他用户修改，请刷新后重试");
   }
   private static boolean present(String value) { return value != null && !value.isBlank(); }
+  private static String nullToEmpty(String value) { return value == null ? "" : value; }
   private static Date date(LocalDate value) { return value == null ? null : Date.valueOf(value); }
   private static LocalDate localDate(Date value) { return value == null ? null : value.toLocalDate(); }
   private record Filter(String sql, Object[] args) {}

@@ -131,6 +131,9 @@ export interface RiskSummary {
   level: RiskLevel
   status: RiskStatus
   actionCount: number
+  openActionCount: number
+  overdueActionCount: number
+  nextPlannedDate: string | null
   version: number
   updatedAt: string
 }
@@ -158,14 +161,25 @@ export interface RiskAction {
   status: RiskActionStatus
   completionNote: string
   version: number
+  overdue: boolean
+}
+
+export interface RiskActivity {
+  type: 'ASSESSMENT' | 'STATUS' | 'ACTION' | string
+  title: string
+  detail: string
+  at: string
+  by: string
 }
 
 export interface RiskDetail {
   risk: RiskSummary
   registeredDate: string
   closeReason: string
+  closedTime: string | null
   assessments: RiskAssessment[]
   actions: RiskAction[]
+  activities: RiskActivity[]
 }
 
 export interface RiskPage {
@@ -180,6 +194,8 @@ export interface RiskQuery {
   status?: RiskStatus | ''
   level?: RiskLevel | ''
   studyId?: number
+  ownerUserId?: number
+  overdueOnly?: boolean
   sortBy?: 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate'
   sortOrder?: 'asc' | 'desc'
   page?: number
@@ -219,6 +235,7 @@ export interface RiskActionInput {
   completedDate?: string
   status?: RiskActionStatus
   completionNote?: string
+  changeReason?: string
 }
 export interface CreateRiskInput {
   studyId: number

@@ -99,17 +99,31 @@ class RiskManagementIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {"expectedVersion":0,"action":{"description":"准备备选中心",
+                 "ownerUserId":%d,"plannedDate":"2026-08-20","status":"IN_PROGRESS"}}
+                """.formatted(ownerId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.actions[1].status").value("IN_PROGRESS"))
+        .andExpect(jsonPath("$.actions[1].version").value(1));
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}/actions/{actionId}",
+            riskCode, actionId)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"expectedVersion":1,"action":{"description":"准备备选中心",
                  "ownerUserId":%d,"plannedDate":"2026-08-20",
                  "completedDate":"2026-08-10","status":"COMPLETED",
                  "completionNote":"备选中心已确认"}}
                 """.formatted(ownerId)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.actions[1].status").value("COMPLETED"))
-        .andExpect(jsonPath("$.actions[1].version").value(1));
+        .andExpect(jsonPath("$.actions[1].version").value(2))
+        .andExpect(jsonPath("$.activities[0].type").isString());
 
     mvc.perform(delete("/api/v1/risk-management/risks/{riskCode}/actions/{actionId}",
             riskCode, actionId)
-            .param("expectedVersion", "1")
+            .param("expectedVersion", "2")
             .with(user(operator).authorities(authority("risk.update")))
             .with(csrf()))
         .andExpect(status().isOk())
@@ -121,9 +135,165 @@ class RiskManagementIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data[0].riskCode").value(riskCode))
         .andExpect(jsonPath("$.data[0].actionCount").value(1))
+        .andExpect(jsonPath("$.data[0].openActionCount").value(1))
         .andExpect(jsonPath("$.stats.total").value(1))
         .andExpect(jsonPath("$.stats.open").value(1))
         .andExpect(jsonPath("$.stats.high").value(1));
+  }
+
+  @Test
+  void rejectsCloseWhileActionsAreActiveAndLocksActionsWhenClosed() throws Exception {
+    String operator = "risk.tracker@example.com";
+    long ownerId = seedUser(operator, "风险跟踪人");
+    long studyId = seedStudy("RISK-STUDY-TRACK");
+    assignToStudy(studyId, ownerId);
+    long functionLineId = jdbc.queryForObject(
+        "SELECT id FROM hd_plt_function_line WHERE function_code = 'PM'", Long.class);
+
+    String created = mvc.perform(post("/api/v1/risk-management/risks")
+            .with(user(operator).authorities(authority("risk.create")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"studyId":%d,"functionLineId":%d,"ownerUserId":%d,
+                 "description":"需先完成措施再关闭","registeredDate":"2026-07-22",
+                 "assessment":{"impact":3,"likelihood":2,"detectability":2,"reason":"初始"},
+                 "actions":[{"description":"跟踪启动材料","ownerUserId":%d,
+                   "plannedDate":"2026-01-01","status":"OPEN"}]}
+                """.formatted(studyId, functionLineId, ownerId, ownerId)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.actions[0].overdue").value(true))
+        .andExpect(jsonPath("$.risk.openActionCount").value(1))
+        .andExpect(jsonPath("$.risk.overdueActionCount").value(1))
+        .andReturn().getResponse().getContentAsString();
+    var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(created);
+    String riskCode = tree.get("risk").get("riskCode").asText();
+    long actionId = tree.get("actions").get(0).get("id").asLong();
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}", riskCode)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(updateBody(0, studyId, functionLineId, ownerId, "CLOSED", "尝试关闭")))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("未完成的控制措施")));
+
+    mvc.perform(get("/api/v1/risk-management/risks")
+            .param("overdueOnly", "true")
+            .with(user(operator).authorities(authority("risk.read"))))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data[0].riskCode").value(riskCode));
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}/actions/{actionId}",
+            riskCode, actionId)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"expectedVersion":0,"action":{"description":"跟踪启动材料",
+                 "ownerUserId":%d,"plannedDate":"2026-01-01","status":"IN_PROGRESS"}}
+                """.formatted(ownerId)))
+        .andExpect(status().isOk());
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}/actions/{actionId}",
+            riskCode, actionId)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"expectedVersion":1,"action":{"description":"跟踪启动材料",
+                 "ownerUserId":%d,"plannedDate":"2026-01-01",
+                 "completedDate":"2026-07-20","status":"COMPLETED",
+                 "completionNote":"材料已齐"}}
+                """.formatted(ownerId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.actions[0].overdue").value(false));
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}", riskCode)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(updateBody(2, studyId, functionLineId, ownerId, "CLOSED", "措施已闭环")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.risk.status").value("CLOSED"))
+        .andExpect(jsonPath("$.closedTime").isNotEmpty())
+        .andExpect(jsonPath("$.activities[?(@.type=='STATUS')]").isNotEmpty());
+
+    mvc.perform(post("/api/v1/risk-management/risks/{riskCode}/actions", riskCode)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"expectedRiskVersion":3,"action":{"description":"不应新增",
+                 "ownerUserId":%d,"plannedDate":"2026-08-01","status":"OPEN"}}
+                """.formatted(ownerId)))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("已关闭")));
+  }
+
+  @Test
+  void allowsOpenToCompletedAndRejectsMissingCancelNoteOrIllegalJump() throws Exception {
+    String operator = "risk.guard@example.com";
+    long ownerId = seedUser(operator, "风险守卫");
+    long studyId = seedStudy("RISK-STUDY-GUARD");
+    assignToStudy(studyId, ownerId);
+    long functionLineId = jdbc.queryForObject(
+        "SELECT id FROM hd_plt_function_line WHERE function_code = 'PM'", Long.class);
+
+    String created = mvc.perform(post("/api/v1/risk-management/risks")
+            .with(user(operator).authorities(authority("risk.create")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"studyId":%d,"functionLineId":%d,"ownerUserId":%d,
+                 "description":"校验措施状态机","registeredDate":"2026-07-22",
+                 "assessment":{"impact":2,"likelihood":2,"detectability":2,"reason":"初始"},
+                 "actions":[{"description":"推进措施","ownerUserId":%d,
+                   "plannedDate":"2026-08-01","status":"OPEN"}]}
+                """.formatted(studyId, functionLineId, ownerId, ownerId)))
+        .andExpect(status().isCreated())
+        .andReturn().getResponse().getContentAsString();
+    var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(created);
+    String riskCode = tree.get("risk").get("riskCode").asText();
+    long actionId = tree.get("actions").get(0).get("id").asLong();
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}/actions/{actionId}",
+            riskCode, actionId)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"expectedVersion":0,"action":{"description":"推进措施",
+                 "ownerUserId":%d,"plannedDate":"2026-08-01","status":"CANCELLED"}}
+                """.formatted(ownerId)))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("取消说明")));
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}/actions/{actionId}",
+            riskCode, actionId)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"expectedVersion":0,"action":{"description":"推进措施",
+                 "ownerUserId":%d,"plannedDate":"2026-08-01",
+                 "completedDate":"2026-08-01","status":"COMPLETED",
+                 "completionNote":"未开始可直接完成"}}
+                """.formatted(ownerId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.actions[0].status").value("COMPLETED"));
+
+    mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}/actions/{actionId}",
+            riskCode, actionId)
+            .with(user(operator).authorities(authority("risk.update")))
+            .with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"expectedVersion":1,"action":{"description":"推进措施",
+                 "ownerUserId":%d,"plannedDate":"2026-08-01","status":"OPEN"}}
+                """.formatted(ownerId)))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("不允许")));
   }
 
   @Test

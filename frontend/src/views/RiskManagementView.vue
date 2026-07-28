@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { RiskFormOptions, RiskLevel, RiskPage, RiskStatus, RiskSummary } from '../api/types'
 import ListPagination, { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import RiskEditorDrawer from '../components/RiskEditorDrawer.vue'
 import {
+  riskActionSummaryLabel,
   riskLevelLabel,
   riskLevelTone,
   riskScoreRuleLines,
   riskStatusLabel,
 } from '../domain/risk-labels'
 import { session } from '../session'
-import { useClientSort } from '../composables/useClientSort'
 
+const route = useRoute()
+const router = useRouter()
 const result = ref<RiskPage>()
 const formOptions = ref<RiskFormOptions>()
 const loading = ref(true)
@@ -25,6 +28,10 @@ const filters = reactive({
   functionCode: '',
   status: '' as RiskStatus | '',
   level: '' as RiskLevel | '',
+  studyId: undefined as number | undefined,
+  overdueOnly: false,
+  sortBy: 'updatedAt' as 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate',
+  sortOrder: 'desc' as 'asc' | 'desc',
   page: 1,
   pageSize: DEFAULT_PAGE_SIZE,
 })
@@ -33,38 +40,27 @@ const scoreTip = ref<{ left: number; top: number } | null>(null)
 const permissions = computed(() => session.currentUser.value?.permissions ?? [])
 const canCreate = computed(() => permissions.value.includes('risk.create'))
 const functionOptions = computed(() => formOptions.value?.functions ?? [])
-const scoreRuleLines = computed(() =>
-  riskScoreRuleLines(formOptions.value?.scoringRule),
-)
-
+const studyOptions = computed(() => formOptions.value?.studies ?? [])
+const scoreRuleLines = computed(() => riskScoreRuleLines(formOptions.value?.scoringRule))
 const risks = computed(() => result.value?.data ?? [])
-const {
-  sorted: sortedRisks,
-  registerMany: registerRiskSortColumns,
-  toggle: toggleRiskSort,
-  getDirection: riskSortDirection,
-} = useClientSort({ items: risks })
-
-registerRiskSortColumns([
-  { key: 'riskCode', resolver: (r) => r.riskCode, type: 'string' },
-  { key: 'studyCode', resolver: (r) => r.studyCode, type: 'string' },
-  { key: 'program', resolver: (r) => r.programCode, type: 'string' },
-  { key: 'functionLine', resolver: (r) => r.functionName, type: 'string' },
-  { key: 'description', resolver: (r) => r.description, type: 'string' },
-  { key: 'owner', resolver: (r) => r.ownerName, type: 'string' },
-  { key: 'score', resolver: (r) => r.score, type: 'number' },
-  { key: 'level', resolver: (r) => r.level, type: 'string' },
-  { key: 'actions', resolver: (r) => r.actionCount, type: 'number' },
-  { key: 'status', resolver: (r) => r.status, type: 'string' },
-  { key: 'updatedAt', resolver: (r) => r.updatedAt, type: 'date' },
-])
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
     const [page, options] = await Promise.all([
-      apiClient.listRisks({ ...filters }),
+      apiClient.listRisks({
+        query: filters.query || undefined,
+        functionCode: filters.functionCode || undefined,
+        status: filters.status || undefined,
+        level: filters.level || undefined,
+        studyId: filters.studyId,
+        overdueOnly: filters.overdueOnly || undefined,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+        page: filters.page,
+        pageSize: filters.pageSize,
+      }),
       formOptions.value ? Promise.resolve(formOptions.value) : apiClient.getRiskFormOptions(),
     ])
     result.value = page
@@ -84,17 +80,39 @@ function quickFilter(type: 'total' | 'open' | 'high' | 'medium') {
 }
 function openCreate() { selectedRiskCode.value = undefined; drawerOpen.value = true }
 function openRisk(risk: RiskSummary) { selectedRiskCode.value = risk.riskCode; drawerOpen.value = true }
-function closeDrawer() { drawerOpen.value = false; selectedRiskCode.value = undefined }
+function closeDrawer() {
+  drawerOpen.value = false
+  selectedRiskCode.value = undefined
+  if (route.query.riskCode) {
+    const next = { ...route.query }
+    delete next.riskCode
+    void router.replace({ query: next })
+  }
+}
 async function saved() { closeDrawer(); await load() }
 function changePage(page: number) {
   filters.page = page
   void load()
 }
-
 function changePageSize(pageSize: number) {
   filters.pageSize = pageSize
   filters.page = 1
   void load()
+}
+
+function toggleSort(column: typeof filters.sortBy) {
+  if (filters.sortBy === column) {
+    filters.sortOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc'
+  } else {
+    filters.sortBy = column
+    filters.sortOrder = column === 'updatedAt' ? 'desc' : 'asc'
+  }
+  applyFilters()
+}
+
+function sortClass(column: typeof filters.sortBy) {
+  if (filters.sortBy !== column) return 'sortable'
+  return filters.sortOrder === 'asc' ? 'sortable sort-asc' : 'sortable sort-desc'
 }
 
 function showScoreTip(event: FocusEvent | MouseEvent) {
@@ -108,17 +126,75 @@ function showScoreTip(event: FocusEvent | MouseEvent) {
 }
 function hideScoreTip() { scoreTip.value = null }
 
-onMounted(load)
+function formatUpdatedAt(value: string) {
+  try {
+    return new Date(value).toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    })
+  } catch {
+    return value
+  }
+}
+
+function openFromQuery() {
+  const code = typeof route.query.riskCode === 'string' ? route.query.riskCode : ''
+  if (code) {
+    selectedRiskCode.value = code
+    drawerOpen.value = true
+  }
+}
+
+watch(() => route.query.riskCode, () => openFromQuery())
+onMounted(async () => {
+  await load()
+  openFromQuery()
+})
 </script>
 
 <template>
   <section class="page-content risk-page">
     <form class="page-toolbar risk-toolbar" role="search" @submit.prevent="applyFilters">
       <div class="toolbar-filters">
-        <label class="inline-search"><span class="sr-only">搜索风险</span><input v-model="filters.query" type="search" placeholder="搜索编号 / 描述 / Owner / Program"></label>
-        <label><span class="sr-only">功能线</span><select v-model="filters.functionCode" @change="applyFilters"><option value="">全部功能线</option><option v-for="item in functionOptions" :key="item.code" :value="item.code">{{ item.name }}</option></select></label>
-        <label><span class="sr-only">风险状态</span><select v-model="filters.status" @change="applyFilters"><option value="">全部状态</option><option value="OPEN">未关闭</option><option value="CLOSED">已关闭</option></select></label>
-        <label><span class="sr-only">风险等级</span><select v-model="filters.level" @change="applyFilters"><option value="">全部等级</option><option value="HIGH">高危</option><option value="MEDIUM">中风险</option><option value="LOW">低风险</option></select></label>
+        <label class="inline-search">
+          <span class="sr-only">搜索风险</span>
+          <input v-model="filters.query" type="search" placeholder="搜索编号 / 描述 / Owner / Program">
+        </label>
+        <label>
+          <span class="sr-only">Study</span>
+          <select v-model="filters.studyId" @change="applyFilters">
+            <option :value="undefined">全部 Study</option>
+            <option v-for="item in studyOptions" :key="item.id" :value="item.id">{{ item.studyCode }}</option>
+          </select>
+        </label>
+        <label>
+          <span class="sr-only">功能线</span>
+          <select v-model="filters.functionCode" @change="applyFilters">
+            <option value="">全部功能线</option>
+            <option v-for="item in functionOptions" :key="item.code" :value="item.code">{{ item.name }}</option>
+          </select>
+        </label>
+        <label>
+          <span class="sr-only">风险状态</span>
+          <select v-model="filters.status" @change="applyFilters">
+            <option value="">全部状态</option>
+            <option value="OPEN">未关闭</option>
+            <option value="CLOSED">已关闭</option>
+          </select>
+        </label>
+        <label>
+          <span class="sr-only">风险等级</span>
+          <select v-model="filters.level" @change="applyFilters">
+            <option value="">全部等级</option>
+            <option value="HIGH">高危</option>
+            <option value="MEDIUM">中风险</option>
+            <option value="LOW">低风险</option>
+          </select>
+        </label>
+        <label class="risk-overdue-filter">
+          <input v-model="filters.overdueOnly" type="checkbox" @change="applyFilters">
+          仅看逾期
+        </label>
         <button class="secondary-button" type="submit">搜索</button>
       </div>
       <button v-if="canCreate" class="primary-button" type="button" @click="openCreate">＋ 新增风险</button>
@@ -142,35 +218,70 @@ onMounted(load)
     <PageState :loading :error :empty="!result?.data.length" empty-title="暂无风险记录">
       <div class="data-card risk-table-card">
         <table class="data-table risk-table">
-          <thead><tr>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('riskCode') === 'asc', 'sort-desc': riskSortDirection('riskCode') === 'desc' }" @click="toggleRiskSort('riskCode')">Risk ID</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('studyCode') === 'asc', 'sort-desc': riskSortDirection('studyCode') === 'desc' }" @click="toggleRiskSort('studyCode')">Study No.</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('program') === 'asc', 'sort-desc': riskSortDirection('program') === 'desc' }" @click="toggleRiskSort('program')">Program / Project</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('functionLine') === 'asc', 'sort-desc': riskSortDirection('functionLine') === 'desc' }" @click="toggleRiskSort('functionLine')">功能线</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('description') === 'asc', 'sort-desc': riskSortDirection('description') === 'desc' }" @click="toggleRiskSort('description')">风险描述</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('owner') === 'asc', 'sort-desc': riskSortDirection('owner') === 'desc' }" @click="toggleRiskSort('owner')">Owner</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('score') === 'asc', 'sort-desc': riskSortDirection('score') === 'desc' }" @click="toggleRiskSort('score')">评分</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('level') === 'asc', 'sort-desc': riskSortDirection('level') === 'desc' }" @click="toggleRiskSort('level')">等级</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('actions') === 'asc', 'sort-desc': riskSortDirection('actions') === 'desc' }" @click="toggleRiskSort('actions')">措施</th>
-            <th class="sortable" :class="{ 'sort-asc': riskSortDirection('status') === 'asc', 'sort-desc': riskSortDirection('status') === 'desc' }" @click="toggleRiskSort('status')">Status</th>
-          </tr></thead>
-          <tbody><tr v-for="risk in sortedRisks" :key="risk.riskCode" tabindex="0" @click="openRisk(risk)" @keydown.enter="openRisk(risk)">
-            <td><button class="risk-link mono" type="button" @click.stop="openRisk(risk)">{{ risk.riskCode }}</button></td>
-            <td class="mono">{{ risk.studyCode }}</td><td><strong>{{ risk.programCode }}</strong><small>{{ risk.projectCode }}</small></td><td>{{ risk.functionName }}</td><td class="risk-description">{{ risk.description }}</td><td>{{ risk.ownerName }}</td>
-            <td>
-              <span
-                class="risk-score mono"
-                tabindex="0"
-                aria-describedby="risk-score-rule-tip"
-                @mouseenter="showScoreTip"
-                @mouseleave="hideScoreTip"
-                @focus="showScoreTip"
-                @blur="hideScoreTip"
-                @click.stop
-              >{{ risk.score }}</span>
-            </td>
-            <td><span class="status-chip" :class="`status-chip--${riskLevelTone(risk.level)}`">{{ riskLevelLabel(risk.level) }}</span></td><td><span v-if="risk.actionCount" class="status-chip status-chip--blue">含 {{ risk.actionCount }} 项</span><span v-else>—</span></td><td><span class="status-chip" :class="risk.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">{{ riskStatusLabel(risk.status) }}</span></td>
-          </tr></tbody>
+          <thead>
+            <tr>
+              <th :class="sortClass('riskCode')" @click="toggleSort('riskCode')">Risk ID</th>
+              <th :class="sortClass('studyCode')" @click="toggleSort('studyCode')">Study No.</th>
+              <th>Program / Project</th>
+              <th>功能线</th>
+              <th>风险描述</th>
+              <th>Owner</th>
+              <th :class="sortClass('score')" @click="toggleSort('score')">评分</th>
+              <th :class="sortClass('level')" @click="toggleSort('level')">等级</th>
+              <th>措施</th>
+              <th>Status</th>
+              <th :class="sortClass('updatedAt')" @click="toggleSort('updatedAt')">更新时间</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="risk in risks"
+              :key="risk.riskCode"
+              tabindex="0"
+              @click="openRisk(risk)"
+              @keydown.enter="openRisk(risk)"
+            >
+              <td>
+                <button class="risk-link mono" type="button" @click.stop="openRisk(risk)">{{ risk.riskCode }}</button>
+              </td>
+              <td class="mono">{{ risk.studyCode }}</td>
+              <td><strong>{{ risk.programCode }}</strong><small>{{ risk.projectCode }}</small></td>
+              <td>{{ risk.functionName }}</td>
+              <td class="risk-description">{{ risk.description }}</td>
+              <td>{{ risk.ownerName }}</td>
+              <td>
+                <span
+                  class="risk-score mono"
+                  tabindex="0"
+                  aria-describedby="risk-score-rule-tip"
+                  @mouseenter="showScoreTip"
+                  @mouseleave="hideScoreTip"
+                  @focus="showScoreTip"
+                  @blur="hideScoreTip"
+                  @click.stop
+                >{{ risk.score }}</span>
+              </td>
+              <td>
+                <span class="status-chip" :class="`status-chip--${riskLevelTone(risk.level)}`">
+                  {{ riskLevelLabel(risk.level) }}
+                </span>
+              </td>
+              <td>
+                <span
+                  v-if="risk.actionCount"
+                  class="status-chip"
+                  :class="risk.overdueActionCount ? 'status-chip--red' : 'status-chip--blue'"
+                >{{ riskActionSummaryLabel(risk) }}</span>
+                <span v-else>—</span>
+              </td>
+              <td>
+                <span class="status-chip" :class="risk.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">
+                  {{ riskStatusLabel(risk.status) }}
+                </span>
+              </td>
+              <td class="mono">{{ formatUpdatedAt(risk.updatedAt) }}</td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </PageState>

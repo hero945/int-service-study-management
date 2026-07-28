@@ -15,10 +15,11 @@ public class RiskApiService implements RiskApi {
 
   @Override
   public PageResponse list(String username, String query, String functionCode, String status,
-                           String level, Long studyId, String sortBy, String sortOrder,
-                           int page, int pageSize) {
+                           String level, Long studyId, Long ownerUserId, Boolean overdueOnly,
+                           String sortBy, String sortOrder, int page, int pageSize) {
     var result = manager.list(username, new RiskRepository.RiskQuery(
-        query, functionCode, status, level, studyId, sortBy, sortOrder, page, pageSize));
+        query, functionCode, status, level, studyId, ownerUserId, overdueOnly,
+        sortBy, sortOrder, page, pageSize));
     int pages = Math.max(1, (int) Math.ceil((double) result.totalItems() / result.pageSize()));
     return new PageResponse(result.data().stream().map(this::summary).toList(),
         new StatsResponse(result.stats().total(), result.stats().open(),
@@ -75,16 +76,20 @@ public class RiskApiService implements RiskApi {
     return new SummaryResponse(item.riskCode(), item.studyId(), item.studyCode(),
         item.programCode(), item.projectCode(), item.functionCode(), item.functionName(),
         item.description(), item.ownerUserId(), item.ownerName(), item.score(), item.level().name(),
-        item.status(), item.actionCount(), item.version(), item.updatedAt());
+        item.status(), item.actionCount(), item.openActionCount(), item.overdueActionCount(),
+        item.nextPlannedDate(), item.version(), item.updatedAt());
   }
   private DetailResponse detail(RiskRepository.RiskDetail item) {
     return new DetailResponse(summary(item.risk()), item.registeredDate(), item.closeReason(),
+        item.closedTime(),
         item.assessments().stream().map(a -> new AssessmentResponse(a.id(), a.number(),
             a.impact(), a.likelihood(), a.detectability(), a.score(), a.level().name(),
             a.reason(), a.assessedBy(), a.assessedAt())).toList(),
         item.actions().stream().map(a -> new ActionResponse(a.id(), a.description(),
             a.ownerUserId(), a.ownerName(), a.plannedDate(), a.completedDate(), a.status(),
-            a.completionNote(), a.version())).toList());
+            a.completionNote(), a.version(), a.overdue())).toList(),
+        item.activities().stream().map(a -> new ActivityResponse(
+            a.type(), a.title(), a.detail(), a.at(), a.by())).toList());
   }
   private static RiskManager.AssessmentCommand assessment(AssessmentRequest input) {
     return new RiskManager.AssessmentCommand(
@@ -95,6 +100,7 @@ public class RiskApiService implements RiskApi {
   }
   private static RiskManager.ActionCommand action(ActionInput input) {
     return new RiskManager.ActionCommand(input.description(), input.ownerUserId(),
-        input.plannedDate(), input.completedDate(), input.status(), input.completionNote());
+        input.plannedDate(), input.completedDate(), input.status(), input.completionNote(),
+        input.changeReason());
   }
 }

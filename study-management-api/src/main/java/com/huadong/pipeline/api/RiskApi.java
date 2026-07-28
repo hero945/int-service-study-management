@@ -12,8 +12,8 @@ import java.util.List;
 
 public interface RiskApi {
   PageResponse list(String username, String query, String functionCode, String status,
-                    String level, Long studyId, String sortBy, String sortOrder,
-                    int page, int pageSize);
+                    String level, Long studyId, Long ownerUserId, Boolean overdueOnly,
+                    String sortBy, String sortOrder, int page, int pageSize);
   DetailResponse detail(String username, String riskCode);
   FormOptionsResponse formOptions(String username, Long studyId);
   DetailResponse create(@Valid CreateRequest request, String username);
@@ -28,7 +28,8 @@ public interface RiskApi {
   record SummaryResponse(String riskCode, long studyId, String studyCode, String programCode,
       String projectCode, String functionCode, String functionName, String description,
       long ownerUserId, String ownerName, int score, String level, String status,
-      int actionCount, long version, Instant updatedAt) {}
+      int actionCount, int openActionCount, int overdueActionCount, LocalDate nextPlannedDate,
+      long version, Instant updatedAt) {}
   record StatsResponse(long total, long open, long high, long medium) {}
   record PaginationResponse(int page, int pageSize, long totalItems, int totalPages) {}
   record PageResponse(List<SummaryResponse> data, StatsResponse stats,
@@ -38,9 +39,11 @@ public interface RiskApi {
       String assessedBy, Instant assessedAt) {}
   record ActionResponse(long id, String description, long ownerUserId, String ownerName,
       LocalDate plannedDate, LocalDate completedDate, String status,
-      String completionNote, long version) {}
+      String completionNote, long version, boolean overdue) {}
+  record ActivityResponse(String type, String title, String detail, Instant at, String by) {}
   record DetailResponse(SummaryResponse risk, LocalDate registeredDate, String closeReason,
-      List<AssessmentResponse> assessments, List<ActionResponse> actions) {}
+      Instant closedTime, List<AssessmentResponse> assessments, List<ActionResponse> actions,
+      List<ActivityResponse> activities) {}
   record StudyOptionResponse(long id, String studyCode, String programCode, String projectCode) {}
   record FunctionOptionResponse(long id, String code, String name) {}
   record MemberOptionResponse(long id, String email, String displayName) {}
@@ -61,7 +64,8 @@ public interface RiskApi {
       LocalDate plannedDate,
       LocalDate completedDate,
       @Size(max = 32) String status,
-      @Size(max = 2000) String completionNote) {}
+      @Size(max = 2000) String completionNote,
+      @Size(max = 2000) String changeReason) {}
   record CreateRequest(
       @Min(1) long studyId,
       @Min(1) long functionLineId,

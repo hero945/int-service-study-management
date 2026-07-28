@@ -33,7 +33,8 @@ public interface RiskRepository {
                           StudyAccessScope scope, Operator operator);
 
   record RiskQuery(String query, String functionCode, String status, String level,
-                   Long studyId, String sortBy, String sortOrder, int page, int pageSize) {}
+                   Long studyId, Long ownerUserId, Boolean overdueOnly,
+                   String sortBy, String sortOrder, int page, int pageSize) {}
   record RiskPage(List<RiskSummary> data, Stats stats, int page, int pageSize,
                   long totalItems) {}
   record Stats(long total, long open, long high, long medium) {}
@@ -41,15 +42,18 @@ public interface RiskRepository {
                      String projectCode, String functionCode, String functionName,
                      String description, long ownerUserId, String ownerName,
                      int score, RiskLevel level, String status, int actionCount,
+                     int openActionCount, int overdueActionCount, LocalDate nextPlannedDate,
                      long version, Instant updatedAt) {}
   record RiskDetail(RiskSummary risk, LocalDate registeredDate, String closeReason,
-                    List<AssessmentView> assessments, List<ActionView> actions) {}
+                    Instant closedTime, List<AssessmentView> assessments,
+                    List<ActionView> actions, List<ActivityView> activities) {}
   record AssessmentView(long id, int number, int impact, int likelihood, int detectability,
                         int score, RiskLevel level, String reason, String assessedBy,
                         Instant assessedAt) {}
   record ActionView(long id, String description, long ownerUserId, String ownerName,
                     LocalDate plannedDate, LocalDate completedDate, String status,
-                    String completionNote, long version) {}
+                    String completionNote, long version, boolean overdue) {}
+  record ActivityView(String type, String title, String detail, Instant at, String by) {}
   record StudyOption(long id, String studyCode, String programCode, String projectCode) {}
   record FunctionOption(long id, String code, String name) {}
   record MemberOption(long id, String email, String displayName) {}
@@ -64,10 +68,12 @@ public interface RiskRepository {
   record CreateRisk(StudyContext study, FunctionOption function, MemberOption owner,
                     String description, LocalDate registeredDate) {}
   record UpdateRisk(StudyContext study, FunctionOption function, MemberOption owner,
-                    String description, LocalDate registeredDate, String status,
-                    boolean closing, String statusReason) {}
+                    String description, LocalDate registeredDate, String fromStatus,
+                    String status, boolean statusChanged, boolean closing,
+                    String statusReason) {}
   record CreateAction(String description, MemberOption owner, LocalDate plannedDate,
                       LocalDate completedDate, String status, String completionNote) {}
   record UpdateAction(String description, MemberOption owner, LocalDate plannedDate,
-                      LocalDate completedDate, String status, String completionNote) {}
+                      LocalDate completedDate, String status, String completionNote,
+                      String changeReason, boolean reopen) {}
 }

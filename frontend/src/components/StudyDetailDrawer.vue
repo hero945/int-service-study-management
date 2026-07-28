@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { Study, MilestonePage, RiskPage, TeamMatrixPage } from '../api/types'
 import PageState from '../components/PageState.vue'
@@ -12,6 +13,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: [] }>()
+const router = useRouter()
 
 type TabKey = 'milestone' | 'team' | 'risk'
 const activeTab = ref<TabKey>('milestone')
@@ -235,6 +237,11 @@ const tabs = computed(() => {
                     <span class="risk-tag mono">Score {{ r.score }}</span>
                   </div>
                   <div class="risk-card-owner">Owner：{{ r.ownerName }}</div>
+                  <button
+                    class="text-button"
+                    type="button"
+                    @click="router.push({ path: '/risks', query: { riskCode: r.riskCode } }); emit('close')"
+                  >在风险管理中打开</button>
                 </div>
               </div>
             </PageState>

@@ -65,3 +65,38 @@ export function riskScoreRuleLines(
     `等级：≤${rule.lowMax} 低风险 · ${rule.lowMax + 1}–${rule.mediumMax} 中风险 · ≥${rule.mediumMax + 1} 高危`,
   ]
 }
+
+/** a/b/c 量表旁说明 */
+export function riskFactorScaleHint(): string {
+  return '1=很低 · 2=低 · 3=中 · 4=高 · 5=很高'
+}
+
+/** 列表措施摘要 */
+export function riskActionSummaryLabel(risk: {
+  actionCount: number
+  openActionCount: number
+  overdueActionCount: number
+}): string {
+  if (!risk.actionCount) return '—'
+  if (!risk.openActionCount) return '全部完成'
+  const parts = [`未完成 ${risk.openActionCount}`]
+  if (risk.overdueActionCount) parts.push(`逾期 ${risk.overdueActionCount}`)
+  return parts.join(' · ')
+}
+
+/** 措施允许的下一状态（与后端状态机一致） */
+export function allowedNextActionStatuses(
+  current: string,
+): Array<'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'> {
+  switch (current) {
+    case 'OPEN':
+      return ['IN_PROGRESS', 'COMPLETED', 'CANCELLED']
+    case 'IN_PROGRESS':
+      return ['COMPLETED', 'CANCELLED']
+    case 'COMPLETED':
+    case 'CANCELLED':
+      return ['IN_PROGRESS']
+    default:
+      return ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
+  }
+}

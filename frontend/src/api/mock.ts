@@ -249,22 +249,52 @@ function deriveOverviewCompletionFromStage(
 
 let nextRiskId = 19
 let nextRiskActionId = 2
+
+function actionOverdue(plannedDate: string | null | undefined, status: string): boolean {
+  if (!plannedDate || status === 'COMPLETED' || status === 'CANCELLED') return false
+  return plannedDate < new Date().toISOString().slice(0, 10)
+}
+
+function syncRiskTracking(detail: RiskDetail) {
+  const open = detail.actions.filter(item => item.status === 'OPEN' || item.status === 'IN_PROGRESS')
+  detail.risk.actionCount = detail.actions.length
+  detail.risk.openActionCount = open.length
+  detail.risk.overdueActionCount = open.filter(item => actionOverdue(item.plannedDate, item.status)).length
+  const dates = open.map(item => item.plannedDate).filter((value): value is string => !!value).sort()
+  detail.risk.nextPlannedDate = dates[0] ?? null
+  for (const action of detail.actions) {
+    action.overdue = actionOverdue(action.plannedDate, action.status)
+  }
+  if (!detail.activities) detail.activities = []
+  if (detail.closedTime === undefined) detail.closedTime = null
+}
+
 const mockRisks: RiskDetail[] = [{
   risk: {
     riskCode: 'RSK-2026-000018', studyId: 3, studyCode: 'HDM1005-302',
     programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'RA',
-    functionName: '??', description: '??????????????',
-    ownerUserId: 2, ownerName: '??', score: 48, level: 'HIGH', status: 'OPEN',
-    actionCount: 1, version: 0, updatedAt: '2026-07-22T09:00:00Z',
+    functionName: '注册', description: '监管沟通窗口可能影响计划节点',
+    ownerUserId: 2, ownerName: '张伟', score: 48, level: 'HIGH', status: 'OPEN',
+    actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-15',
+    version: 0, updatedAt: '2026-07-22T09:00:00Z',
   },
-  registeredDate: '2026-07-15', closeReason: '',
+  registeredDate: '2026-07-15', closeReason: '', closedTime: null,
   assessments: [{ id: 1, number: 1, impact: 4, likelihood: 4, detectability: 3,
-    score: 48, level: 'HIGH', reason: '????', assessedBy: '??',
+    score: 48, level: 'HIGH', reason: '首次评估', assessedBy: '张伟',
     assessedAt: '2026-07-15T09:00:00Z' }],
-  actions: [{ id: 1, description: '??????????', ownerUserId: 2,
-    ownerName: '??', plannedDate: '2026-08-15', completedDate: null,
-    status: 'IN_PROGRESS', completionNote: '', version: 0 }],
+  actions: [{ id: 1, description: '提前准备沟通材料', ownerUserId: 2,
+    ownerName: '张伟', plannedDate: '2026-08-15', completedDate: null,
+    status: 'IN_PROGRESS', completionNote: '', version: 0, overdue: false }],
+  activities: [{
+    type: 'ASSESSMENT', title: '第 1 次评估 · 48 分 · HIGH',
+    detail: '4 × 4 × 3 · 首次评估', at: '2026-07-15T09:00:00Z', by: '张伟',
+  }, {
+    type: 'ACTION', title: '新增控制措施',
+    detail: '提前准备沟通材料', at: '2026-07-15T09:05:00Z', by: '张伟',
+  }],
 }]
+syncRiskTracking(mockRisks[0])
+
 
 const teamRoles: TeamMatrixRole[] = [
   ['PL', 'PL ?????', 'PM', '????'],
@@ -822,9 +852,13 @@ export function createMockApiClient(): ApiClient {
         (!query.functionCode || risk.functionCode === query.functionCode))
       const filtered = base.filter(({ risk }) =>
         (!query.status || risk.status === query.status) &&
-        (!query.level || risk.level === query.level))
+        (!query.level || risk.level === query.level) &&
+        (!query.studyId || risk.studyId === query.studyId) &&
+        (!query.ownerUserId || risk.ownerUserId === query.ownerUserId) &&
+        (!query.overdueOnly || risk.overdueActionCount > 0))
       const page = query.page ?? 1
       const pageSize = query.pageSize ?? 10
+      filtered.forEach(item => syncRiskTracking(item))
       return {
         data: filtered.slice((page - 1) * pageSize, page * pageSize).map(item => item.risk),
         stats: {
@@ -869,34 +903,66 @@ export function createMockApiClient(): ApiClient {
           studyId: study.id, studyCode: study.code, programCode: study.programCode ?? '',
           projectCode: study.projectCode ?? '', functionCode: fn.code, functionName: fn.name,
           description: input.description, ownerUserId: owner.id, ownerName: owner.displayName,
-          score, level, status: 'OPEN', actionCount: input.actions.length, version: 0, updatedAt: now },
-        registeredDate: input.registeredDate ?? now.slice(0, 10), closeReason: '',
+          score, level, status: 'OPEN', actionCount: 0, openActionCount: 0, overdueActionCount: 0,
+          nextPlannedDate: null, version: 0, updatedAt: now },
+        registeredDate: input.registeredDate ?? now.slice(0, 10), closeReason: '', closedTime: null,
         assessments: [{ id: Date.now(), number: 1, ...input.assessment, score, level,
           reason: input.assessment.reason ?? '', assessedBy: currentUser?.displayName ?? '', assessedAt: now }],
         actions: input.actions.map(action => ({ id: nextRiskActionId++, description: action.description,
           ownerUserId: action.ownerUserId,
           ownerName: options.owners.find(item => item.id === action.ownerUserId)?.displayName ?? '',
           plannedDate: action.plannedDate ?? null, completedDate: action.completedDate ?? null,
-          status: action.status ?? 'OPEN', completionNote: action.completionNote ?? '', version: 0 })),
+          status: action.status ?? 'OPEN', completionNote: action.completionNote ?? '', version: 0,
+          overdue: false })),
+        activities: [{
+          type: 'ASSESSMENT', title: `第 1 次评估 · ${score} 分 · ${level}`,
+          detail: `${input.assessment.impact} × ${input.assessment.likelihood} × ${input.assessment.detectability}`,
+          at: now, by: currentUser?.displayName ?? '',
+        }],
       }
+      for (const action of detail.actions) {
+        detail.activities.push({
+          type: 'ACTION', title: '新增控制措施', detail: action.description,
+          at: now, by: currentUser?.displayName ?? '',
+        })
+      }
+      syncRiskTracking(detail)
       mockRisks.unshift(detail)
       return structuredClone(detail)
     },
     async updateRisk(riskCode, input) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)
-      if (!detail) throw new Error('?????')
-      if (detail.risk.version !== input.expectedVersion) throw new Error('?????????????????')
+      if (!detail) throw new Error('风险不存在')
+      if (detail.risk.version !== input.expectedVersion) throw new Error('风险已被其他用户修改')
+      if (detail.risk.status === 'CLOSED' && input.status !== 'OPEN') {
+        throw new Error('已关闭的风险不可编辑，请先重新打开')
+      }
+      if (input.status === 'CLOSED') {
+        const active = detail.actions.some(item => item.status === 'OPEN' || item.status === 'IN_PROGRESS')
+        if (active) throw new Error('存在未完成的控制措施，请先完成或取消后再关闭风险')
+      }
       const options = await this.getRiskFormOptions(input.studyId)
       const study = demoStudies.find(item => item.id === input.studyId)!
       const fn = options.functions.find(item => item.id === input.functionLineId)!
       const owner = options.owners.find(item => item.id === input.ownerUserId)!
+      const previousStatus = detail.risk.status
       Object.assign(detail.risk, { studyId: study.id, studyCode: study.code,
         programCode: study.programCode ?? '', projectCode: study.projectCode ?? '',
         functionCode: fn.code, functionName: fn.name, ownerUserId: owner.id,
         ownerName: owner.displayName, description: input.description, status: input.status,
         version: detail.risk.version + 1, updatedAt: new Date().toISOString() })
       detail.registeredDate = input.registeredDate ?? detail.registeredDate
-      detail.closeReason = input.statusReason ?? ''
+      if (previousStatus !== input.status) {
+        if (input.status === 'CLOSED') {
+          detail.closeReason = input.statusReason ?? ''
+          detail.closedTime = new Date().toISOString()
+        }
+        detail.activities.unshift({
+          type: 'STATUS', title: `状态 ${previousStatus} → ${input.status}`,
+          detail: input.statusReason ?? '', at: new Date().toISOString(),
+          by: currentUser?.displayName ?? '',
+        })
+      }
       if (input.assessment) {
         const score = input.assessment.impact * input.assessment.likelihood * input.assessment.detectability
         const level = score <= 12 ? 'LOW' : score <= 36 ? 'MEDIUM' : 'HIGH'
@@ -904,42 +970,77 @@ export function createMockApiClient(): ApiClient {
         detail.assessments.unshift({ id: Date.now(), number: detail.assessments.length + 1,
           ...input.assessment, score, level, reason: input.assessment.reason ?? '',
           assessedBy: currentUser?.displayName ?? '', assessedAt: new Date().toISOString() })
+        detail.activities.unshift({
+          type: 'ASSESSMENT', title: `第 ${detail.assessments[0].number} 次评估 · ${score} 分 · ${level}`,
+          detail: input.assessment.reason ?? '', at: new Date().toISOString(),
+          by: currentUser?.displayName ?? '',
+        })
       }
+      syncRiskTracking(detail)
       return structuredClone(detail)
     },
     async deleteRisk(riskCode, expectedVersion) {
       const index = mockRisks.findIndex(item => item.risk.riskCode === riskCode)
-      if (index < 0 || mockRisks[index].risk.version !== expectedVersion) throw new Error('???????????')
+      if (index < 0 || mockRisks[index].risk.version !== expectedVersion) throw new Error('风险删除失败')
       mockRisks.splice(index, 1)
     },
     async addRiskAction(riskCode, expectedRiskVersion, action) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
-      if (detail.risk.version !== expectedRiskVersion) throw new Error('???????')
+      if (detail.risk.status === 'CLOSED') throw new Error('已关闭的风险不可再维护控制措施')
+      if (detail.risk.version !== expectedRiskVersion) throw new Error('风险已被修改')
       const options = await this.getRiskFormOptions(detail.risk.studyId)
       detail.actions.push({ id: nextRiskActionId++, description: action.description,
         ownerUserId: action.ownerUserId,
         ownerName: options.owners.find(item => item.id === action.ownerUserId)?.displayName ?? '',
         plannedDate: action.plannedDate ?? null, completedDate: action.completedDate ?? null,
-        status: action.status ?? 'OPEN', completionNote: action.completionNote ?? '', version: 0 })
-      detail.risk.actionCount = detail.actions.length
+        status: action.status ?? 'OPEN', completionNote: action.completionNote ?? '', version: 0,
+        overdue: false })
+      detail.activities.unshift({
+        type: 'ACTION', title: '新增控制措施', detail: action.description,
+        at: new Date().toISOString(), by: currentUser?.displayName ?? '',
+      })
       detail.risk.version++
+      syncRiskTracking(detail)
       return structuredClone(detail)
     },
     async updateRiskAction(riskCode, actionId, expectedVersion, action) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      if (detail.risk.status === 'CLOSED') throw new Error('已关闭的风险不可再维护控制措施')
       const target = detail.actions.find(item => item.id === actionId)!
-      if (target.version !== expectedVersion) throw new Error('???????')
-      Object.assign(target, action, { version: target.version + 1 })
+      if (target.version !== expectedVersion) throw new Error('措施已被修改')
+      const from = target.status
+      Object.assign(target, {
+        description: action.description,
+        ownerUserId: action.ownerUserId,
+        plannedDate: action.plannedDate ?? null,
+        completedDate: action.completedDate ?? null,
+        status: action.status ?? target.status,
+        completionNote: action.completionNote ?? '',
+        version: target.version + 1,
+      })
+      detail.activities.unshift({
+        type: 'ACTION',
+        title: `更新措施 ${from} → ${target.status}`,
+        detail: action.changeReason || action.completionNote || action.description,
+        at: new Date().toISOString(), by: currentUser?.displayName ?? '',
+      })
       detail.risk.version++
+      syncRiskTracking(detail)
       return structuredClone(detail)
     },
     async deleteRiskAction(riskCode, actionId, expectedVersion) {
       const detail = mockRisks.find(item => item.risk.riskCode === riskCode)!
+      if (detail.risk.status === 'CLOSED') throw new Error('已关闭的风险不可再维护控制措施')
       const index = detail.actions.findIndex(item => item.id === actionId && item.version === expectedVersion)
-      if (index < 0) throw new Error('???????????')
+      if (index < 0) throw new Error('措施删除失败')
+      const removed = detail.actions[index]
       detail.actions.splice(index, 1)
-      detail.risk.actionCount = detail.actions.length
+      detail.activities.unshift({
+        type: 'ACTION', title: '删除控制措施', detail: removed.description,
+        at: new Date().toISOString(), by: currentUser?.displayName ?? '',
+      })
       detail.risk.version++
+      syncRiskTracking(detail)
       return structuredClone(detail)
     },
     async listMonthlyReports() {

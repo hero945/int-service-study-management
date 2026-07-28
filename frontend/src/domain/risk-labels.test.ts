@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   riskActionStatusLabel,
+  riskActionSummaryLabel,
   riskLevelLabel,
   riskLevelTone,
   riskScoreLevelLabel,
@@ -52,5 +53,12 @@ describe('risk-labels', () => {
     expect(lines.join(' ')).toContain('≤12 低风险')
     expect(lines.join(' ')).toContain('13–36 中风险')
     expect(lines.join(' ')).toContain('≥37 高危')
+  })
+
+  it('summarizes open and overdue actions for list display', () => {
+    expect(riskActionSummaryLabel({ actionCount: 0, openActionCount: 0, overdueActionCount: 0 })).toBe('—')
+    expect(riskActionSummaryLabel({ actionCount: 2, openActionCount: 0, overdueActionCount: 0 })).toBe('全部完成')
+    expect(riskActionSummaryLabel({ actionCount: 3, openActionCount: 2, overdueActionCount: 1 }))
+      .toBe('未完成 2 · 逾期 1')
   })
 })

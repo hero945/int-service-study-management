@@ -80,6 +80,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 }
 .login-card input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30, 94, 214, .12); }
 .form-error { margin: -4px 0 10px; color: var(--red-text); font-size: 12px; }
+.form-success { margin: -4px 0 10px; color: #1f6b3a; font-size: 12px; }
 .demo-accounts {
   margin: -2px 0 8px;
   padding-top: 10px;
@@ -812,18 +813,280 @@ th.sort-desc {
 .risk-score-result strong { margin: 3px 0; color: var(--blue-text); font: 700 21px "IBM Plex Mono", monospace; }
 .risk-assessment-toggle { display: flex !important; grid-template-columns: auto 1fr; align-items: center; margin-bottom: 12px; }
 .risk-assessment-toggle input { width: auto; height: auto; }
-.risk-action-list { display: grid; gap: 8px; margin-bottom: 10px; }
-.risk-action-list article { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid #edf0f3; border-radius: 7px; background: #fbfcfd; }
-.risk-action-list strong { font-size: 12px; }
-.risk-action-list p { margin: 5px 0 0; color: var(--muted); font-size: 10.5px; }
-.text-button { padding: 3px 5px; border: 0; background: transparent; color: var(--accent); font-size: 11px; cursor: pointer; }
-.text-button.danger { color: var(--red-text); }
+.risk-action-list { display: grid; gap: 10px; margin-bottom: 12px; }
+.risk-action-card {
+  position: relative;
+  padding: 12px 14px 12px 16px;
+  border: 1px solid #e6ebf1;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(24, 39, 75, 0.03);
+}
+.risk-action-card::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #9db4d4;
+}
+.risk-action-card--open::before { background: #5b8fd9; }
+.risk-action-card--progress::before { background: #e08a2b; }
+.risk-action-card--completed::before { background: #27a159; }
+.risk-action-card--cancelled::before { background: #a0a8b4; }
+.risk-action-card--overdue {
+  border-color: #f0c2c2;
+  background: #fffaf9;
+}
+.risk-action-card--overdue::before { background: #da463f; }
+.risk-action-card--pending {
+  border-style: dashed;
+  background: #fbfcfe;
+}
+.risk-action-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.risk-action-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.risk-action-card__index {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.risk-action-card__flag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--red-bg);
+  color: var(--red-text);
+  font-size: 10px;
+  font-weight: 700;
+}
+.risk-action-card__ops {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.risk-action-card__body {
+  margin: 0;
+  color: #243041;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.risk-action-card__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 10px 0 0;
+}
+.risk-action-card__facts > div {
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #f5f7fa;
+}
+.risk-action-card__facts dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+.risk-action-card__facts dd {
+  margin: 3px 0 0;
+  color: #303744;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.risk-action-card__note {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px dashed #e5e9ef;
+  color: #4a5565;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.risk-action-card__note span {
+  color: var(--muted);
+  font-weight: 600;
+}
 .risk-action-editor { display: grid; gap: 11px; margin-top: 11px; padding: 12px; border: 1px solid #cddcf4; border-radius: 8px; background: #f8faff; }
 .risk-action-editor > div:last-child { display: flex; justify-content: flex-end; gap: 8px; }
+.text-button { padding: 3px 5px; border: 0; background: transparent; color: var(--accent); font-size: 11px; cursor: pointer; }
+.text-button.danger { color: var(--red-text); }
 .risk-timeline { margin: 0; padding-left: 21px; }
 .risk-timeline li { padding: 0 0 14px 5px; }
 .risk-timeline strong, .risk-timeline span { display: block; font-size: 11.5px; }
 .risk-timeline span, .risk-timeline p { margin-top: 4px; color: var(--muted); font-size: 10.5px; }
+.risk-axis-timeline {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.risk-axis-item {
+  display: grid;
+  grid-template-columns: 78px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 72px;
+}
+.risk-axis-track {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2px;
+}
+.risk-axis-track::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  bottom: -8px;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #d7dee8 0%, #eef2f6 100%);
+}
+.risk-axis-item:last-child .risk-axis-track::before { display: none; }
+.risk-axis-node {
+  position: relative;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px currentColor;
+  background: currentColor;
+}
+.risk-axis-node--assessment { color: #2f9e64; }
+.risk-axis-node--action { color: #3b82c4; }
+.risk-axis-node--status { color: #d97706; }
+.risk-axis-time {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1px;
+  margin-top: 8px;
+  text-align: center;
+  line-height: 1.2;
+}
+.risk-axis-time strong {
+  color: #303744;
+  font-size: 11px;
+  font-weight: 700;
+}
+.risk-axis-time small {
+  color: var(--muted);
+  font-size: 10px;
+}
+.risk-axis-content {
+  min-width: 0;
+  padding: 0 0 18px;
+}
+.risk-axis-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.risk-axis-head strong {
+  color: #303744;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.risk-axis-type {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.risk-axis-type.risk-axis-node--assessment {
+  background: #e7f7ee;
+  color: #2f9e64;
+}
+.risk-axis-type.risk-axis-node--action {
+  background: #eaf3fb;
+  color: #3b82c4;
+}
+.risk-axis-type.risk-axis-node--status {
+  background: #fff4e5;
+  color: #d97706;
+}
+.risk-axis-desc {
+  margin: 6px 0 0;
+  color: #303744;
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.risk-axis-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.risk-axis-meta-line > span:not(:last-child)::after {
+  content: "·";
+  margin: 0 8px;
+  color: #c2c8d0;
+}
+.risk-axis-meta {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.risk-status-bar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  margin: 0 0 16px; padding: 10px 12px; border-radius: 8px; background: #f5f8fc; border: 1px solid #e3ebf5;
+}
+.risk-dirty-flag { color: #9a5b00; font-size: 11px; font-weight: 600; }
+.risk-saved-hint { color: var(--muted); font-size: 11px; }
+.risk-scale-hint, .risk-action-hint, .risk-close-reason {
+  margin: 0 0 10px; color: var(--muted); font-size: 11px; line-height: 1.4;
+}
+.field-invalid input, .field-invalid select, .field-invalid textarea {
+  border-color: var(--red-text) !important;
+}
+.field-invalid small { color: var(--red-text); font-size: 10.5px; }
+.risk-overdue-filter {
+  display: inline-flex !important; align-items: center; gap: 6px;
+  color: var(--muted); font-size: 12px; white-space: nowrap;
+}
+.risk-overdue-filter input { width: auto; height: auto; }
 
 /* ──── 里程碑页面 ──── */
 .milestone-toolbar { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
