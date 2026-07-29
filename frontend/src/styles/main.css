@@ -81,7 +81,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   display: grid;
   place-items: center;
   padding: 32px 20px;
-  background: var(--canvas);
+  background:
+    radial-gradient(560px 420px at 12% 8%, rgba(30, 94, 214, .07), transparent 70%),
+    radial-gradient(680px 520px at 88% 92%, rgba(30, 94, 214, .06), transparent 70%),
+    linear-gradient(135deg, rgba(30, 94, 214, .04), transparent 45%),
+    var(--canvas);
 }
 .login-card {
   width: min(380px, 100%);
@@ -124,6 +128,27 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   outline: none;
 }
 .login-card input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30, 94, 214, .12); }
+.login-card input:disabled { background: var(--surface-muted); color: var(--subtle); cursor: not-allowed; }
+.password-field { position: relative; margin-bottom: 16px; }
+.password-field input { margin-bottom: 0; padding-right: 40px; }
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+.password-toggle:hover:not(:disabled) { background: var(--surface-muted); color: var(--ink-2); }
+.password-toggle:focus-visible { outline: none; box-shadow: var(--shadow-focus); }
+.password-toggle:disabled { cursor: not-allowed; opacity: .5; }
+.caps-lock-hint { margin: -8px 0 10px; color: var(--orange-text); font-size: 12px; }
 .form-error { margin: -4px 0 10px; color: var(--red-text); font-size: 12px; }
 .form-success { margin: -4px 0 10px; color: #1f6b3a; font-size: 12px; }
 .demo-accounts {
@@ -153,6 +178,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   box-shadow: var(--shadow-focus);
 }
 .login-button { width: 100%; margin-top: 8px; }
+.login-footer {
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid #eef0f3;
+  text-align: center;
+  color: var(--subtle);
+  font-size: var(--text-xs);
+}
 
 .app-shell { min-height: 100vh; display: flex; overflow: hidden; }
 .sidebar {
