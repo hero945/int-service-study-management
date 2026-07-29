@@ -15,7 +15,7 @@ import MilestoneView from './views/MilestoneView.vue'
 import MonthlyReportFillView from './views/MonthlyReportFillView.vue'
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/login',

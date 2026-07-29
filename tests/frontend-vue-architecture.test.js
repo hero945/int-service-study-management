@@ -187,6 +187,18 @@ test('mock development mode is configured in version-controlled Vite config', ()
   assert.match(viteConfig, /VITE_API_MODE/);
 });
 
+test('integrated local builds use root paths while Docker publishes the frontend under PLM', () => {
+  const viteConfig = read('frontend/vite.config.ts');
+  const router = read('frontend/src/router.ts');
+  const dockerfile = read('Dockerfile');
+
+  assert.match(viteConfig, /loadEnv/);
+  assert.match(viteConfig, /base:\s*env\.VITE_BASE_PATH\s*\|\|\s*['"]\/['"]/);
+  assert.match(router, /createWebHistory\(import\.meta\.env\.BASE_URL\)/);
+  assert.match(dockerfile, /ARG VITE_BASE_PATH=\/PLM\//);
+  assert.match(dockerfile, /ENV VITE_BASE_PATH=\$VITE_BASE_PATH/);
+});
+
 test('Vue type checking stays on the TypeScript compatibility line supported by vue-tsc', () => {
   const packageJson = JSON.parse(read('frontend/package.json'));
 

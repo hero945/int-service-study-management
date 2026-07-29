@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.7
 FROM node:24.18.0-alpine AS frontend-build
+ARG VITE_BASE_PATH=/PLM/
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
 WORKDIR /workspace/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
