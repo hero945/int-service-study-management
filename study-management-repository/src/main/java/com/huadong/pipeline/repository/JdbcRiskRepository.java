@@ -23,7 +23,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class JdbcRiskRepository implements RiskRepository {
   private static final String SUMMARY_SELECT = """
-      SELECT r.risk_code, r.study_id, r.study_code_snapshot,
+      SELECT r.id AS risk_id, r.risk_code, r.study_id, r.study_code_snapshot,
         r.program_code_snapshot, r.project_code_snapshot,
         r.function_line_code_snapshot, r.function_line_name_snapshot,
         r.risk_description, r.owner_user_id, r.owner_name_snapshot,
@@ -294,7 +294,6 @@ public class JdbcRiskRepository implements RiskRepository {
       insertActionHistory(actionId, id, "CREATE", null, action.status(),
           actionSnapshot(action), null, operator.username());
     }
-    audit(operator, "RISK_CREATE", "hd_plt_risk", id, code);
     return findDetail(StudyAccessScope.all(), code).orElseThrow();
   }
 
@@ -329,8 +328,6 @@ public class JdbcRiskRepository implements RiskRepository {
           WHERE id=?
           """, assessmentId, assessment.score(), assessment.level().name(), id);
     }
-    audit(operator, "RISK_UPDATE", "hd_plt_risk", id,
-        present(data.statusReason()) ? data.statusReason() : riskCode);
     return findDetail(StudyAccessScope.all(), riskCode).orElseThrow();
   }
 
@@ -346,7 +343,6 @@ public class JdbcRiskRepository implements RiskRepository {
     if (changed == 0) throw conflict();
     jdbc.update("UPDATE hd_plt_risk_action SET sys_deleted=1, sys_update_by=? WHERE risk_id=?",
         operator.username(), id);
-    audit(operator, "RISK_DELETE", "hd_plt_risk", id, riskCode);
   }
 
   @Override
@@ -357,7 +353,6 @@ public class JdbcRiskRepository implements RiskRepository {
     long actionId = insertAction(id, action, operator.username());
     insertActionHistory(actionId, id, "CREATE", null, action.status(),
         actionSnapshot(action), null, operator.username());
-    audit(operator, "RISK_ACTION_CREATE", "hd_plt_risk_action", actionId, riskCode);
     return findDetail(scope, riskCode).orElseThrow();
   }
 
@@ -386,7 +381,6 @@ public class JdbcRiskRepository implements RiskRepository {
     String changeType = action.reopen() ? "REOPEN" : "UPDATE";
     insertActionHistory(actionId, riskId, changeType, fromStatus, action.status(),
         updateSnapshot(action), action.changeReason(), operator.username());
-    audit(operator, "RISK_ACTION_UPDATE", "hd_plt_risk_action", actionId, riskCode);
     return findDetail(scope, riskCode).orElseThrow();
   }
 
@@ -409,7 +403,6 @@ public class JdbcRiskRepository implements RiskRepository {
         operator.username(), riskId);
     insertActionHistory(actionId, riskId, "DELETE", fromStatus, fromStatus, null, null,
         operator.username());
-    audit(operator, "RISK_ACTION_DELETE", "hd_plt_risk_action", actionId, riskCode);
     return findDetail(scope, riskCode).orElseThrow();
   }
 
@@ -441,7 +434,7 @@ public class JdbcRiskRepository implements RiskRepository {
 
   private RiskSummary summary(java.sql.ResultSet rs) throws java.sql.SQLException {
     Date next = rs.getDate("next_planned_date");
-    return new RiskSummary(rs.getString("risk_code"), rs.getLong("study_id"),
+    return new RiskSummary(rs.getLong("risk_id"), rs.getString("risk_code"), rs.getLong("study_id"),
         rs.getString("study_code_snapshot"), rs.getString("program_code_snapshot"),
         rs.getString("project_code_snapshot"), rs.getString("function_line_code_snapshot"),
         rs.getString("function_line_name_snapshot"), rs.getString("risk_description"),
@@ -673,15 +666,6 @@ public class JdbcRiskRepository implements RiskRepository {
           sys_update_time=CURRENT_TIMESTAMP WHERE id=? AND row_version=? AND sys_deleted=0
         """, operator, id, version);
     if (changed == 0) throw conflict();
-  }
-
-  private void audit(Operator operator, String action, String table, long id, String code) {
-    jdbc.update("""
-        INSERT INTO hd_plt_audit_log(
-          operator_user_id, operator_email, action_code, target_table, target_id,
-          operation_reason, result_code)
-        VALUES (?,?,?,?,?,?,'SUCCESS')
-        """, operator.id(), operator.username(), action, table, id, code);
   }
 
   private static String actionSnapshot(CreateAction action) {

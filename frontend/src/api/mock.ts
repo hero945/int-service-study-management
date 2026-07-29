@@ -65,6 +65,7 @@ const users: Array<CurrentUser & { password: string }> = [
       'role.create',
       'role.update',
       'role.delete',
+      'audit.read',
       'team.page.view',
       'team.edit_mode',
       'team.update',
@@ -281,7 +282,7 @@ function syncRiskTracking(detail: RiskDetail) {
 
 const mockRisks: RiskDetail[] = [{
   risk: {
-    riskCode: 'RSK-2026-000018', studyId: 3, studyCode: 'HDM1005-302',
+    riskId: 18, riskCode: 'RSK-2026-000018', studyId: 3, studyCode: 'HDM1005-302',
     programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'RA',
     functionName: '注册', description: '监管沟通窗口可能影响计划节点',
     ownerUserId: 2, ownerName: '张伟', score: 48, level: 'HIGH', status: 'OPEN',
@@ -735,6 +736,15 @@ export function createMockApiClient(): ApiClient {
   let nextStudyId = demoStudies.length + 1
 
   return {
+    async listAuditLogs(query) {
+      return {
+        data: [],
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 20,
+        totalItems: 0,
+        totalPages: 0,
+      }
+    },
     async getCurrentUser() {
       if (!currentUser) throw new Error('????')
       return currentUser
@@ -909,7 +919,7 @@ export function createMockApiClient(): ApiClient {
       const level = deriveRiskLevel(score, options.scoringRule)
       const now = new Date().toISOString()
       const detail: RiskDetail = {
-        risk: { riskCode: `RSK-${new Date().getFullYear()}-${String(nextRiskId++).padStart(6, '0')}`,
+        risk: { riskId: nextRiskId, riskCode: `RSK-${new Date().getFullYear()}-${String(nextRiskId++).padStart(6, '0')}`,
           studyId: study.id, studyCode: study.code, programCode: study.programCode ?? '',
           projectCode: study.projectCode ?? '', functionCode: fn.code, functionName: fn.name,
           description: input.description, ownerUserId: owner.id, ownerName: owner.displayName,

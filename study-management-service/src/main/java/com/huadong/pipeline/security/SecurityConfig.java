@@ -3,6 +3,7 @@ package com.huadong.pipeline.security;
 import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.huadong.pipeline.audit.AuditFailureRecorder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.net.URLEncoder;
@@ -30,7 +31,8 @@ public class SecurityConfig {
   }
 
   @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectMapper mapper) throws Exception {
+  SecurityFilterChain securityFilterChain(
+      HttpSecurity http, ObjectMapper mapper, AuditFailureRecorder auditFailures) throws Exception {
     http.authorizeHttpRequests(auth -> auth
             .requestMatchers(
                 "/",
@@ -97,6 +99,7 @@ public class SecurityConfig {
                 response.sendRedirect(loginRedirect(request));
                 return;
               }
+              auditFailures.record(request, "DENIED", "ACCESS_DENIED", "权限不足");
               writeApiError(response, mapper, 403, "ACCESS_DENIED", "无权执行此操作");
             }))
         .headers(headers -> headers

@@ -57,6 +57,7 @@ public class MilestoneManager {
       for (MilestoneNode node : group.nodes()) {
         PersistedMilestone persisted = byCode.get(node.code());
         nodes.add(new MilestoneNodeState(
+            persisted == null ? null : persisted.id(),
             group.code(), group.label(), group.sortOrder(),
             node.code(), node.label(), node.sortOrder(),
             persisted == null ? null : persisted.planV1Date(),
@@ -293,6 +294,7 @@ public class MilestoneManager {
       for (MilestoneNode node : group.nodes()) {
         PersistedMilestone persisted = byCode.get(node.code());
         nodes.add(new MilestoneNodeState(
+            persisted == null ? null : persisted.id(),
             group.code(), group.label(), group.sortOrder(),
             node.code(), node.label(), node.sortOrder(),
             persisted == null ? null : persisted.planV1Date(),
@@ -417,25 +419,26 @@ public class MilestoneManager {
       boolean currentPhaseCompleted) {}
 
   public record MilestoneNodeState(
+      Long milestoneId,
       String stageCode, String stageLabel, int stageOrder,
       String milestoneCode, String milestoneLabel, int nodeOrder,
       LocalDate planV1Date, LocalDate planV2Date,
       LocalDate actualStartDate, LocalDate actualEndDate,
       String deviationNote, String status) {
 
-    public MilestoneNodeState(String stageCode, String stageLabel, int stageOrder,
+    public MilestoneNodeState(Long milestoneId, String stageCode, String stageLabel, int stageOrder,
         String milestoneCode, String milestoneLabel, int nodeOrder,
         LocalDate planV1Date, LocalDate planV2Date,
         LocalDate actualStartDate, LocalDate actualEndDate,
         String deviationNote) {
-      this(stageCode, stageLabel, stageOrder,
+      this(milestoneId, stageCode, stageLabel, stageOrder,
           milestoneCode, milestoneLabel, nodeOrder,
           planV1Date, planV2Date, actualStartDate, actualEndDate,
           deviationNote, "NOT_STARTED");
     }
 
     public MilestoneNodeState withStatus(String newStatus) {
-      return new MilestoneNodeState(stageCode, stageLabel, stageOrder,
+      return new MilestoneNodeState(milestoneId, stageCode, stageLabel, stageOrder,
           milestoneCode, milestoneLabel, nodeOrder,
           planV1Date, planV2Date, actualStartDate, actualEndDate,
           deviationNote, newStatus);

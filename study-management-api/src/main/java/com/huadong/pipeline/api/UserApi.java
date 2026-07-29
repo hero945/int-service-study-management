@@ -13,7 +13,7 @@ public interface UserApi {
 
   UserPageResponse list(int page, int pageSize, String keyword, String roleCode);
 
-  void create(@Valid CreateUserRequest request);
+  void create(@Valid CreateUserRequest request, String operator);
 
   void update(long id, @Valid UpdateUserRequest request, String operator);
 

@@ -142,17 +142,4 @@ public interface RoleMapper extends BaseMapper<RoleEntity> {
       """)
   int deletePermissions(@Param("roleId") long roleId, @Param("operator") String operator);
 
-  @Insert("""
-      INSERT INTO hd_plt_audit_log(
-          operator_email, action_code, target_table, target_id,
-          before_data, after_data, result_code)
-      VALUES (#{operator}, #{action}, 'hd_plt_role', #{roleId},
-              #{beforeData}, #{afterData}, 'SUCCESS')
-      """)
-  int insertAudit(
-      @Param("operator") String operator,
-      @Param("action") String action,
-      @Param("roleId") long roleId,
-      @Param("beforeData") String beforeData,
-      @Param("afterData") String afterData);
 }

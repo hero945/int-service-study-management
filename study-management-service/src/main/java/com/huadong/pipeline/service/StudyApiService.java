@@ -2,16 +2,20 @@ package com.huadong.pipeline.service;
 
 
 import com.huadong.pipeline.api.StudyApi;
+import com.huadong.pipeline.audit.BusinessAuditService;
 import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.manager.StudyManager;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StudyApiService implements StudyApi {
   @Autowired
   private StudyManager manager;
+  @Autowired
+  private BusinessAuditService audit;
 
   @Override
   public PipelineOverviewResponse overview(String username) {
@@ -101,8 +105,9 @@ public class StudyApiService implements StudyApi {
   }
 
   @Override
+  @Transactional
   public void create(CreateStudyRequest request, String username) {
-    manager.create(
+    var created = manager.create(
         new StudyManager.CreateStudyCommand(
             request.code(),
             request.projectId(),
@@ -116,5 +121,8 @@ public class StudyApiService implements StudyApi {
             request.actualEndDate(),
             request.description()),
         username);
+    audit.success(
+        "CONFIG", "STUDY", created.id(), created.code(), created.id(),
+        "STUDY_CREATE", "hd_plt_study", created.id(), null, created, null, username);
   }
 }

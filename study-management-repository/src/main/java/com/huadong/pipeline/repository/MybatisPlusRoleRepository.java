@@ -96,7 +96,6 @@ public class MybatisPlusRoleRepository implements RoleRepository {
     roleMapper.insert(entity);
     replacePermissions(entity.getId(), permissionCodes, operator);
     var created = findById(entity.getId()).orElseThrow();
-    roleMapper.insertAudit(operator, "ROLE_CREATE", entity.getId(), null, auditJson(created));
     return created;
   }
 
@@ -117,7 +116,6 @@ public class MybatisPlusRoleRepository implements RoleRepository {
     roleMapper.updateById(entity);
     replacePermissions(roleId, permissionCodes, operator);
     var updated = findById(roleId).orElseThrow();
-    roleMapper.insertAudit(operator, "ROLE_UPDATE", roleId, auditJson(before), auditJson(updated));
     return updated;
   }
 
@@ -129,7 +127,6 @@ public class MybatisPlusRoleRepository implements RoleRepository {
     entity.setSysUpdateBy(operator);
     roleMapper.updateById(entity);
     roleMapper.deletePermissions(roleId, operator);
-    roleMapper.insertAudit(operator, "ROLE_DELETE", roleId, auditJson(before), null);
   }
 
   @Override
@@ -178,23 +175,4 @@ public class MybatisPlusRoleRepository implements RoleRepository {
         entity.getPermissionDescription(), entity.getSortOrder());
   }
 
-  private static String auditJson(Role role) {
-    return "{\"roleCode\":" + jsonString(role.code())
-        + ",\"roleDescription\":" + jsonString(role.description()) + ",\"status\":\""
-        + role.status().name() + "\",\"dataScopeMode\":\"" + role.dataScope().name()
-        + "\",\"permissionCodes\":[" + role.permissionCodes().stream()
-            .map(MybatisPlusRoleRepository::jsonString)
-            .collect(Collectors.joining(","))
-        + "]}";
-  }
-
-  private static String jsonString(String value) {
-    if (value == null) {
-      return "null";
-    }
-    return "\"" + value.replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\r", "\\r")
-        .replace("\n", "\\n") + "\"";
-  }
 }

@@ -281,20 +281,4 @@ public interface TeamMatrixMapper {
       @Param("expectedVersion") long expectedVersion,
       @Param("operator") String operator);
 
-  @Insert("""
-      INSERT INTO hd_plt_audit_log(
-          operator_user_id, operator_email, action_code, target_table, target_id,
-          operation_reason, before_data, after_data, result_code)
-      VALUES(
-          #{operatorUserId}, #{operator}, 'TEAM_ASSIGNMENT_REPLACE',
-          'hd_plt_team_assignment', #{studyId}, #{roleCode},
-          #{beforeJson}, #{afterJson}, 'SUCCESS')
-      """)
-  void insertAudit(
-      @Param("studyId") long studyId,
-      @Param("roleCode") String roleCode,
-      @Param("beforeJson") String beforeJson,
-      @Param("afterJson") String afterJson,
-      @Param("operatorUserId") long operatorUserId,
-      @Param("operator") String operator);
 }

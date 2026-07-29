@@ -28,10 +28,6 @@ public interface TeamMatrixRepository {
 
   boolean incrementVersion(long studyId, long expectedVersion, String operator);
 
-  void appendAudit(
-      long studyId, String roleCode, List<Long> beforeUserIds, List<Long> afterUserIds,
-      long operatorUserId, String operator);
-
   record TeamStudy(
       long studyId,
       String studyCode,

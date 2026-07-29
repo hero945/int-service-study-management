@@ -118,6 +118,14 @@ class MonthlyReportIntegrationTest {
         WHERE monthly_report_id = ? AND sys_deleted = 0 ORDER BY sequence_no
         """, Integer.class, reportId);
     assertThat(sequences).containsExactly(1, 2);
+
+    List<String> auditGroupTypes = jdbc.queryForList("""
+        SELECT group_type FROM hd_plt_audit_log
+        WHERE module_code = 'MONTHLY' AND group_id = ?
+        ORDER BY id
+        """, String.class, reportId);
+    assertThat(auditGroupTypes).containsExactly(
+        "MONTHLY_FUNCTION", "MONTHLY_FUNCTION");
   }
 
   @Test

@@ -3,6 +3,7 @@ package com.huadong.pipeline.web;
 import lombok.extern.slf4j.Slf4j;
 
 import com.huadong.pipeline.common.BusinessException;
+import com.huadong.pipeline.audit.AuditFailureRecorder;
 import io.sentry.Sentry;
 import io.sentry.protocol.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,10 +30,18 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 @RestControllerAdvice
 @Slf4j
 public class ApiExceptionHandler {
+  private final AuditFailureRecorder auditFailures;
+
+  public ApiExceptionHandler(AuditFailureRecorder auditFailures) {
+    this.auditFailures = auditFailures;
+  }
 
   @ExceptionHandler(BusinessException.class)
   ResponseEntity<ApiError> business(BusinessException ex, HttpServletRequest request) {
     HttpStatus status = resolveBusinessStatus(ex);
+    auditFailures.record(
+        request, status == HttpStatus.FORBIDDEN ? "DENIED" : "FAILED",
+        ex.code(), ex.getMessage());
     if (status == HttpStatus.FORBIDDEN) {
       log.warn(
           "业务禁止访问 code={} user={} method={} path={} message={}",
@@ -73,6 +82,7 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(AccessDeniedException.class)
   ResponseEntity<ApiError> accessDenied(AccessDeniedException ex, HttpServletRequest request) {
+    auditFailures.record(request, "DENIED", "ACCESS_DENIED", "权限不足");
     log.warn(
         "访问被拒绝 user={} method={} path={}",
         currentUsername(),
@@ -89,7 +99,9 @@ public class ApiExceptionHandler {
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
-  ResponseEntity<ApiError> validation(MethodArgumentNotValidException ex) {
+  ResponseEntity<ApiError> validation(
+      MethodArgumentNotValidException ex, HttpServletRequest request) {
+    auditFailures.record(request, "FAILED", "VALIDATION_FAILED", "字段校验失败");
     var fieldErrors = ex.getBindingResult().getFieldErrors();
     String message;
     Map<String, String> details;
@@ -122,7 +134,9 @@ public class ApiExceptionHandler {
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
-  ResponseEntity<ApiError> unreadable(HttpMessageNotReadableException ex) {
+  ResponseEntity<ApiError> unreadable(
+      HttpMessageNotReadableException ex, HttpServletRequest request) {
+    auditFailures.record(request, "FAILED", "INVALID_REQUEST_BODY", "请求内容格式不正确");
     return ResponseEntity.badRequest()
         .body(new ApiError("INVALID_REQUEST_BODY", "请求内容格式不正确", Map.of(), Instant.now()));
   }
@@ -170,6 +184,7 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   ResponseEntity<ApiError> unexpected(Exception ex, HttpServletRequest request) {
+    auditFailures.record(request, "FAILED", "INTERNAL_ERROR", "服务器内部错误");
     log.error(
         "未捕获异常 user={} method={} path={}",
         currentUsername(),

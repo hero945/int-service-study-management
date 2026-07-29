@@ -2,16 +2,20 @@ package com.huadong.pipeline.service;
 
 
 import com.huadong.pipeline.api.RiskApi;
+import com.huadong.pipeline.audit.BusinessAuditService;
 import com.huadong.pipeline.domain.risk.RiskRepository;
 import com.huadong.pipeline.manager.RiskManager;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class RiskApiService implements RiskApi {
   @Autowired
   private RiskManager manager;
+  @Autowired
+  private BusinessAuditService audit;
 
   @Override
   public PageResponse list(String username, String query, String functionCode, String status,
@@ -42,38 +46,88 @@ public class RiskApiService implements RiskApi {
             item.id(), item.email(), item.displayName())).toList(),
         new ScoringRuleResponse(rule.id(), rule.lowMax(), rule.mediumMax()));
   }
-  @Override public DetailResponse create(CreateRequest request, String username) {
-    return detail(manager.create(new RiskManager.CreateCommand(request.studyId(),
+  @Override
+  @Transactional
+  public DetailResponse create(CreateRequest request, String username) {
+    var created = detail(manager.create(new RiskManager.CreateCommand(request.studyId(),
         request.functionLineId(), request.ownerUserId(), request.description(),
         request.registeredDate(), assessment(request.assessment()), actions(request.actions())), username));
+    audit.success(
+        "RISK", "RISK", created.risk().riskId(), created.risk().riskCode(),
+        created.risk().studyId(), "RISK_CREATE", "hd_plt_risk", created.risk().riskId(),
+        null, created, null, username);
+    return created;
   }
-  @Override public DetailResponse update(String riskCode, UpdateRequest request, String username) {
-    return detail(manager.update(riskCode, new RiskManager.UpdateCommand(
+  @Override
+  @Transactional
+  public DetailResponse update(String riskCode, UpdateRequest request, String username) {
+    var before = detail(manager.detail(username, riskCode));
+    var after = detail(manager.update(riskCode, new RiskManager.UpdateCommand(
         request.expectedVersion(), request.studyId(), request.functionLineId(),
         request.ownerUserId(), request.description(), request.registeredDate(), request.status(),
         request.statusReason(), request.assessment() == null ? null : assessment(request.assessment())),
         username));
+    Long targetId = request.assessment() == null
+        ? after.risk().riskId()
+        : newestAssessmentId(before, after);
+    audit.success(
+        "RISK", "RISK", after.risk().riskId(), riskCode, after.risk().studyId(),
+        request.assessment() == null ? "RISK_UPDATE" : "RISK_ASSESS",
+        request.assessment() == null ? "hd_plt_risk" : "hd_plt_risk_assessment",
+        targetId, before, after, request.statusReason(), username);
+    return after;
   }
-  @Override public void delete(String riskCode, long expectedVersion, String username) {
+  @Override
+  @Transactional
+  public void delete(String riskCode, long expectedVersion, String username) {
+    var before = detail(manager.detail(username, riskCode));
     manager.delete(riskCode, expectedVersion, username);
+    audit.success(
+        "RISK", "RISK", before.risk().riskId(), riskCode, before.risk().studyId(),
+        "RISK_DELETE", "hd_plt_risk", before.risk().riskId(), before,
+        java.util.Map.of("deleted", true), null, username);
   }
-  @Override public DetailResponse addAction(
+  @Override
+  @Transactional
+  public DetailResponse addAction(
       String riskCode, ActionCreateRequest request, String username) {
-    return detail(manager.addAction(riskCode, request.expectedRiskVersion(),
-        action(request.action()), username));
+    var before = detail(manager.detail(username, riskCode));
+    var after = detail(manager.addAction(
+        riskCode, request.expectedRiskVersion(), action(request.action()), username));
+    Long actionId = newestActionId(before, after);
+    audit.success(
+        "RISK", "RISK", after.risk().riskId(), riskCode, after.risk().studyId(),
+        "RISK_ACTION_CREATE", "hd_plt_risk_action", actionId, before, after,
+        request.action().changeReason(), username);
+    return after;
   }
-  @Override public DetailResponse updateAction(
+  @Override
+  @Transactional
+  public DetailResponse updateAction(
       String riskCode, long actionId, ActionUpdateRequest request, String username) {
-    return detail(manager.updateAction(riskCode, actionId, request.expectedVersion(),
-        action(request.action()), username));
+    var before = detail(manager.detail(username, riskCode));
+    var after = detail(manager.updateAction(
+        riskCode, actionId, request.expectedVersion(), action(request.action()), username));
+    audit.success(
+        "RISK", "RISK", after.risk().riskId(), riskCode, after.risk().studyId(),
+        "RISK_ACTION_UPDATE", "hd_plt_risk_action", actionId, before, after,
+        request.action().changeReason(), username);
+    return after;
   }
-  @Override public DetailResponse deleteAction(
+  @Override
+  @Transactional
+  public DetailResponse deleteAction(
       String riskCode, long actionId, long expectedVersion, String username) {
-    return detail(manager.deleteAction(riskCode, actionId, expectedVersion, username));
+    var before = detail(manager.detail(username, riskCode));
+    var after = detail(manager.deleteAction(riskCode, actionId, expectedVersion, username));
+    audit.success(
+        "RISK", "RISK", after.risk().riskId(), riskCode, after.risk().studyId(),
+        "RISK_ACTION_DELETE", "hd_plt_risk_action", actionId, before, after, null, username);
+    return after;
   }
 
   private SummaryResponse summary(RiskRepository.RiskSummary item) {
-    return new SummaryResponse(item.riskCode(), item.studyId(), item.studyCode(),
+    return new SummaryResponse(item.riskId(), item.riskCode(), item.studyId(), item.studyCode(),
         item.programCode(), item.projectCode(), item.functionCode(), item.functionName(),
         item.description(), item.ownerUserId(), item.ownerName(), item.score(), item.level().name(),
         item.status(), item.actionCount(), item.openActionCount(), item.overdueActionCount(),
@@ -102,5 +156,27 @@ public class RiskApiService implements RiskApi {
     return new RiskManager.ActionCommand(input.description(), input.ownerUserId(),
         input.plannedDate(), input.completedDate(), input.status(), input.completionNote(),
         input.changeReason());
+  }
+
+  private static Long newestAssessmentId(DetailResponse before, DetailResponse after) {
+    var existing = before.assessments().stream()
+        .map(AssessmentResponse::id)
+        .collect(java.util.stream.Collectors.toSet());
+    return after.assessments().stream()
+        .map(AssessmentResponse::id)
+        .filter(id -> !existing.contains(id))
+        .findFirst()
+        .orElse(null);
+  }
+
+  private static Long newestActionId(DetailResponse before, DetailResponse after) {
+    var existing = before.actions().stream()
+        .map(ActionResponse::id)
+        .collect(java.util.stream.Collectors.toSet());
+    return after.actions().stream()
+        .map(ActionResponse::id)
+        .filter(id -> !existing.contains(id))
+        .findFirst()
+        .orElse(null);
   }
 }

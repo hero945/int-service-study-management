@@ -1180,6 +1180,8 @@ th.sort-desc {
 .monthly-line-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .monthly-line-name { font-size: 13.5px; font-weight: 700; color: var(--ink-3); }
 .monthly-line-code { margin-left: 8px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.monthly-line-header-actions, .monthly-line-audit { display: flex; align-items: center; gap: 10px; }
+.monthly-line-audit > span { color: var(--muted); font-size: 11px; }
 .monthly-entry-list { margin: 0; padding: 0; list-style: none; }
 .monthly-entry { display: grid; grid-template-columns: 100px 1fr auto; gap: 4px 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid var(--surface-muted); }
 .monthly-entry:last-child { border-bottom: 0; }
@@ -1261,8 +1263,9 @@ th.sort-desc {
 .project-drawer h2 { margin: 0; font-size: 18px; }
 .project-drawer header p { margin: 5px 0 0; color: var(--muted); font-size: 12px; }
 .drawer-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 22px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
-.drawer-project-list { display: grid; gap: 10px; overflow: auto; padding: 16px 22px 24px; }
-.drawer-project-list article { display: flex; justify-content: space-between; gap: 16px; padding: 14px; border: 1px solid var(--line); border-radius: 9px; }
+.drawer-project-list { overflow: auto; padding: 16px 22px 24px; }
+.drawer-project-table { min-width: 620px; }
+.drawer-project-table td:first-child { min-width: 280px; }
 .drawer-project-list p { margin: 5px 0; color: #4a5360; font-size: 12px; }
 .drawer-project-list small { color: var(--muted); }
 .project-drawer > .empty-inline { padding: 32px 22px; }

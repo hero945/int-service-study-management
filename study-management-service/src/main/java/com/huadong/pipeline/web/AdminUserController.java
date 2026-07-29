@@ -40,8 +40,8 @@ public class AdminUserController {
   @PostMapping
   @PreAuthorize("hasAuthority('account.create')")
   @ResponseStatus(HttpStatus.CREATED)
-  void create(@Valid @RequestBody UserApi.CreateUserRequest request) {
-    userApi.create(request);
+  void create(@Valid @RequestBody UserApi.CreateUserRequest request, Principal principal) {
+    userApi.create(request, principal.getName());
   }
 
   @PatchMapping("/{id}")

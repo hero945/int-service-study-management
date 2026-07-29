@@ -38,7 +38,7 @@ public interface RiskRepository {
   record RiskPage(List<RiskSummary> data, Stats stats, int page, int pageSize,
                   long totalItems) {}
   record Stats(long total, long open, long high, long medium) {}
-  record RiskSummary(String riskCode, long studyId, String studyCode, String programCode,
+  record RiskSummary(long riskId, String riskCode, long studyId, String studyCode, String programCode,
                      String projectCode, String functionCode, String functionName,
                      String description, long ownerUserId, String ownerName,
                      int score, RiskLevel level, String status, int actionCount,

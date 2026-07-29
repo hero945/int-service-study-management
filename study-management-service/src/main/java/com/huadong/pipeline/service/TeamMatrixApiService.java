@@ -2,14 +2,20 @@ package com.huadong.pipeline.service;
 
 
 import com.huadong.pipeline.api.TeamMatrixApi;
+import com.huadong.pipeline.audit.BusinessAuditService;
 import com.huadong.pipeline.manager.TeamMatrixManager;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class TeamMatrixApiService implements TeamMatrixApi {
   @Autowired
   private TeamMatrixManager manager;
+  @Autowired
+  private BusinessAuditService audit;
 
   @Override
   public MatrixResponse list(
@@ -51,7 +57,11 @@ public class TeamMatrixApiService implements TeamMatrixApi {
   }
 
   @Override
+  @Transactional
   public BatchResponse replace(BatchRequest request, String username) {
+    Map<Long, MatrixResponse> beforeByStudy = new LinkedHashMap<>();
+    request.studies().forEach(study ->
+        beforeByStudy.put(study.studyId(), toResponse(manager.getStudyTeam(study.studyId(), username))));
     var command = new TeamMatrixManager.BatchCommand(
         request.studies().stream()
             .map(study -> new TeamMatrixManager.StudyChange(
@@ -64,6 +74,15 @@ public class TeamMatrixApiService implements TeamMatrixApi {
                     .toList()))
             .toList());
     var result = manager.replace(command, username);
+    for (var changed : result.studies()) {
+      var after = toResponse(manager.getStudyTeamForAudit(changed.studyId(), username));
+      String studyCode = after.studies().isEmpty()
+          ? String.valueOf(changed.studyId()) : after.studies().getFirst().studyCode();
+      audit.success(
+          "TEAM", "STUDY", changed.studyId(), studyCode, changed.studyId(),
+          "TEAM_ROLE_ASSIGN", "hd_plt_team_assignment", changed.studyId(),
+          beforeByStudy.get(changed.studyId()), after, null, username);
+    }
     return new BatchResponse(result.studies().stream()
         .map(study -> new StudyVersionResponse(study.studyId(), study.version()))
         .toList());

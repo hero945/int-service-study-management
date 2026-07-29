@@ -49,6 +49,17 @@ class MilestoneAccessIntegrationTest {
                 """))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.studyCode").value("MS-SCOPE-IN"));
+
+    var auditGroup = jdbc.queryForMap("""
+        SELECT group_type, group_code, scope_study_id
+        FROM hd_plt_audit_log
+        WHERE module_code = 'MILESTONE'
+          AND subject_code = 'PreIND-0'
+        """);
+    org.assertj.core.api.Assertions.assertThat(auditGroup)
+        .containsEntry("group_type", "MILESTONE_STAGE")
+        .containsEntry("group_code", "PreIND")
+        .containsEntry("scope_study_id", studyId);
   }
 
   @Test

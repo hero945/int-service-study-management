@@ -68,7 +68,7 @@ public class MonthlyReportManager {
   // ──────────── mutation ────────────
 
   @Transactional
-  public MonthlyPageResult createEntry(long reportId, EntryInput input, String username) {
+  public MonthlyChangeResult createEntry(long reportId, EntryInput input, String username) {
     UserAccount user = currentUser(username);
     if (!user.permissions().contains("monthly.create")) {
       throw forbidden();
@@ -81,17 +81,19 @@ public class MonthlyReportManager {
     validateInput(report.reportMonth(), input);
 
     int sequenceNo = reports.nextSequenceNo(reportId);
-    reports.saveEntry(new MonthlyEntryCreateCommand(
+    long entryId = reports.saveEntry(new MonthlyEntryCreateCommand(
         reportId, input.entryDate(), sequenceNo, input.content().trim(),
         user.id(), user.username(),
         auditReason(report.studyId(), report.reportMonth(), report.functionCode(), true)));
 
     StudyRef study = requireStudy(report.studyId());
-    return assemblePage(study, YearMonth.from(report.reportMonth()), scope);
+    var after = reports.findEntryWithReport(entryId).orElseThrow();
+    return new MonthlyChangeResult(
+        assemblePage(study, YearMonth.from(report.reportMonth()), scope), null, after);
   }
 
   @Transactional
-  public MonthlyPageResult updateEntry(long entryId, EntryInput input, String username) {
+  public MonthlyChangeResult updateEntry(long entryId, EntryInput input, String username) {
     UserAccount user = currentUser(username);
     if (!user.permissions().contains("monthly.update")) {
       throw forbidden();
@@ -109,11 +111,13 @@ public class MonthlyReportManager {
         auditReason(entry.studyId(), entry.reportMonth(), entry.functionCode(), false)));
 
     StudyRef study = requireStudy(entry.studyId());
-    return assemblePage(study, YearMonth.from(entry.reportMonth()), scope);
+    var after = reports.findEntryWithReport(entryId).orElseThrow();
+    return new MonthlyChangeResult(
+        assemblePage(study, YearMonth.from(entry.reportMonth()), scope), entry, after);
   }
 
   @Transactional
-  public MonthlyPageResult deleteEntry(long entryId, String username) {
+  public MonthlyChangeResult deleteEntry(long entryId, String username) {
     UserAccount user = currentUser(username);
     if (!user.permissions().contains("monthly.update")) {
       throw forbidden();
@@ -127,7 +131,8 @@ public class MonthlyReportManager {
     reports.deleteEntry(entryId, user.id(), user.username());
 
     StudyRef study = requireStudy(entry.studyId());
-    return assemblePage(study, YearMonth.from(entry.reportMonth()), scope);
+    return new MonthlyChangeResult(
+        assemblePage(study, YearMonth.from(entry.reportMonth()), scope), entry, null);
   }
 
   @Transactional
@@ -281,6 +286,9 @@ public class MonthlyReportManager {
   public record MonthlyEntryResult(
       long entryId, LocalDate entryDate, String content,
       String updatedBy, Instant updatedAt, boolean editable) {}
+
+  public record MonthlyChangeResult(
+      MonthlyPageResult page, EntryWithReport before, EntryWithReport after) {}
 
   public record FunctionLineHistoryResult(
       long functionLineId, String functionCode, String functionName,

@@ -54,6 +54,18 @@ public class PipelineConfigManager {
     return projects.findAll(programId, keyword == null ? "" : keyword);
   }
 
+  public Program getProgram(long id) {
+    return requireProgram(id);
+  }
+
+  public Project getProject(long id) {
+    return requireProject(id);
+  }
+
+  public PipelineConfigRow getStudy(long id) {
+    return requireStudy(id);
+  }
+
   @Transactional
   public Program createProgram(ProgramCommand command, String username) {
     String code = command.code().trim().toUpperCase();

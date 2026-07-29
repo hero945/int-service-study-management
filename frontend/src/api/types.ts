@@ -117,6 +117,7 @@ export type RiskStatus = 'OPEN' | 'CLOSED'
 export type RiskActionStatus = 'OPEN' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
 export interface RiskSummary {
+  riskId: number
   riskCode: string
   studyId: number
   studyCode: string
@@ -257,6 +258,7 @@ export interface UpdateRiskInput extends Omit<CreateRiskInput, 'actions' | 'asse
 // ── 里程碑 ──
 
 export interface MilestoneNode {
+  milestoneId?: number | null
   milestoneCode: string
   milestoneName: string
   planV1Date: string | null
@@ -284,6 +286,70 @@ export interface MilestoneUpdateInput {
   actualStartDate?: string | null
   actualEndDate?: string | null
   deviationNote?: string | null
+}
+
+export type AuditModuleCode =
+  | 'MILESTONE' | 'MONTHLY' | 'RISK' | 'TEAM' | 'CONFIG' | 'ACCOUNT' | 'ROLE'
+export type AuditSubjectType =
+  | 'MILESTONE' | 'MONTHLY_ENTRY' | 'RISK' | 'STUDY'
+  | 'PROGRAM' | 'PROJECT' | 'USER' | 'ROLE'
+export type AuditGroupType = 'MILESTONE_STAGE' | 'MONTHLY_FUNCTION'
+export type AuditResultCode = 'SUCCESS' | 'FAILED' | 'DENIED'
+
+export interface AuditLogQuery {
+  moduleCode: AuditModuleCode
+  subjectType?: AuditSubjectType
+  subjectId?: number
+  scopeStudyId?: number
+  groupType?: AuditGroupType
+  groupId?: number
+  groupCode?: string
+  resultCode?: AuditResultCode
+  page?: number
+  pageSize?: number
+}
+
+export interface AuditFieldChange {
+  fieldName: string
+  fieldLabel: string
+  beforeValue: unknown
+  afterValue: unknown
+}
+
+export interface AuditLogEntry {
+  id: number
+  moduleCode: AuditModuleCode
+  subjectType: AuditSubjectType | null
+  subjectId: number | null
+  subjectCode: string | null
+  actionCode: string
+  actionLabel: string
+  resultCode: AuditResultCode
+  operationReason: string | null
+  errorCode: string | null
+  operatorUserId: number | null
+  operatorEmail: string
+  operatorDisplayName: string | null
+  requestId: string | null
+  ipAddress: string | null
+  requestMethod: string | null
+  requestPath: string | null
+  targetTable: string
+  targetId: number | null
+  payloadVersion: number
+  historicalSnapshotMissing: boolean
+  beforeData: Record<string, unknown> | null
+  afterData: Record<string, unknown> | null
+  changes: AuditFieldChange[]
+  occurredTime: string
+}
+
+export interface AuditLogPage {
+  data: AuditLogEntry[]
+  page: number
+  pageSize: number
+  totalItems: number
+  totalPages: number
 }
 
 export interface StageProjection {

@@ -147,15 +147,6 @@ public class MybatisPlusTeamMatrixRepository implements TeamMatrixRepository {
     return mapper.incrementVersion(studyId, expectedVersion, operator) == 1;
   }
 
-  @Override
-  public void appendAudit(
-      long studyId, String roleCode, List<Long> beforeUserIds, List<Long> afterUserIds,
-      long operatorUserId, String operator) {
-    mapper.insertAudit(
-        studyId, roleCode, beforeUserIds.toString(), afterUserIds.toString(),
-        operatorUserId, operator);
-  }
-
   private TeamRole role(TeamRoleRow row) {
     return new TeamRole(
         row.id(), row.roleCode(), row.roleName(), row.functionLineId(),

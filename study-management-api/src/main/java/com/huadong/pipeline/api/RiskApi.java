@@ -25,7 +25,7 @@ public interface RiskApi {
   DetailResponse deleteAction(String riskCode, long actionId, long expectedVersion,
                               String username);
 
-  record SummaryResponse(String riskCode, long studyId, String studyCode, String programCode,
+  record SummaryResponse(long riskId, String riskCode, long studyId, String studyCode, String programCode,
       String projectCode, String functionCode, String functionName, String description,
       long ownerUserId, String ownerName, int score, String level, String status,
       int actionCount, int openActionCount, int overdueActionCount, LocalDate nextPlannedDate,

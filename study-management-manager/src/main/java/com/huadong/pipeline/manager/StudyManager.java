@@ -228,7 +228,7 @@ public class StudyManager {
   }
 
   @Transactional
-  public void create(CreateStudyCommand command, String username) {
+  public Study create(CreateStudyCommand command, String username) {
     validateDates(command);
     String programCode = command.programCode();
     String projectCode = command.projectCode();
@@ -261,6 +261,10 @@ public class StudyManager {
       throw new BusinessException(
           "INVALID_STUDY_HIERARCHY", "Program、Project 或治疗领域不存在，或三者关系不匹配");
     }
+    return studies.findAll(StudyAccessScope.all()).stream()
+        .filter(saved -> saved.code().equals(study.code()))
+        .findFirst()
+        .orElseThrow(() -> new BusinessException("STUDY_NOT_FOUND", "Study 创建后未找到"));
   }
 
   private static boolean isBlank(String value) {

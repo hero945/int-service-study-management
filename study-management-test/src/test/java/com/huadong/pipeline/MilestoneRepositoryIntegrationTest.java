@@ -19,8 +19,12 @@ class MilestoneRepositoryIntegrationTest {
   @Autowired JdbcTemplate jdbc;
 
   @Test
-  void saveUpsertsMilestoneRowAndWritesAuditLogWithRealColumns() {
+  void saveUpsertsMilestoneRowWithoutBypassingUnifiedAuditBoundary() {
     long studyId = seedStudy();
+    Integer auditCountBefore = jdbc.queryForObject(
+        "SELECT COUNT(*) FROM hd_plt_audit_log "
+            + "WHERE target_table = 'hd_plt_study_milestone'",
+        Integer.class);
 
     milestones.save(new MilestoneSaveCommand(
         studyId, "IND", "IND-0",
@@ -41,13 +45,13 @@ class MilestoneRepositoryIntegrationTest {
     assertThat(rows.get(0).get("milestone_code")).isEqualTo("IND-0");
     assertThat(rows.get(0).get("deviation_note")).isEqualTo("已调整");
 
-    var audit = jdbc.queryForList(
-        "SELECT action_code, target_table, operator_email, result_code "
-            + "FROM hd_plt_audit_log WHERE target_table = 'hd_plt_study_milestone' "
-            + "AND action_code = 'MILESTONE_SAVE'");
-    assertThat(audit).hasSize(2);
-    assertThat(audit.get(0).get("operator_email")).isEqualTo("tester@example.com");
-    assertThat(audit.get(0).get("result_code")).isEqualTo("SUCCESS");
+    // Repository adapters no longer write audit SQL directly. The API use case writes the
+    // business row and unified audit event in one transaction.
+    Integer auditCount = jdbc.queryForObject(
+        "SELECT COUNT(*) FROM hd_plt_audit_log "
+            + "WHERE target_table = 'hd_plt_study_milestone'",
+        Integer.class);
+    assertThat(auditCount).isEqualTo(auditCountBefore);
   }
 
   private long seedStudy() {

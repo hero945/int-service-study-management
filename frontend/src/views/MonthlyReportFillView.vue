@@ -10,8 +10,10 @@ import type {
   MonthlyReportPage,
 } from '../api/types'
 import PageState from '../components/PageState.vue'
+import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { formatIsoMinute, todayIso } from '../domain/date-format'
 import { usePermissions } from '../composables/usePermissions'
+import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 
 const route = useRoute()
 const router = useRouter()
@@ -42,6 +44,9 @@ const canRead = can('monthly.read')
 const canCreate = can('monthly.create')
 const canUpdate = can('monthly.update')
 const canDelete = can('monthly.update')
+const canAudit = can('audit.read')
+const { auditDrawer, openGroupedAuditLogs, closeAuditLogs } =
+  useAuditLogDrawer('MONTHLY')
 
 // 历史面板状态（按 reportId 维度）
 const historyOpen = ref<Set<number>>(new Set())
@@ -207,7 +212,21 @@ function goBack() { router.push('/studies') }
             <span class="monthly-line-name">
               {{ line.functionName }}<span class="mono monthly-line-code">{{ line.functionCode }}</span>
             </span>
-            <span v-if="!line.editable" class="milestone-readonly">只读</span>
+            <span class="monthly-line-header-actions">
+              <span v-if="!line.editable" class="milestone-readonly">只读</span>
+              <span v-if="canAudit" class="monthly-line-audit">
+                <span>操作日志</span>
+                <button
+                  class="text-button"
+                  type="button"
+                  @click="openGroupedAuditLogs(
+                    `${line.functionName} ${month} 操作日志`,
+                    'MONTHLY_FUNCTION',
+                    { scopeStudyId: studyId, groupId: line.reportId, groupCode: line.functionCode },
+                  )"
+                >查看</button>
+              </span>
+            </span>
           </header>
 
           <ul class="monthly-entry-list">
@@ -304,5 +323,6 @@ function goBack() { router.push('/studies') }
         </div>
       </div>
     </PageState>
+    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>

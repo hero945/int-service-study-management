@@ -4,8 +4,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import type { MilestoneNode, MilestonePage, MilestoneUpdateInput, StageProjection } from '../api/types'
 import PageState from '../components/PageState.vue'
+import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { milestoneNodeStatusClass, milestoneNodeStatusLabel } from '../domain/milestone-status'
 import { usePermissions } from '../composables/usePermissions'
+import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,6 +23,9 @@ const editForm = reactive<Record<string, MilestoneUpdateInput>>({})
 
 const { can } = usePermissions()
 const canEdit = can('milestone.update')
+const canAudit = can('audit.read')
+const { auditDrawer, openGroupedAuditLogs, closeAuditLogs } =
+  useAuditLogDrawer('MILESTONE')
 
 async function load(showLoading = true) {
   if (!studyId.value) { router.push('/studies'); return }
@@ -116,12 +121,24 @@ function goBack() { router.push('/studies') }
                 <th class="milestone-col-status">状态</th>
                 <th class="milestone-col-note">偏差说明</th>
                 <th class="milestone-col-action">操作</th>
+                <th v-if="canAudit" class="milestone-col-action">操作日志</th>
               </tr>
             </thead>
             <template v-for="group in page.groups" :key="group.stageCode">
               <tbody>
                 <tr class="milestone-stage-row">
                   <td colspan="8" class="milestone-stage-title">{{ group.stageName }}</td>
+                  <td v-if="canAudit" class="milestone-cell-action">
+                    <button
+                      class="text-button"
+                      type="button"
+                      @click="openGroupedAuditLogs(
+                        `${group.stageName} 操作日志`,
+                        'MILESTONE_STAGE',
+                        { scopeStudyId: studyId, groupCode: group.stageCode },
+                      )"
+                    >查看</button>
+                  </td>
                 </tr>
                 <tr v-for="node in group.nodes" :key="node.milestoneCode"
                   :class="{ 'milestone-row--active': node.status === 'IN_PROGRESS', 'milestone-row--editing': isEditing(node.milestoneCode) }">
@@ -156,6 +173,7 @@ function goBack() { router.push('/studies') }
                     <button v-else-if="canEdit" class="text-button" type="button" @click="startEdit(node)">编辑</button>
                     <span v-else class="milestone-readonly">只读</span>
                   </td>
+                  <td v-if="canAudit"></td>
                 </tr>
               </tbody>
             </template>
@@ -163,5 +181,6 @@ function goBack() { router.push('/studies') }
         </div>
       </div>
     </PageState>
+    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>

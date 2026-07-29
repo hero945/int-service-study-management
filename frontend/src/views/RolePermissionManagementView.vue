@@ -9,11 +9,13 @@ import type {
 } from '../api/types'
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
+import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { useClientSort } from '../composables/useClientSort'
 import { useEscapeClose } from '../composables/useEscapeClose'
 import { useNotice } from '../composables/useNotice'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
+import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 
 const permissions = ref<PlatformPermission[]>([])
 const saving = ref(false)
@@ -42,6 +44,9 @@ const { can } = usePermissions()
 const canCreate = can('role.create')
 const canUpdate = can('role.update')
 const canDelete = can('role.delete')
+const canAudit = can('audit.read')
+const { auditDrawer, openRecordAuditLogs, closeAuditLogs } =
+  useAuditLogDrawer('ROLE')
 const permissionGroups = computed(() => {
   const groups = new Map<string, PlatformPermission[]>()
   for (const permission of permissions.value) {
@@ -253,6 +258,7 @@ onMounted(async () => {
             <th v-bind="roleSortHeader('assignedUsers')">关联账号</th>
             <th v-bind="roleSortHeader('status')">状态</th>
             <th>操作</th>
+            <th v-if="canAudit">操作日志</th>
           </tr></thead>
           <tbody>
             <tr v-for="role in sortedRoles" :key="role.id">
@@ -274,6 +280,9 @@ onMounted(async () => {
                   :title="role.systemRole ? '系统角色不可删除' : role.assignedUserCount ? '请先解除账号关联' : '删除角色'"
                   @click="removeRole(role)"
                 >删除</button>
+              </td>
+              <td v-if="canAudit">
+                <button class="text-button" type="button" @click="openRecordAuditLogs(`${role.roleCode} 操作日志`, 'ROLE', role.id)">查看</button>
               </td>
             </tr>
           </tbody>
@@ -336,5 +345,6 @@ onMounted(async () => {
         </form>
       </div>
     </Teleport>
+    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>

@@ -6,6 +6,7 @@ import type { RiskFormOptions, RiskLevel, RiskPage, RiskStatus, RiskSummary } fr
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import RiskEditorDrawer from '../components/RiskEditorDrawer.vue'
+import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { formatDateTime } from '../domain/date-format'
 import {
   riskActionSummaryLabel,
@@ -16,6 +17,7 @@ import {
 } from '../domain/risk-labels'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
+import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 import { useServerSort } from '../composables/useServerSort'
 
 const route = useRoute()
@@ -35,6 +37,9 @@ const scoreTip = ref<{ left: number; top: number } | null>(null)
 
 const { can } = usePermissions()
 const canCreate = can('risk.create')
+const canAudit = can('audit.read')
+const { auditDrawer, openRecordAuditLogs, closeAuditLogs } =
+  useAuditLogDrawer('RISK')
 const functionOptions = computed(() => formOptions.value?.functions ?? [])
 const studyOptions = computed(() => formOptions.value?.studies ?? [])
 const scoreRuleLines = computed(() => riskScoreRuleLines(formOptions.value?.scoringRule))
@@ -202,6 +207,7 @@ onMounted(async () => {
               <th>措施</th>
               <th>Status</th>
               <th v-bind="sortHeader('updatedAt')">更新时间</th>
+              <th v-if="canAudit">操作日志</th>
             </tr>
           </thead>
           <tbody>
@@ -252,6 +258,9 @@ onMounted(async () => {
                 </span>
               </td>
               <td class="mono">{{ formatDateTime(risk.updatedAt) }}</td>
+              <td v-if="canAudit">
+                <button class="text-button" type="button" @click.stop="openRecordAuditLogs(`${risk.riskCode} 操作日志`, 'RISK', risk.riskId)">查看</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -283,5 +292,6 @@ onMounted(async () => {
     </Teleport>
 
     <RiskEditorDrawer :open="drawerOpen" :risk-code="selectedRiskCode" @close="closeDrawer" @saved="saved" />
+    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>

@@ -107,8 +107,6 @@ public class JdbcMilestoneRepository implements StudyMilestonePort {
         "SELECT id FROM hd_plt_study_milestone WHERE study_id = ? AND milestone_code = ? AND sys_deleted = 0",
         Long.class, command.studyId(), command.milestoneCode());
 
-    audit("MILESTONE_SAVE", command);
-
     return new PersistedMilestone(
         id, command.studyId(), command.stageCode(), command.milestoneCode(),
         command.planV1Date(), command.planV2Date(),
@@ -126,19 +124,6 @@ public class JdbcMilestoneRepository implements StudyMilestonePort {
     return " AND EXISTS (SELECT 1 FROM hd_plt_team_assignment scope_ta"
         + " WHERE scope_ta.study_id = s.id AND scope_ta.user_id = ?"
         + " AND scope_ta.sys_deleted = 0)";
-  }
-
-  private void audit(String action, MilestoneSaveCommand command) {
-    jdbc.update("""
-        INSERT INTO hd_plt_audit_log(
-          operator_user_id, operator_email, action_code, target_table, target_id,
-          operation_reason, result_code)
-        VALUES (NULL, ?, ?, 'hd_plt_study_milestone', NULL, ?, 'SUCCESS')
-        """, command.operatorEmail(), action,
-        command.studyId() + "/" + command.milestoneCode()
-            + " V1=" + command.planV1Date() + " V2=" + command.planV2Date()
-            + " AS=" + command.actualStartDate() + " AE=" + command.actualEndDate()
-            + " note=" + command.deviationNote());
   }
 
   private static Date date(LocalDate value) {

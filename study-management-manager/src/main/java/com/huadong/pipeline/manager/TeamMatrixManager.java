@@ -54,6 +54,11 @@ public class TeamMatrixManager {
     return withCurrentStatus(matrix, user);
   }
 
+  public MatrixPage getStudyTeamForAudit(long studyId, String username) {
+    UserAccount user = currentUser(username);
+    return withCurrentStatus(teams.findStudyTeam(StudyAccessScope.all(), studyId), user);
+  }
+
   private MatrixPage withCurrentStatus(MatrixPage matrix, UserAccount user) {
     boolean canReadMilestone = user.permissions().contains("milestone.read");
     List<Long> studyIds = matrix.studies().stream().map(TeamStudy::studyId).toList();
@@ -161,9 +166,6 @@ public class TeamMatrixManager {
         if (!sortedBefore.equals(after)) {
           teams.replaceAssignments(study.studyId(), roles.get(roleChange.roleCode()),
               afterMembers, operator.username());
-          teams.appendAudit(
-              study.studyId(), roleChange.roleCode(), sortedBefore, after,
-              operator.id(), operator.username());
           changed = true;
         }
       }

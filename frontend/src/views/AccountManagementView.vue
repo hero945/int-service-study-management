@@ -8,11 +8,13 @@ import type {
 } from '../api/types'
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
+import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { useClientSort } from '../composables/useClientSort'
 import { useEscapeClose } from '../composables/useEscapeClose'
 import { useNotice } from '../composables/useNotice'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
+import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 
 const saving = ref(false)
 const filters = reactive({ keyword: '', roleFilter: '' })
@@ -42,6 +44,9 @@ const { can } = usePermissions()
 const canCreate = can('account.create')
 const canUpdate = can('account.update')
 const canAssignRoles = can('account.assignRole')
+const canAudit = can('audit.read')
+const { auditDrawer, openRecordAuditLogs, closeAuditLogs } =
+  useAuditLogDrawer('ACCOUNT')
 
 const { notice, showNotice } = useNotice()
 
@@ -292,6 +297,7 @@ onUnmounted(() => {
               <th v-bind="userSortHeader('visibleScope')">可见范围</th>
               <th v-bind="userSortHeader('status')">状态</th>
               <th class="account-actions-col">操作</th>
+              <th v-if="canAudit">操作日志</th>
             </tr>
           </thead>
           <tbody>
@@ -346,6 +352,9 @@ onUnmounted(() => {
                     @click="confirmToggle(user)"
                   >{{ user.enabled ? '停用' : '启用' }}</button>
                 </div>
+              </td>
+              <td v-if="canAudit">
+                <button type="button" class="link-button" @click="openRecordAuditLogs(`${user.displayName} 操作日志`, 'USER', user.id)">查看</button>
               </td>
             </tr>
           </tbody>
@@ -533,6 +542,7 @@ onUnmounted(() => {
         </div>
       </div>
     </Teleport>
+    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>
 

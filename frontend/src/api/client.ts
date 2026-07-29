@@ -1,4 +1,6 @@
 import type {
+  AuditLogPage,
+  AuditLogQuery,
   AssignRolesInput,
   ChangePasswordInput,
   CreateUserInput,
@@ -57,6 +59,7 @@ import type {
 import { createMockApiClient } from './mock'
 
 export interface ApiClient {
+  listAuditLogs(query: AuditLogQuery): Promise<AuditLogPage>
   getCurrentUser(): Promise<CurrentUser>
   login(credentials: LoginCredentials): Promise<CurrentUser>
   logout(): Promise<void>
@@ -199,6 +202,19 @@ export function createHttpApiClient(): ApiClient {
   }
 
   return {
+    listAuditLogs: (query) =>
+      request<AuditLogPage>(`/api/v1/audit-logs?${toSearchParams({
+        moduleCode: query.moduleCode,
+        subjectType: query.subjectType,
+        subjectId: query.subjectId,
+        scopeStudyId: query.scopeStudyId,
+        groupType: query.groupType,
+        groupId: query.groupId,
+        groupCode: query.groupCode,
+        resultCode: query.resultCode,
+        page: query.page ?? 1,
+        pageSize: query.pageSize ?? 20,
+      })}`),
     getCurrentUser: () => request<CurrentUser>('/api/v1/platform/me'),
     async login(credentials) {
       await refreshCsrf()

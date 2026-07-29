@@ -76,8 +76,12 @@ test('pipeline entity forms use the reduced fields and database-backed therapeut
   assert.doesNotMatch(configView, /Study 名称/);
   assert.doesNotMatch(types, /(?:studyName|programName|projectName|phaseStatusLabel)/);
   const columns = ['Source', 'Origin', 'Product', 'Program', 'MOA', 'Project', 'TA', 'Indication', 'Study No.', 'Phase Status'];
+  const headerPositions = columns.map((column) =>
+    configView.search(new RegExp(`<th[^>]*>${column.replace('.', '\\.')}</th>`)),
+  );
+  assert.ok(headerPositions.every((position) => position >= 0));
   for (let index = 1; index < columns.length; index += 1) {
-    assert.ok(configView.indexOf(`<th>${columns[index - 1]}</th>`) < configView.indexOf(`<th>${columns[index]}</th>`));
+    assert.ok(headerPositions[index - 1] < headerPositions[index]);
   }
   assert.match(configView, /class="[^"]*entity-program-table/);
   assert.match(configView, /class="project-drawer"/);
@@ -102,6 +106,68 @@ test('pipeline entity forms use the reduced fields and database-backed therapeut
   }
   assert.match(configView, /新建 Program/);
   assert.match(configView, /新建 Project/);
+});
+
+test('audit log entry points are record or group scoped without module-wide buttons', () => {
+  const accountView = read('frontend/src/views/AccountManagementView.vue');
+  const roleView = read('frontend/src/views/RolePermissionManagementView.vue');
+  const configView = read('frontend/src/views/PipelineConfigView.vue');
+  const riskView = read('frontend/src/views/RiskManagementView.vue');
+  const milestoneView = read('frontend/src/views/MilestoneView.vue');
+  const monthlyView = read('frontend/src/views/MonthlyReportFillView.vue');
+
+  for (const source of [
+    accountView, roleView, configView, riskView, milestoneView, monthlyView,
+  ]) {
+    assert.doesNotMatch(source, />全部操作日志</);
+  }
+
+  for (const source of [accountView, roleView, configView, riskView]) {
+    assert.match(source, />操作日志</);
+    assert.match(source, />查看</);
+  }
+
+  assert.match(
+    accountView,
+    /<th class="account-actions-col">操作<\/th>\s*<th v-if="canAudit">操作日志<\/th>/,
+  );
+  assert.match(
+    roleView,
+    /<th>操作<\/th>\s*<th v-if="canAudit">操作日志<\/th>/,
+  );
+  assert.match(
+    roleView,
+    /<button class="text-button" type="button" @click="openRecordAuditLogs\([^>]+>查看<\/button>/,
+  );
+  assert.match(
+    riskView,
+    /<th v-if="canAudit">操作日志<\/th>\s*<\/tr>/,
+  );
+  assert.match(
+    milestoneView,
+    /<th v-if="canAudit" class="milestone-col-action">操作日志<\/th>\s*<\/tr>/,
+  );
+  assert.equal(
+    (configView.match(
+      /<th>操作<\/th>\s*<th v-if="canAudit">操作日志<\/th>/g,
+    ) ?? []).length,
+    3,
+  );
+
+  assert.match(milestoneView, /openGroupedAuditLogs\([^)]*'MILESTONE_STAGE'/s);
+  assert.doesNotMatch(milestoneView, /node\.milestoneId\)/);
+  assert.match(monthlyView, /openGroupedAuditLogs\([^)]*'MONTHLY_FUNCTION'/s);
+  assert.doesNotMatch(monthlyView, /'MONTHLY_ENTRY', entry\.entryId/);
+});
+
+test('pipeline config keeps independent save state for each entity dialog', () => {
+  const configView = read('frontend/src/views/PipelineConfigView.vue');
+
+  assert.match(configView, /const programSaving = ref\(false\)/);
+  assert.match(configView, /const projectSaving = ref\(false\)/);
+  assert.match(configView, /const studySaving = ref\(false\)/);
+  assert.doesNotMatch(configView, /const saving = ref\(false\)/);
+  assert.match(configView, /:disabled="studySaving \|\| !studyForm\.projectId"/);
 });
 
 test('production packaging consumes the compiled frontend output', () => {
@@ -175,8 +241,9 @@ test('pipeline overview keeps sticky id columns and stacked project/study drawer
   assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*min-width:\s*510px/s);
   assert.match(mainCss, /\.pipeline-table[^{]*th:nth-child\(3\)[\s\S]*?border-right:\s*1px/s);
   assert.match(mainCss, /\.status-chip\s*\{[^}]*width:\s*128px/s);
-  assert.match(mainCss, /\.status-chip--green\s*\{[^}]*background:\s*#e5f4eb/s);
-  assert.match(mainCss, /\.status-chip--blue\s*\{[^}]*border-color:\s*#b7cff5/s);
+  assert.match(mainCss, /--green-bg:\s*#e5f4eb/);
+  assert.match(mainCss, /\.status-chip--green[^}]*\{[^}]*background:\s*var\(--green-bg\)/s);
+  assert.match(mainCss, /\.status-chip--blue[^}]*\{[^}]*border-color:\s*#b7cff5/s);
   assert.match(mainCss, /\.pipeline-id-cell\s*\{[^}]*cursor:\s*pointer/s);
   assert.match(mainCss, /\.cell-clickable\s*\{[^}]*cursor:\s*pointer/s);
 

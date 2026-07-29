@@ -21,6 +21,7 @@ public interface MilestoneApi {
   // ──────────── response records ────────────
 
   record MilestoneNodeResponse(
+      Long milestoneId,
       String milestoneCode,
       String milestoneName,
       LocalDate planV1Date,

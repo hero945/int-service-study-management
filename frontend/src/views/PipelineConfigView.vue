@@ -7,10 +7,12 @@ import type {
 } from '../api/types'
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
+import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
 import { useClientSort } from '../composables/useClientSort'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
+import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 
 const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
 
@@ -24,7 +26,9 @@ const therapeuticAreas = ref<TherapeuticArea[]>([])
 const selectedProgramId = ref<number>()
 const projectDrawerOpen = ref(false)
 const notice = ref('')
-const saving = ref(false)
+const programSaving = ref(false)
+const projectSaving = ref(false)
+const studySaving = ref(false)
 const entityDialog = ref<EntityKind>()
 const editingProgram = ref<PipelineProgram>()
 const editingProject = ref<PipelineProject>()
@@ -39,6 +43,9 @@ const { can } = usePermissions()
 const canCreate = can('config.create')
 const canUpdate = can('config.update')
 const canDelete = can('config.delete')
+const canAudit = can('audit.read')
+const { auditDrawer, openRecordAuditLogs, closeAuditLogs } =
+  useAuditLogDrawer('CONFIG')
 
 const {
   result, loading, error,
@@ -161,7 +168,7 @@ function manageProgram(program: PipelineProgram) {
 }
 
 async function saveProgram() {
-  saving.value = true
+  programSaving.value = true
   resetFeedback()
   try {
     let saved: PipelineProgram
@@ -183,12 +190,12 @@ async function saveProgram() {
   } catch (reason) {
     error.value = messageOf(reason, 'Program 保存失败')
   } finally {
-    saving.value = false
+    programSaving.value = false
   }
 }
 
 async function saveProject() {
-  saving.value = true
+  projectSaving.value = true
   resetFeedback()
   try {
     let saved: PipelineProject
@@ -210,7 +217,7 @@ async function saveProject() {
   } catch (reason) {
     error.value = messageOf(reason, 'Project 保存失败')
   } finally {
-    saving.value = false
+    projectSaving.value = false
   }
 }
 
@@ -290,7 +297,7 @@ function selectedProjectsForStudy() {
 }
 
 async function saveStudy() {
-  saving.value = true
+  studySaving.value = true
   resetFeedback()
   try {
     if (editingStudy.value) {
@@ -308,7 +315,7 @@ async function saveStudy() {
   } catch (reason) {
     error.value = messageOf(reason, 'Study 保存失败')
   } finally {
-    saving.value = false
+    studySaving.value = false
   }
 }
 
@@ -381,11 +388,13 @@ onUnmounted(() => {
           <th v-bind="rowSortHeader('studyNo')">Study No.</th>
           <th v-bind="rowSortHeader('phaseStatus')">Phase Status</th>
           <th>操作</th>
+          <th v-if="canAudit">操作日志</th>
         </tr></thead><tbody><tr v-for="row in sortedRows" :key="row.studyId">
           <td>{{ row.sourceLabel }}</td><td>{{ row.originLabel }}</td><td>{{ row.productName }}</td><td class="mono">{{ row.programCode }}</td>
           <td>{{ row.moa || '—' }}</td><td class="mono">{{ row.projectCode }}</td><td>{{ row.therapeuticAreaName }}</td><td>{{ row.indication }}</td>
           <td class="mono">{{ row.studyCode }}</td><td><span class="status-chip status-chip--blue">{{ row.phaseStatusCode }}</span></td>
           <td class="row-actions"><button v-if="canUpdate" type="button" @click="openStudy(row)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('study', row.studyId, row.studyCode)">删除</button></td>
+          <td v-if="canAudit"><button class="text-button" type="button" @click="openRecordAuditLogs(`${row.studyCode} 操作日志`, 'STUDY', row.studyId)">查看</button></td>
         </tr></tbody></table></div>
       </PageState>
       <ListPagination
@@ -410,8 +419,9 @@ onUnmounted(() => {
           <th v-bind="programSortHeader('product')">Product</th>
           <th v-bind="programSortHeader('moa')">MOA</th>
           <th>操作</th>
+          <th v-if="canAudit">操作日志</th>
         </tr></thead><tbody>
-          <tr v-for="program in sortedPrograms" :key="program.id"><td class="mono strong">{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('program', program.id, program.code)">删除</button></td></tr>
+          <tr v-for="program in sortedPrograms" :key="program.id"><td class="mono strong">{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('program', program.id, program.code)">删除</button></td><td v-if="canAudit"><button class="text-button" type="button" @click="openRecordAuditLogs(`${program.code} 操作日志`, 'PROGRAM', program.id)">查看</button></td></tr>
         </tbody></table></div>
       </PageState>
     </template>
@@ -421,7 +431,17 @@ onUnmounted(() => {
         <header><div><h2 id="project-drawer-title">{{ selectedProgram?.code }} 的 Project</h2><p>在当前 Program 下新增、编辑或删除 Project。</p></div><button type="button" aria-label="关闭 Project 管理" @click="projectDrawerOpen = false">×</button></header>
         <div class="drawer-toolbar"><span>{{ selectedProjects.length }} 个 Project</span><button v-if="canCreate" class="primary-button" type="button" @click="openProject(undefined, selectedProgramId)">＋ 新增 Project</button></div>
         <div v-if="!selectedProjects.length" class="empty-inline">该 Program 尚无 Project</div>
-        <div v-else class="drawer-project-list"><article v-for="project in selectedProjects" :key="project.id"><div><strong class="mono">{{ project.code }}</strong><p>{{ project.indication }}</p><small>{{ project.therapeuticAreaName }} · {{ project.studyCount }} Study</small></div><div class="row-actions"><button v-if="canUpdate" type="button" @click="openProject(project)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('project', project.id, project.code)">删除</button></div></article></div>
+        <div v-else class="drawer-project-list">
+          <table class="data-table drawer-project-table">
+            <thead><tr><th>Project</th><th>Study</th><th>操作</th><th v-if="canAudit">操作日志</th></tr></thead>
+            <tbody><tr v-for="project in selectedProjects" :key="project.id">
+              <td><strong class="mono">{{ project.code }}</strong><p>{{ project.indication }}</p><small>{{ project.therapeuticAreaName }}</small></td>
+              <td>{{ project.studyCount }}</td>
+              <td class="row-actions"><button v-if="canUpdate" type="button" @click="openProject(project)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('project', project.id, project.code)">删除</button></td>
+              <td v-if="canAudit"><button class="text-button" type="button" @click="openRecordAuditLogs(`${project.code} 操作日志`, 'PROJECT', project.id)">查看</button></td>
+            </tr></tbody>
+          </table>
+        </div>
       </aside>
     </div>
 
@@ -441,7 +461,7 @@ onUnmounted(() => {
           <label>TA *<select v-model="projectForm.therapeuticAreaCode" required><option value="" disabled>请选择治疗领域</option><option v-for="area in therapeuticAreas" :key="area.id" :value="area.code">{{ area.name }}（{{ area.code }}）</option></select><small>TA：治疗领域，如肿瘤、自身免疫。</small></label>
           <label class="form-wide">Indication 适应症 *<textarea v-model="projectForm.indication" required maxlength="500" rows="3"></textarea></label>
         </div>
-        <footer><button class="secondary-button" type="button" @click="closeEntityDialog">取消</button><button class="primary-button" type="submit" :disabled="saving">{{ saving ? '保存中…' : entityDialog === 'program' ? '保存 Program' : '保存 Project' }}</button></footer>
+        <footer><button class="secondary-button" type="button" @click="closeEntityDialog">取消</button><button class="primary-button" type="submit" :disabled="entityDialog === 'program' ? programSaving : projectSaving">{{ entityDialog === 'program' ? (programSaving ? '保存中…' : '保存 Program') : (projectSaving ? '保存中…' : '保存 Project') }}</button></footer>
       </form>
     </div>
 
@@ -454,8 +474,9 @@ onUnmounted(() => {
           <label>Project *<details ref="studyProjectDetails" class="entity-select"><summary>{{ projects.find(item => item.id === studyForm.projectId)?.code || '请选择 Project' }}</summary><div class="entity-select-menu" role="listbox"><button v-for="project in selectedProjectsForStudy()" :key="project.id" type="button" role="option" @click="selectStudyProject(project.id, $event)">{{ project.code }}</button><button v-if="canCreate" class="entity-select-create" type="button" @click="quickCreateProject">＋ 新建 Project</button></div></details></label>
           <label>Phase Status *<select v-model="studyForm.phaseStatusCode"><option v-for="opt in phaseStatusOptions" :key="opt.code" :value="opt.code">{{ opt.label }}</option></select></label>
         </div>
-        <footer><button class="secondary-button" type="button" @click="studyDialog = false">取消</button><button class="primary-button" type="submit" :disabled="saving || !studyForm.projectId">{{ saving ? '保存中…' : '保存 Study' }}</button></footer>
+        <footer><button class="secondary-button" type="button" @click="studyDialog = false">取消</button><button class="primary-button" type="submit" :disabled="studySaving || !studyForm.projectId">{{ studySaving ? '保存中…' : '保存 Study' }}</button></footer>
       </form>
     </div>
+    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>

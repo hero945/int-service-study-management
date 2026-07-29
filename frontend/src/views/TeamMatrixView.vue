@@ -7,8 +7,10 @@ import type {
 } from '../api/types'
 import PageState from '../components/PageState.vue'
 import ListPagination from '../components/ListPagination.vue'
+import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
+import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 import { session } from '../session'
 
 const users = ref<PlatformUser[]>([])
@@ -23,6 +25,9 @@ const { can } = usePermissions()
 const canEditMode = can('team.edit_mode')
 const canUpdateTeam = can('team.update')
 const canEdit = computed(() => canEditMode.value && canUpdateTeam.value)
+const canAudit = can('audit.read')
+const { auditDrawer, openAllAuditLogs, openRecordAuditLogs, closeAuditLogs } =
+  useAuditLogDrawer('TEAM')
 const enabledUsers = computed(() => users.value.filter(user => user.enabled))
 const hasChanges = computed(() => drafts.value.size > 0)
 
@@ -184,6 +189,7 @@ onMounted(load)
 <template>
   <section class="page-content team-page">
     <form class="page-toolbar team-toolbar" role="search" @submit.prevent="applyFilters">
+      <button v-if="canAudit" class="secondary-button" type="button" @click="openAllAuditLogs('团队全部操作日志')">全部操作日志</button>
       <div class="toolbar-filters">
         <label>
           <span class="sr-only">搜索 Study 或适应症</span>
@@ -238,6 +244,7 @@ onMounted(load)
                 <th scope="col">角色 / Study</th>
                 <th v-for="study in matrix?.studies" :key="study.studyId" scope="col">
                   <strong>{{ study.studyCode }}</strong>
+                  <button v-if="canAudit" class="text-button" type="button" @click="openRecordAuditLogs(`${study.studyCode} 角色分配记录`, 'STUDY', study.studyId)">角色分配记录</button>
                   <span>{{ study.indication || '—' }}</span>
                   <small>{{ study.currentStatus || '—' }}</small>
                 </th>
@@ -314,5 +321,6 @@ onMounted(load)
       @update:page="changePage"
       @update:page-size="changePageSize"
     />
+    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>

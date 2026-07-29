@@ -218,7 +218,6 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
         SELECT id FROM hd_plt_monthly_report_entry
         WHERE monthly_report_id = ? AND sequence_no = ? AND sys_deleted = 0
         """, Long.class, command.reportId(), command.sequenceNo());
-    audit(command.operatorUserId(), command.operatorEmail(), id, command.auditReason(), "monthly_save");
     return id;
   }
 
@@ -232,8 +231,6 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
         """,
         Date.valueOf(command.entryDate()), command.content(),
         command.operatorEmail(), command.entryId());
-    audit(command.operatorUserId(), command.operatorEmail(),
-        command.entryId(), command.auditReason(), "monthly_save");
   }
 
   @Override
@@ -243,7 +240,6 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
         SET sys_deleted = 1, sys_update_by = ?, sys_update_time = CURRENT_TIMESTAMP
         WHERE id = ? AND sys_deleted = 0
         """, operatorEmail, entryId);
-    audit(operatorUserId, operatorEmail, entryId, "soft delete", "monthly_delete");
   }
 
   @Override
@@ -326,16 +322,6 @@ public class JdbcMonthlyReportRepository implements MonthlyReportPort {
     return " AND EXISTS (SELECT 1 FROM hd_plt_team_assignment scope_ta"
         + " WHERE scope_ta.study_id = s.id AND scope_ta.user_id = ?"
         + " AND scope_ta.sys_deleted = 0)";
-  }
-
-  private void audit(long operatorUserId, String operatorEmail, long entryId,
-                     String reason, String actionCode) {
-    jdbc.update("""
-        INSERT INTO hd_plt_audit_log(
-          operator_user_id, operator_email, action_code, target_table, target_id,
-          operation_reason, result_code)
-        VALUES (?, ?, ?, 'hd_plt_monthly_report_entry', ?, ?, 'SUCCESS')
-        """, operatorUserId, operatorEmail, actionCode, entryId, reason);
   }
 
   private static final org.springframework.jdbc.core.RowMapper<FunctionLineRef>
