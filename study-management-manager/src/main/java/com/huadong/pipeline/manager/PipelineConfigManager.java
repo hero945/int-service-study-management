@@ -76,10 +76,11 @@ public class PipelineConfigManager {
       throw new BusinessException("PRODUCT_NAME_EXISTS", "Product 已关联其他 Program");
     }
     validateProgramEnums(command.sourceCode(), command.originCode());
+    int version = programs.findMaxVersionByCode(code).orElse(0) + 1;
     Program created = programs.create(code, command.productName().trim(),
-        trimToNull(command.moa()), command.sourceCode(), command.originCode(), username);
-    log.info("配置写入 operator={} entity=Program action=create id={} code={}",
-        username, created.id(), created.code());
+        trimToNull(command.moa()), command.sourceCode(), command.originCode(), version, username);
+    log.info("配置写入 operator={} entity=Program action=create id={} code={} version={}",
+        username, created.id(), created.code(), created.version());
     return created;
   }
 
@@ -95,8 +96,9 @@ public class PipelineConfigManager {
     if (programs.existsByProductName(productName, id)) {
       throw new BusinessException("PRODUCT_NAME_EXISTS", "Product 已关联其他 Program");
     }
-    programs.update(id, productName, moa, source, origin, username);
-    log.info("配置写入 operator={} entity=Program action=update id={}", username, id);
+    programs.update(id, productName, moa, source, origin, command.expectedVersion(), username);
+    log.info("配置写入 operator={} entity=Program action=update id={} version={}",
+        username, id, command.expectedVersion());
     return requireProgram(id);
   }
 
@@ -119,11 +121,13 @@ public class PipelineConfigManager {
     if (projects.findByCode(code).isPresent()) {
       throw new BusinessException("PROJECT_CODE_EXISTS", "Project 编码已存在");
     }
+    int version = projects.findMaxVersionByCode(code).orElse(0) + 1;
     try {
       Project created = projects.create(code, command.programId(),
-          command.indication().trim(), command.therapeuticAreaCode().trim().toUpperCase(), username);
-      log.info("配置写入 operator={} entity=Project action=create id={} code={}",
-          username, created.id(), created.code());
+          command.indication().trim(), command.therapeuticAreaCode().trim().toUpperCase(),
+          version, username);
+      log.info("配置写入 operator={} entity=Project action=create id={} code={} version={}",
+          username, created.id(), created.code(), created.version());
       return created;
     } catch (IllegalArgumentException ex) {
       throw new BusinessException("INVALID_THERAPEUTIC_AREA", "治疗领域不存在或已停用");
@@ -132,16 +136,17 @@ public class PipelineConfigManager {
 
   @Transactional
   public Project updateProject(long id, ProjectUpdate command, String username) {
-    Project existing = requireProject(id);
-    String indication = valueOr(command.indication(), existing.indication());
-    String area = valueOr(command.therapeuticAreaCode(), existing.therapeuticAreaCode()).toUpperCase();
+    requireProject(id);
+    String indication = valueOr(command.indication(), existing(id).indication());
+    String area = valueOr(command.therapeuticAreaCode(), existing(id).therapeuticAreaCode()).toUpperCase();
     requireText(indication, "Indication 不能为空");
     try {
-      projects.update(id, indication, area, username);
+      projects.update(id, indication, area, command.expectedVersion(), username);
     } catch (IllegalArgumentException ex) {
       throw new BusinessException("INVALID_THERAPEUTIC_AREA", "治疗领域不存在或已停用");
     }
-    log.info("配置写入 operator={} entity=Project action=update id={}", username, id);
+    log.info("配置写入 operator={} entity=Project action=update id={} version={}",
+        username, id, command.expectedVersion());
     return requireProject(id);
   }
 
@@ -158,15 +163,19 @@ public class PipelineConfigManager {
 
   @Transactional
   public PipelineConfigRow updateStudy(
-      long id, long projectId, String phaseStatusCode, String username) {
+      long id, long projectId, String phaseStatusCode, int expectedVersion, String username) {
     requireStudy(id);
     requireProject(projectId);
     String phase = normalizePhase(phaseStatusCode);
-    configuration.updateStudy(id, projectId, phase, username);
+    configuration.updateStudy(id, projectId, phase, expectedVersion, username);
     log.info(
-        "配置写入 operator={} entity=Study action=update id={} projectId={} phase={}",
-        username, id, projectId, phase);
+        "配置写入 operator={} entity=Study action=update id={} projectId={} phase={} version={}",
+        username, id, projectId, phase, expectedVersion);
     return requireStudy(id);
+  }
+
+  private Project existing(long id) {
+    return requireProject(id);
   }
 
   @Transactional
@@ -235,7 +244,8 @@ public class PipelineConfigManager {
   }
 
   public record ProgramUpdate(
-      String productName, String moa, String sourceCode, String originCode) {
+      String productName, String moa, String sourceCode, String originCode,
+      int expectedVersion) {
   }
 
   public record ProjectCommand(
@@ -243,6 +253,7 @@ public class PipelineConfigManager {
   }
 
   public record ProjectUpdate(
-      String indication, String therapeuticAreaCode) {
+      String indication, String therapeuticAreaCode,
+      int expectedVersion) {
   }
 }

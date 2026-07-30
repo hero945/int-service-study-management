@@ -716,6 +716,7 @@ export function createMockApiClient(): ApiClient {
       originLabel: ORIGIN_LABEL[study.originCode ?? ''] ?? '',
       projectCount: new Set(demoStudies.filter((s) => s.programCode === study.programCode).map((s) => s.projectCode)).size,
       studyCount: demoStudies.filter((s) => s.programCode === study.programCode).length,
+      version: 1,
       updatedAt: study.updatedAt,
     }))
   const projects: PipelineProject[] = uniqueBy(demoStudies, (s) => s.projectCode ?? '')
@@ -729,6 +730,7 @@ export function createMockApiClient(): ApiClient {
       therapeuticAreaCode: study.therapeuticAreaCode ?? '',
       therapeuticAreaName: study.therapeuticAreaName ?? '',
       studyCount: demoStudies.filter((s) => s.projectCode === study.projectCode).length,
+      version: 1,
       updatedAt: study.updatedAt,
     }))
   let nextProgramId = programs.length + 1
@@ -915,7 +917,7 @@ export function createMockApiClient(): ApiClient {
       const options = await this.getRiskFormOptions(input.studyId)
       const fn = mustFind(options.functions, item => item.id === input.functionLineId, '功能线不存在')
       const owner = mustFind(options.owners, item => item.id === input.ownerUserId, 'Owner 不存在')
-      const score = input.assessment.impact * input.assessment.likelihood * input.assessment.detectability
+      const score = input.assessment.impact * input.assessment.likelihood * (6 - input.assessment.detectability)
       const level = deriveRiskLevel(score, options.scoringRule)
       const now = new Date().toISOString()
       const detail: RiskDetail = {
@@ -984,7 +986,7 @@ export function createMockApiClient(): ApiClient {
         })
       }
       if (input.assessment) {
-        const score = input.assessment.impact * input.assessment.likelihood * input.assessment.detectability
+        const score = input.assessment.impact * input.assessment.likelihood * (6 - input.assessment.detectability)
         const level = deriveRiskLevel(score, options.scoringRule)
         Object.assign(detail.risk, { score, level })
         detail.assessments.unshift({ id: Date.now(), number: detail.assessments.length + 1,
@@ -1291,6 +1293,7 @@ export function createMockApiClient(): ApiClient {
           sourceLabel: program.sourceLabel,
           originCode: program.originCode,
           originLabel: program.originLabel,
+          version: 1,
           updatedAt: study.updatedAt,
         }
       }).filter((row) => !keyword || [
@@ -1316,21 +1319,23 @@ export function createMockApiClient(): ApiClient {
         .some((value) => value.toLowerCase().includes(query)))
     },
     async createProgram(input) {
-      if (programs.some((item) => item.code === input.code)) throw new Error('Program ?????')
+      if (programs.some((item) => item.code === input.code)) throw new Error('Program 编码已存在')
       const program: PipelineProgram = {
         id: nextProgramId++, code: input.code, productName: input.productName,
         moa: input.moa ?? null, sourceCode: input.sourceCode,
         sourceLabel: sourceLabel(input.sourceCode),
         originCode: input.originCode, originLabel: originLabel(input.originCode),
-        projectCount: 0, studyCount: 0, updatedAt: now(),
+        projectCount: 0, studyCount: 0, version: 1, updatedAt: now(),
       }
       programs.push(program)
       return program
     },
     async updateProgram(id, input) {
       const program = programs.find((item) => item.id === id)
-      if (!program) throw new Error('Program ???')
-      Object.assign(program, input, { updatedAt: now() })
+      if (!program) throw new Error('Program 不存在')
+      if (program.version !== input.expectedVersion) throw new Error('Program 已被其他用户修改')
+      const { expectedVersion, ...rest } = input
+      Object.assign(program, rest, { updatedAt: now(), version: program.version + 1 })
       return program
     },
     async deleteProgram(id) {
@@ -1345,15 +1350,15 @@ export function createMockApiClient(): ApiClient {
         (!query || item.code.toLowerCase().includes(query)))
     },
     async createProject(input) {
-      if (projects.some((item) => item.code === input.code)) throw new Error('Project ?????')
+      if (projects.some((item) => item.code === input.code)) throw new Error('Project 编码已存在')
       const program = programs.find((item) => item.id === input.programId)
-      if (!program) throw new Error('Program ???')
+      if (!program) throw new Error('Program 不存在')
       const project: PipelineProject = {
         id: nextProjectId++, code: input.code, programId: input.programId,
         programCode: program.code, indication: input.indication, therapeuticAreaId: 99,
         therapeuticAreaCode: input.therapeuticAreaCode,
         therapeuticAreaName: therapeuticAreas.find((item) => item.code === input.therapeuticAreaCode)?.name ?? input.therapeuticAreaCode,
-        studyCount: 0, updatedAt: now(),
+        studyCount: 0, version: 1, updatedAt: now(),
       }
       projects.push(project)
       program.projectCount++
@@ -1361,8 +1366,10 @@ export function createMockApiClient(): ApiClient {
     },
     async updateProject(id, input) {
       const project = projects.find((item) => item.id === id)
-      if (!project) throw new Error('Project ???')
-      Object.assign(project, input, { updatedAt: now() })
+      if (!project) throw new Error('Project 不存在')
+      if (project.version !== input.expectedVersion) throw new Error('Project 已被其他用户修改')
+      const { expectedVersion, ...rest } = input
+      Object.assign(project, rest, { updatedAt: now(), version: project.version + 1 })
       return project
     },
     async deleteProject(id) {
@@ -1388,18 +1395,19 @@ export function createMockApiClient(): ApiClient {
     async updateStudyConfig(id, input) {
       const study = demoStudies.find((item) => item.id === id)
       const project = projects.find((item) => item.id === input.projectId)
-      if (!study || !project) throw new Error('Study ? Project ???')
+      if (!study || !project) throw new Error('Study 或 Project 不存在')
+      const page = await this.listPipelineConfig({ page: 1, pageSize: 500 })
+      const row = page.data.find((item) => item.studyId === id)
+      if (!row) throw new Error('Study 配置不存在')
+      if (row.version !== input.expectedVersion) throw new Error('Study 已被其他用户修改')
       study.phase = input.phaseStatusCode
       study.projectCode = project.code
       study.programCode = project.programCode
       study.therapeuticAreaCode = project.therapeuticAreaCode
       study.therapeuticAreaName = project.therapeuticAreaName
       study.indication = project.indication
-      return mustFind(
-        (await this.listPipelineConfig({ page: 1, pageSize: 500 })).data,
-        (item) => item.studyId === id,
-        'Study 配置不存在',
-      )
+      row.version++
+      return row
     },
     async deleteStudyConfig(id) {
       const index = demoStudies.findIndex((item) => item.id === id)

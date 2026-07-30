@@ -176,7 +176,7 @@ public class RiskManager {
       throw invalid("影响、可能性和可探测性必须为1至5");
     }
     var rule = risks.activeRule();
-    int score = input.impact() * input.likelihood() * input.detectability();
+    int score = input.impact() * input.likelihood() * (6 - input.detectability());
     return new RiskRepository.Assessment(input.impact(), input.likelihood(),
         input.detectability(), score,
         RiskLevel.fromScore(score, rule.lowMax(), rule.mediumMax()),

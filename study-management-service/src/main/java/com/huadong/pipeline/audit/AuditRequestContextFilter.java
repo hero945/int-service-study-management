@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -14,6 +15,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
+@Slf4j
 public class AuditRequestContextFilter extends OncePerRequestFilter {
   public static final String REQUEST_ID_HEADER = "X-Request-ID";
 
@@ -47,7 +49,8 @@ public class AuditRequestContextFilter extends OncePerRequestFilter {
   private static boolean isLoopback(String address) {
     try {
       return InetAddress.getByName(address).isLoopbackAddress();
-    } catch (Exception ignored) {
+    } catch (Exception ex) {
+      log.debug("loopback 地址检测失败 address={}", address, ex);
       return false;
     }
   }

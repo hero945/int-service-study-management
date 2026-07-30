@@ -3,7 +3,6 @@ package com.huadong.pipeline.manager;
 
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.common.StudyStatus;
-import com.huadong.pipeline.domain.study.DuplicateStudyCodeException;
 import com.huadong.pipeline.domain.study.OverviewArea;
 import com.huadong.pipeline.domain.study.OverviewProject;
 import com.huadong.pipeline.domain.study.PipelineOverview;
@@ -12,7 +11,7 @@ import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.domain.study.StudyRepository.StudyListQuery;
 import com.huadong.pipeline.domain.study.StudyRepository.StudyPage;
-import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
+import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.study.OverviewStudy;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.milestone.CurrentMilestoneStatus;
@@ -242,6 +241,11 @@ public class StudyManager {
     } else if (isBlank(programCode) || isBlank(projectCode) || isBlank(therapeuticAreaCode)) {
       throw new BusinessException("INVALID_STUDY_HIERARCHY", "必须选择 Project 实体");
     }
+    String code = command.code().trim().toUpperCase();
+    if (studies.findByCode(code).isPresent()) {
+      throw new BusinessException("STUDY_CODE_EXISTS", "项目编号已存在");
+    }
+    int version = studies.findMaxVersionByCode(code).orElse(0) + 1;
     Study study = Study.create(
         command.code(),
         programCode,
@@ -254,12 +258,9 @@ public class StudyManager {
         command.actualEndDate(),
         command.description());
     try {
-      studies.save(study, username);
-    } catch (DuplicateStudyCodeException ex) {
-      throw new BusinessException("STUDY_CODE_EXISTS", "项目编号已存在");
-    } catch (InvalidStudyHierarchyException ex) {
-      throw new BusinessException(
-          "INVALID_STUDY_HIERARCHY", "Program、Project 或治疗领域不存在，或三者关系不匹配");
+      studies.save(study, version, username);
+    } catch (IllegalArgumentException ex) {
+      throw new BusinessException("INVALID_STUDY_HIERARCHY", "必须选择 Project 实体");
     }
     return studies.findAll(StudyAccessScope.all()).stream()
         .filter(saved -> saved.code().equals(study.code()))

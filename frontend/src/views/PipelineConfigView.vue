@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { ApiError, apiClient } from '../api/client'
+import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   PipelineConfigRow, PipelineProgram, PipelineProject, ProgramInput,
   ProgramUpdateInput, ProjectInput, ProjectUpdateInput, TherapeuticArea,
 } from '../api/types'
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
+import LabeledValue from '../components/LabeledValue.vue'
 import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
 import { useClientSort } from '../composables/useClientSort'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
+import { useNotice } from '../composables/useNotice'
 
 const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
 
@@ -25,7 +28,8 @@ const projects = ref<PipelineProject[]>([])
 const therapeuticAreas = ref<TherapeuticArea[]>([])
 const selectedProgramId = ref<number>()
 const projectDrawerOpen = ref(false)
-const notice = ref('')
+const expandedProgramIds = ref<Set<number>>(new Set())
+const { notice, noticeType, showNotice, hideNotice } = useNotice()
 const programSaving = ref(false)
 const projectSaving = ref(false)
 const studySaving = ref(false)
@@ -71,6 +75,7 @@ const studyTotalItems = computed(() => result.value?.totalItems ?? 0)
 const studyTotalPages = computed(() => Math.max(result.value?.totalPages ?? 1, 1))
 const selectedProgram = computed(() => programs.value.find((item) => item.id === selectedProgramId.value))
 const selectedProjects = computed(() => projects.value.filter((item) => item.programId === selectedProgramId.value))
+const selectedStudyProject = computed(() => projects.value.find((item) => item.id === studyForm.projectId))
 
 const {
   sorted: sortedRows,
@@ -128,16 +133,19 @@ async function loadAll() {
       selectedProgramId.value = undefined
       projectDrawerOpen.value = false
     }
+    expandedProgramIds.value = new Set(
+      [...expandedProgramIds.value].filter((id) => nextPrograms.some((item) => item.id === id)),
+    )
     await load()
   } catch (reason) {
-    error.value = messageOf(reason, '管线配置加载失败')
+    showNotice(messageOf(reason, '管线配置加载失败'), 'error')
     loading.value = false
   }
 }
 
 function resetFeedback() {
   error.value = ''
-  notice.value = ''
+  hideNotice()
 }
 
 function openProgram(program?: PipelineProgram) {
@@ -167,6 +175,35 @@ function manageProgram(program: PipelineProgram) {
   projectDrawerOpen.value = true
 }
 
+function projectsOfProgram(programId: number) {
+  return projects.value.filter((item) => item.programId === programId)
+}
+
+function toggleProgramExpand(program: PipelineProgram) {
+  const next = new Set(expandedProgramIds.value)
+  if (next.has(program.id)) next.delete(program.id)
+  else next.add(program.id)
+  expandedProgramIds.value = next
+}
+
+function isRowEditing(project: PipelineProject) {
+  return !entityDialog.value && editingProject.value?.id === project.id
+}
+
+function startProjectRowEdit(project: PipelineProject) {
+  resetFeedback()
+  editingProgram.value = undefined
+  editingProject.value = project
+  Object.assign(projectForm, {
+    code: project.code, programId: project.programId,
+    indication: project.indication, therapeuticAreaCode: project.therapeuticAreaCode,
+  })
+}
+
+function cancelProjectRowEdit() {
+  editingProject.value = undefined
+}
+
 async function saveProgram() {
   programSaving.value = true
   resetFeedback()
@@ -177,6 +214,7 @@ async function saveProgram() {
       const input: ProgramUpdateInput = {
         productName: programForm.productName, moa: programForm.moa,
         sourceCode: programForm.sourceCode, originCode: programForm.originCode,
+        expectedVersion: editingProgram.value.version,
       }
       saved = await apiClient.updateProgram(editingProgram.value.id, input)
     }
@@ -184,11 +222,11 @@ async function saveProgram() {
     studyForm.programId = saved.id
     studyForm.projectId = 0
     selectedProgramId.value = saved.id
-    notice.value = 'Program 已保存'
+    showNotice('Program 已保存')
     await loadAll()
     if (returnToStudyAfterCreate.value) returnToStudy()
   } catch (reason) {
-    error.value = messageOf(reason, 'Program 保存失败')
+    showNotice(messageOf(reason, 'Program 保存失败'), 'error')
   } finally {
     programSaving.value = false
   }
@@ -204,18 +242,20 @@ async function saveProject() {
       const input: ProjectUpdateInput = {
         indication: projectForm.indication,
         therapeuticAreaCode: projectForm.therapeuticAreaCode,
+        expectedVersion: editingProject.value.version,
       }
       saved = await apiClient.updateProject(editingProject.value.id, input)
     }
     entityDialog.value = undefined
+    editingProject.value = undefined
     studyForm.programId = saved.programId
     studyForm.projectId = saved.id
     selectedProgramId.value = saved.programId
-    notice.value = 'Project 已保存'
+    showNotice('Project 已保存')
     await loadAll()
     if (returnToStudyAfterCreate.value) returnToStudy()
   } catch (reason) {
-    error.value = messageOf(reason, 'Project 保存失败')
+    showNotice(messageOf(reason, 'Project 保存失败'), 'error')
   } finally {
     projectSaving.value = false
   }
@@ -269,7 +309,7 @@ function quickCreateProgram() {
 
 function quickCreateProject() {
   if (!studyForm.programId) {
-    error.value = '请先选择或新建 Program'
+    showNotice('请先选择或新建 Program', 'error')
     return
   }
   returnToStudyAfterCreate.value = true
@@ -289,6 +329,8 @@ function returnToStudy() {
 
 function closeEntityDialog() {
   entityDialog.value = undefined
+  editingProgram.value = undefined
+  editingProject.value = undefined
   if (returnToStudyAfterCreate.value) returnToStudy()
 }
 
@@ -303,6 +345,7 @@ async function saveStudy() {
     if (editingStudy.value) {
       await apiClient.updateStudyConfig(editingStudy.value.studyId, {
         projectId: studyForm.projectId, phaseStatusCode: studyForm.phaseStatusCode,
+        expectedVersion: editingStudy.value.version,
       })
     } else {
       await apiClient.createStudyConfig({
@@ -310,10 +353,10 @@ async function saveStudy() {
       })
     }
     studyDialog.value = false
-    notice.value = 'Study 配置已保存'
+    showNotice('Study 配置已保存')
     await loadAll()
   } catch (reason) {
-    error.value = messageOf(reason, 'Study 保存失败')
+    showNotice(messageOf(reason, 'Study 保存失败'), 'error')
   } finally {
     studySaving.value = false
   }
@@ -326,20 +369,15 @@ async function remove(kind: 'program' | 'project' | 'study', id: number, label: 
     if (kind === 'program') await apiClient.deleteProgram(id)
     else if (kind === 'project') await apiClient.deleteProject(id)
     else await apiClient.deleteStudyConfig(id)
-    notice.value = `${label} 已删除`
+    showNotice(`${label} 已删除`)
     await loadAll()
   } catch (reason) {
-    error.value = messageOf(reason, '删除失败')
+    showNotice(messageOf(reason, '删除失败'), 'error')
   }
 }
 
 function messageOf(reason: unknown, fallback: string) {
-  if (reason instanceof ApiError && reason.status === 409 && reason.details) {
-    const counts = Object.entries(reason.details).filter(([, value]) => value !== '0')
-      .map(([key, value]) => `${key}: ${value}`).join('，')
-    return `${reason.message}${counts ? `（${counts}）` : ''}`
-  }
-  return reason instanceof Error ? reason.message : fallback
+  return formatApiError(reason, fallback)
 }
 
 function onEscape(event: KeyboardEvent) {
@@ -367,8 +405,7 @@ onUnmounted(() => {
       <button :class="{ active: view === 'studies' }" role="tab" type="button" @click="view = 'studies'">Study 明细</button>
       <button :class="{ active: view === 'entities' }" role="tab" type="button" @click="view = 'entities'">Program / Project 管理</button>
     </div>
-    <div v-if="notice" class="config-notice" role="status">{{ notice }}<button type="button" aria-label="关闭提示" @click="notice = ''">×</button></div>
-    <div v-if="error" class="state-panel state-panel--error config-error" role="alert">{{ error }}</div>
+    <div v-if="notice" class="config-notice" :class="{ 'config-notice--error': noticeType === 'error' }" role="status">{{ notice }}<button type="button" aria-label="关闭提示" @click="hideNotice">×</button></div>
 
     <template v-if="view === 'studies'">
       <div class="page-toolbar">
@@ -410,7 +447,7 @@ onUnmounted(() => {
     </template>
 
     <template v-else>
-      <div class="entity-toolbar"><div><strong>Program 管理</strong><span>Project 在对应 Program 的管理抽屉中维护。</span></div><button v-if="canCreate" class="primary-button" type="button" @click="openProgram()">＋ 新增 Program</button></div>
+      <div class="entity-toolbar"><div><strong>Program 管理</strong><span>点击 Program 行展开 Project 列表并直接编辑；新增 Project 在「管理」抽屉中维护。</span></div><button v-if="canCreate" class="primary-button" type="button" @click="openProgram()">＋ 新增 Program</button></div>
       <PageState :loading :empty="!programs.length">
         <div class="data-card"><table class="data-table entity-program-table"><thead><tr>
           <th v-bind="programSortHeader('program')">Program</th>
@@ -421,7 +458,22 @@ onUnmounted(() => {
           <th>操作</th>
           <th v-if="canAudit">操作日志</th>
         </tr></thead><tbody>
-          <tr v-for="program in sortedPrograms" :key="program.id"><td class="mono strong">{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('program', program.id, program.code)">删除</button></td><td v-if="canAudit"><button class="text-button" type="button" @click="openRecordAuditLogs(`${program.code} 操作日志`, 'PROGRAM', program.id)">查看</button></td></tr>
+          <template v-for="program in sortedPrograms" :key="program.id">
+            <tr class="program-row" @click="toggleProgramExpand(program)"><td class="mono strong"><span class="expand-caret" :class="{ open: expandedProgramIds.has(program.id) }">▸</span>{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click.stop="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click.stop="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click.stop="remove('program', program.id, program.code)">删除</button></td><td v-if="canAudit"><button class="text-button" type="button" @click.stop="openRecordAuditLogs(`${program.code} 操作日志`, 'PROGRAM', program.id)">查看</button></td></tr>
+            <template v-if="expandedProgramIds.has(program.id)">
+              <tr v-if="!projectsOfProgram(program.id).length" class="project-sub-row"><td class="empty-inline" :colspan="canAudit ? 7 : 6">该 Program 尚无 Project</td></tr>
+              <tr v-for="(project, index) in projectsOfProgram(program.id)" :key="project.id" class="project-sub-row">
+                <td class="mono"><span class="project-index">({{ index + 1 }})</span><LabeledValue label="Code:" :value="project.code" /></td>
+                <td><select v-if="isRowEditing(project)" v-model="projectForm.therapeuticAreaCode" required @click.stop><option value="" disabled>请选择治疗领域</option><option v-for="area in therapeuticAreas" :key="area.id" :value="area.code">{{ area.name }}（{{ area.code }}）</option></select><LabeledValue v-else label="TA:" :value="project.therapeuticAreaName" /></td>
+                <td colspan="3"><textarea v-if="isRowEditing(project)" v-model="projectForm.indication" required maxlength="500" rows="1" @click.stop></textarea><LabeledValue v-else label="Indication:" :value="project.indication" /></td>
+                <td class="row-actions">
+                  <template v-if="isRowEditing(project)"><button type="button" :disabled="projectSaving" @click.stop="saveProject()">{{ projectSaving ? '保存中…' : '保存' }}</button><button type="button" @click.stop="cancelProjectRowEdit">取消</button></template>
+                  <template v-else><button v-if="canUpdate" type="button" @click.stop="startProjectRowEdit(project)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click.stop="remove('project', project.id, project.code)">删除</button></template>
+                </td>
+                <td v-if="canAudit"><button class="text-button" type="button" @click.stop="openRecordAuditLogs(`${project.code} 操作日志`, 'PROJECT', project.id)">查看</button></td>
+              </tr>
+            </template>
+          </template>
         </tbody></table></div>
       </PageState>
     </template>
@@ -435,8 +487,8 @@ onUnmounted(() => {
           <table class="data-table drawer-project-table">
             <thead><tr><th>Project</th><th>Study</th><th>操作</th><th v-if="canAudit">操作日志</th></tr></thead>
             <tbody><tr v-for="project in selectedProjects" :key="project.id">
-              <td><strong class="mono">{{ project.code }}</strong><p>{{ project.indication }}</p><small>{{ project.therapeuticAreaName }}</small></td>
-              <td>{{ project.studyCount }}</td>
+              <td><strong class="mono"><LabeledValue label="Code:" :value="project.code" /></strong><p><LabeledValue label="Indication:" :value="project.indication" /></p><small><LabeledValue label="TA:" :value="project.therapeuticAreaName" /></small></td>
+              <td><LabeledValue label="Study:" :value="project.studyCount" /></td>
               <td class="row-actions"><button v-if="canUpdate" type="button" @click="openProject(project)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('project', project.id, project.code)">删除</button></td>
               <td v-if="canAudit"><button class="text-button" type="button" @click="openRecordAuditLogs(`${project.code} 操作日志`, 'PROJECT', project.id)">查看</button></td>
             </tr></tbody>
@@ -471,7 +523,7 @@ onUnmounted(() => {
         <div class="role-form-grid">
           <label>Study No. *<input v-model="studyForm.code" required maxlength="64" :disabled="!!editingStudy"></label>
           <label>Program *<details ref="studyProgramDetails" class="entity-select"><summary>{{ programs.find(item => item.id === studyForm.programId)?.code || '请选择 Program' }}</summary><div class="entity-select-menu" role="listbox"><button v-for="program in programs" :key="program.id" type="button" role="option" @click="selectStudyProgram(program.id, $event)">{{ program.code }}</button><button v-if="canCreate" class="entity-select-create" type="button" @click="quickCreateProgram">＋ 新建 Program</button></div></details></label>
-          <label>Project *<details ref="studyProjectDetails" class="entity-select"><summary>{{ projects.find(item => item.id === studyForm.projectId)?.code || '请选择 Project' }}</summary><div class="entity-select-menu" role="listbox"><button v-for="project in selectedProjectsForStudy()" :key="project.id" type="button" role="option" @click="selectStudyProject(project.id, $event)">{{ project.code }}</button><button v-if="canCreate" class="entity-select-create" type="button" @click="quickCreateProject">＋ 新建 Project</button></div></details></label>
+          <label>Project *<details ref="studyProjectDetails" class="entity-select"><summary>{{ selectedStudyProject ? `${selectedStudyProject.code} — ${selectedStudyProject.indication || '—'}` : '请选择 Project' }}</summary><div class="entity-select-menu" role="listbox"><div class="entity-select-menu__header" aria-hidden="true"><span>Project</span><span>Indication</span><span>TA</span></div><button v-for="project in selectedProjectsForStudy()" :key="project.id" type="button" role="option" class="entity-select-menu__option" @click="selectStudyProject(project.id, $event)"><span class="mono">{{ project.code }}</span><span>{{ project.indication || '—' }}</span><span>{{ project.therapeuticAreaName }}</span></button><button v-if="canCreate" class="entity-select-create" type="button" @click="quickCreateProject">＋ 新建 Project</button></div></details></label>
           <label>Phase Status *<select v-model="studyForm.phaseStatusCode"><option v-for="opt in phaseStatusOptions" :key="opt.code" :value="opt.code">{{ opt.label }}</option></select></label>
         </div>
         <footer><button class="secondary-button" type="button" @click="studyDialog = false">取消</button><button class="primary-button" type="submit" :disabled="studySaving || !studyForm.projectId">{{ studySaving ? '保存中…' : '保存 Study' }}</button></footer>

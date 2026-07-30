@@ -20,7 +20,15 @@ public class BusinessException extends RuntimeException {
   }
 
   public BusinessException(String code, String message, Map<String, String> details, int httpStatus) {
-    super(message);
+    this(code, message, details, httpStatus, null);
+  }
+
+  public BusinessException(String code, String message, Throwable cause) {
+    this(code, message, Map.of(), 0, cause);
+  }
+
+  public BusinessException(String code, String message, Map<String, String> details, int httpStatus, Throwable cause) {
+    super(message, cause);
     this.code = code;
     this.details = Map.copyOf(details);
     this.httpStatus = httpStatus;

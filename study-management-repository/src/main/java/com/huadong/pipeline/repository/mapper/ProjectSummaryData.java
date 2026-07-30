@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public record ProjectSummaryData(
     long id,
+    int version,
     String code,
     long programId,
     String programCode,

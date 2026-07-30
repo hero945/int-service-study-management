@@ -6,7 +6,7 @@ import org.apache.ibatis.annotations.Select;
 
 public interface PipelineConfigMapper {
   @Select("""
-      SELECT p.id, p.program_code AS code, p.product_name,
+      SELECT p.id, p.version, p.program_code AS code, p.product_name,
              p.moa, p.source_code, p.origin_code,
              (SELECT COUNT(*) FROM hd_plt_project pr
               WHERE pr.program_id = p.id AND pr.sys_deleted = 0) AS project_count,
@@ -23,7 +23,7 @@ public interface PipelineConfigMapper {
   List<ProgramSummaryData> findPrograms(@Param("keyword") String keyword);
 
   @Select("""
-      SELECT p.id, p.program_code AS code, p.product_name,
+      SELECT p.id, p.version, p.program_code AS code, p.product_name,
              p.moa, p.source_code, p.origin_code,
              (SELECT COUNT(*) FROM hd_plt_project pr
               WHERE pr.program_id = p.id AND pr.sys_deleted = 0) AS project_count,
@@ -36,7 +36,7 @@ public interface PipelineConfigMapper {
   ProgramSummaryData findProgram(@Param("id") long id);
 
   @Select("""
-      SELECT p.id, p.program_code AS code, p.product_name,
+      SELECT p.id, p.version, p.program_code AS code, p.product_name,
              p.moa, p.source_code, p.origin_code,
              (SELECT COUNT(*) FROM hd_plt_project pr
               WHERE pr.program_id = p.id AND pr.sys_deleted = 0) AS project_count,
@@ -49,7 +49,23 @@ public interface PipelineConfigMapper {
   ProgramSummaryData findProgramByCode(@Param("code") String code);
 
   @Select("""
-      SELECT s.id AS study_id, s.study_code, s.phase_status_code,
+      SELECT pr.id, pr.version, pr.project_code AS code,
+             pr.program_id, p.program_code, pr.indication_description AS indication,
+             ta.id AS therapeutic_area_id, ta.area_code AS therapeutic_area_code,
+             ta.area_name AS therapeutic_area_name,
+             (SELECT COUNT(*) FROM hd_plt_study s
+              WHERE s.project_id = pr.id AND s.sys_deleted = 0) AS study_count,
+             pr.sys_update_time AS updated_at
+      FROM hd_plt_project pr
+      JOIN hd_plt_program p ON p.id = pr.program_id AND p.sys_deleted = 0
+      LEFT JOIN hd_plt_therapeutic_area ta ON ta.id = pr.therapeutic_area_id
+      WHERE pr.project_code = #{code} AND pr.sys_deleted = 0
+      LIMIT 1
+      """)
+  ProjectSummaryData findProjectByCode(@Param("code") String code);
+
+  @Select("""
+      SELECT s.id AS study_id, s.version, s.study_code, s.phase_status_code,
              pr.id AS project_id, pr.project_code,
              pr.indication_description AS indication,
              ta.area_code AS therapeutic_area_code, ta.area_name AS therapeutic_area_name,
@@ -67,7 +83,7 @@ public interface PipelineConfigMapper {
 
   @Select("""
       <script>
-      SELECT s.id AS study_id, s.study_code, s.phase_status_code,
+      SELECT s.id AS study_id, s.version, s.study_code, s.phase_status_code,
              pr.id AS project_id, pr.project_code,
              pr.indication_description AS indication,
              ta.area_code AS therapeutic_area_code, ta.area_name AS therapeutic_area_name,
@@ -118,7 +134,7 @@ public interface PipelineConfigMapper {
   long countRows(@Param("keyword") String keyword);
 
   @Select("""
-      SELECT pr.id, pr.project_code AS code,
+      SELECT pr.id, pr.version, pr.project_code AS code,
              pr.program_id, p.program_code, pr.indication_description AS indication,
              ta.id AS therapeutic_area_id, ta.area_code AS therapeutic_area_code,
              ta.area_name AS therapeutic_area_name,
@@ -138,7 +154,7 @@ public interface PipelineConfigMapper {
       @Param("programId") Long programId, @Param("keyword") String keyword);
 
   @Select("""
-      SELECT pr.id, pr.project_code AS code,
+      SELECT pr.id, pr.version, pr.project_code AS code,
              pr.program_id, p.program_code, pr.indication_description AS indication,
              ta.id AS therapeutic_area_id, ta.area_code AS therapeutic_area_code,
              ta.area_name AS therapeutic_area_name,

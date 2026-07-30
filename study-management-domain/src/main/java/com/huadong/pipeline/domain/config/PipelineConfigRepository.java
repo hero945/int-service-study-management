@@ -13,6 +13,6 @@ public interface PipelineConfigRepository {
   long countStudiesByProject(long projectId);
   StudyReferenceCounts countStudyReferences(long studyId);
   void updateStudy(long studyId, long projectId, String phaseStatusCode,
-      String username);
+      int expectedVersion, String username);
   void softDeleteStudy(long studyId, String username);
 }

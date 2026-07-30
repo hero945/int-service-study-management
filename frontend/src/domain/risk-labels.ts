@@ -70,8 +70,9 @@ export function riskScoreRuleLines(
   rule: RiskScoringRuleThresholds = DEFAULT_SCORE_RULE,
 ): string[] {
   return [
-    '总分 = 影响程度 a × 发生可能性 b × 可探测性 c',
-    'a、b、c 各取值 1–5，总分范围 1–125',
+    '总分 = 影响程度 a × 发生可能性 b × 可探测性风险分数',
+    '可探测性 5 → 风险分数 1 · 4 → 2 · 3 → 3 · 2 → 4 · 1 → 5',
+    '可探测性越高，风险分数越低',
     `等级：≤${rule.lowMax} 低风险 · ${rule.lowMax + 1}–${rule.mediumMax} 中风险 · ≥${rule.mediumMax + 1} 高危`,
   ]
 }

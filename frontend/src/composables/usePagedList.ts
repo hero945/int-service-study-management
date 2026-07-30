@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { DEFAULT_PAGE_SIZE } from '../components/ListPagination.vue'
+import { formatApiError } from '../api/errors'
 
 export interface UsePagedListOptions<F extends object, R> {
   /** 业务筛选条件（reactive 对象，不含分页字段） */
@@ -49,7 +50,7 @@ export function usePagedList<F extends object, R>(
       result.value = await fetcher({ ...filters, page: page.value, pageSize: pageSize.value })
       options.onLoaded?.(result.value)
     } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : (options.errorMessage ?? '数据加载失败')
+      error.value = formatApiError(reason, options.errorMessage ?? '数据加载失败')
     } finally {
       loading.value = false
     }

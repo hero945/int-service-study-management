@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, ref, toRef, watch } from 'vue'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   AuditLogEntry,
   AuditGroupType,
@@ -88,7 +89,7 @@ async function load() {
     totalPages.value = response.totalPages
   } catch (cause) {
     if (current !== sequence) return
-    error.value = cause instanceof Error ? cause.message : '操作日志加载失败'
+    error.value = formatApiError(cause, '操作日志加载失败')
     entries.value = []
   } finally {
     if (current === sequence) loading.value = false

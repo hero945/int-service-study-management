@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { reactive } from 'vue'
+import { SYSTEM_ERROR_MESSAGE } from '../api/errors'
 import { usePagedList } from './usePagedList'
 
 interface Row { id: number }
@@ -25,7 +26,7 @@ describe('usePagedList', () => {
     expect(fetcher).toHaveBeenCalledWith({ keyword: '', page: 1, pageSize: 10 })
   })
 
-  it('load 失败写入兜底错误文案', async () => {
+  it('load 失败写入统一系统文案', async () => {
     const { error, loading, load } = usePagedList({
       filters: reactive({ keyword: '' }),
       fetcher: async () => { throw new Error('boom') },
@@ -33,17 +34,17 @@ describe('usePagedList', () => {
     })
     await load()
     expect(loading.value).toBe(false)
-    expect(error.value).toBe('boom')
+    expect(error.value).toBe(SYSTEM_ERROR_MESSAGE)
   })
 
-  it('非 Error 异常使用兜底文案', async () => {
+  it('非 Error 异常也写入统一系统文案', async () => {
     const { error, load } = usePagedList({
       filters: reactive({ keyword: '' }),
       fetcher: async () => { throw 'oops' },
       errorMessage: '加载失败',
     })
     await load()
-    expect(error.value).toBe('加载失败')
+    expect(error.value).toBe(SYSTEM_ERROR_MESSAGE)
   })
 
   it('changePage / changePageSize / applyFilters 的分页行为', async () => {

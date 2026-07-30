@@ -2,6 +2,7 @@ package com.huadong.pipeline.domain.study;
 
 import com.huadong.pipeline.common.StudyStatus;
 import java.util.List;
+import java.util.Optional;
 
 public interface StudyRepository {
   List<Study> findAll(StudyAccessScope accessScope);
@@ -25,7 +26,11 @@ public interface StudyRepository {
     return countByStatus(status, StudyAccessScope.all());
   }
 
-  void save(Study study, String createdBy);
+  Optional<Integer> findMaxVersionByCode(String code);
+
+  Optional<Study> findByCode(String code);
+
+  void save(Study study, int version, String createdBy);
 
   record StudyListQuery(
       String therapeuticArea,

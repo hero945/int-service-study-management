@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 public record Study(
     long id,
+    int version,
     String code,
     String indication,
     String phase,
@@ -41,6 +42,7 @@ public record Study(
         ? StudyStatus.COMPLETED
         : actualStartDate != null ? StudyStatus.ACTIVE : StudyStatus.PLANNED;
     return new Study(
+        0,
         0,
         code.trim(),
         "",

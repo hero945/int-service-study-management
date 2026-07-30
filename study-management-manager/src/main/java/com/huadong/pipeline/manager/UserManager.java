@@ -89,7 +89,7 @@ public class UserManager {
     }
     var distinctRoleCodes = List.copyOf(new LinkedHashSet<>(roleCodes));
     if (distinctRoleCodes.isEmpty() || !users.rolesExist(distinctRoleCodes)) {
-      throw new BusinessException("INVALID_ROLE", "Role does not exist or is disabled");
+      throw new BusinessException("INVALID_ROLE", "角色不存在或已停用");
     }
     users.create(username, passwordHash, displayName, distinctRoleCodes);
   }
@@ -114,7 +114,7 @@ public class UserManager {
         .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
     var distinctRoleCodes = List.copyOf(new LinkedHashSet<>(roleCodes));
     if (distinctRoleCodes.isEmpty() || !users.rolesExist(distinctRoleCodes)) {
-      throw new BusinessException("INVALID_ROLE", "Role does not exist or is disabled");
+      throw new BusinessException("INVALID_ROLE", "角色不存在或已停用");
     }
     users.assignRoles(userId, distinctRoleCodes, operator);
   }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, toRef, watch } from 'vue'
 import { ApiError, apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   RiskAction, RiskActionInput, RiskActionStatus, RiskDetail, RiskFormOptions, RiskStatus,
 } from '../api/types'
@@ -13,6 +14,7 @@ import { riskBadge } from '../risk-badge'
 import { todayIso } from '../domain/date-format'
 import { useEscapeClose } from '../composables/useEscapeClose'
 import { usePermissions } from '../composables/usePermissions'
+import { useNotice } from '../composables/useNotice'
 import RiskActionEditor from './RiskActionEditor.vue'
 import RiskActionList from './RiskActionList.vue'
 import RiskForm from './RiskForm.vue'
@@ -32,7 +34,7 @@ const options = ref<RiskFormOptions>({
 const loading = ref(false)
 const saving = ref(false)
 const error = ref('')
-const success = ref('')
+const { notice: success, showNotice: showSuccess, hideNotice: hideSuccess } = useNotice()
 const fieldErrors = reactive<Record<string, string>>({})
 const closeButton = ref<HTMLButtonElement>()
 const includeAssessment = ref(true)
@@ -93,7 +95,7 @@ function serializeForm() {
 }
 
 async function initialize() {
-  loading.value = true; error.value = ''; success.value = ''; detail.value = undefined
+  loading.value = true; error.value = ''; hideSuccess(); detail.value = undefined
   pendingActions.value = []; actionEditor.value = undefined; pendingEditIndex.value = undefined
   Object.keys(fieldErrors).forEach(key => delete fieldErrors[key])
   try {
@@ -226,7 +228,7 @@ async function save() {
     error.value = '请修正标红的字段后再保存'
     return
   }
-  saving.value = true; error.value = ''; success.value = ''
+  saving.value = true; error.value = ''; hideSuccess()
   try {
     if (!detail.value) {
       await apiClient.createRisk({
@@ -318,17 +320,17 @@ async function saveAction() {
     }
     actionEditor.value = undefined
     pendingEditIndex.value = undefined
-    success.value = '措施已加入待保存列表，将随风险一并保存'
+    showSuccess('措施已加入待保存列表，将随风险一并保存')
     return
   }
-  saving.value = true; error.value = ''; success.value = ''
+  saving.value = true; error.value = ''; hideSuccess()
   try {
     detail.value = actionEditor.value?.id
       ? await apiClient.updateRiskAction(detail.value.risk.riskCode, actionEditor.value.id,
           actionEditor.value.version ?? 0, { ...actionForm })
       : await apiClient.addRiskAction(detail.value.risk.riskCode, detail.value.risk.version, { ...actionForm })
     actionEditor.value = undefined
-    success.value = '措施已即时保存'
+    showSuccess('措施已即时保存')
   } catch (reason) { error.value = message(reason, '措施保存失败') }
   finally { saving.value = false }
 }
@@ -339,7 +341,7 @@ async function removeAction(action: RiskAction) {
   try {
     detail.value = await apiClient.deleteRiskAction(
       detail.value.risk.riskCode, action.id, action.version)
-    success.value = '措施已删除'
+    showSuccess('措施已删除')
   } catch (reason) { error.value = message(reason, '措施删除失败') }
   finally { saving.value = false }
 }
@@ -350,7 +352,7 @@ function requestClose() {
 }
 
 function message(reason: unknown, fallback: string) {
-  return reason instanceof Error ? reason.message : fallback
+  return formatApiError(reason, fallback)
 }
 </script>
 

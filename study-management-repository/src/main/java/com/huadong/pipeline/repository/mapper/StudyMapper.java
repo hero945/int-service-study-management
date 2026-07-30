@@ -7,6 +7,13 @@ import org.apache.ibatis.annotations.Select;
 
 public interface StudyMapper extends BaseMapper<StudyEntity> {
   @Select("""
+      SELECT * FROM hd_plt_study
+      WHERE study_code = #{code} AND sys_deleted = 0
+      LIMIT 1
+      """)
+  StudyEntity findByCode(@Param("code") String code);
+
+  @Select("""
       SELECT p.id AS program_id, p.program_code, p.product_name,
              p.moa, p.source_code, p.origin_code,
              pr.id AS project_id, pr.project_code,

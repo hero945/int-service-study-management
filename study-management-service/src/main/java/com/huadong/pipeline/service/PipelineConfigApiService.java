@@ -68,7 +68,7 @@ public class PipelineConfigApiService implements PipelineConfigApi {
     var before = toResponse(manager.getProgram(id));
     var after = toResponse(manager.updateProgram(id, new PipelineConfigManager.ProgramUpdate(
         request.productName(), request.moa(), request.sourceCode(),
-        request.originCode()), username));
+        request.originCode(), request.expectedVersion()), username));
     audit.success("CONFIG", "PROGRAM", id, after.code(), null,
         "PROGRAM_UPDATE", "hd_plt_program", id, before, after, null, username);
     return after;
@@ -100,7 +100,7 @@ public class PipelineConfigApiService implements PipelineConfigApi {
   public ProjectResponse updateProject(long id, UpdateProjectRequest request, String username) {
     var before = toResponse(manager.getProject(id));
     var after = toResponse(manager.updateProject(id, new PipelineConfigManager.ProjectUpdate(
-        request.indication(), request.therapeuticAreaCode()), username));
+        request.indication(), request.therapeuticAreaCode(), request.expectedVersion()), username));
     audit.success("CONFIG", "PROJECT", id, after.code(), null,
         "PROJECT_UPDATE", "hd_plt_project", id, before, after, null, username);
     return after;
@@ -122,7 +122,7 @@ public class PipelineConfigApiService implements PipelineConfigApi {
       long id, UpdateStudyConfigRequest request, String username) {
     var before = toResponse(manager.getStudy(id));
     var after = toResponse(manager.updateStudy(
-        id, request.projectId(), request.phaseStatusCode(), username));
+        id, request.projectId(), request.phaseStatusCode(), request.expectedVersion(), username));
     audit.success("CONFIG", "STUDY", id, after.studyCode(), id,
         "STUDY_UPDATE", "hd_plt_study", id, before, after, null, username);
     return after;
@@ -142,14 +142,15 @@ public class PipelineConfigApiService implements PipelineConfigApi {
     return new ProgramResponse(
         value.id(), value.code(), value.productName(), value.moa(),
         value.sourceCode(), sourceLabel(value.sourceCode()), value.originCode(),
-        originLabel(value.originCode()), value.projectCount(), value.studyCount(), value.updatedAt());
+        originLabel(value.originCode()), value.projectCount(), value.studyCount(),
+        value.version(), value.updatedAt());
   }
 
   private static ProjectResponse toResponse(Project value) {
     return new ProjectResponse(
         value.id(), value.code(), value.programId(), value.programCode(),
         value.indication(), value.therapeuticAreaId(), value.therapeuticAreaCode(),
-        value.therapeuticAreaName(), value.studyCount(), value.updatedAt());
+        value.therapeuticAreaName(), value.studyCount(), value.version(), value.updatedAt());
   }
 
   private static PipelineConfigRowResponse toResponse(PipelineConfigRow value) {
@@ -158,7 +159,7 @@ public class PipelineConfigApiService implements PipelineConfigApi {
         value.projectId(), value.projectCode(), value.indication(), value.therapeuticAreaCode(),
         value.therapeuticAreaName(), value.programId(), value.programCode(),
         value.productName(), value.moa(), value.sourceCode(), sourceLabel(value.sourceCode()),
-        value.originCode(), originLabel(value.originCode()), value.updatedAt());
+        value.originCode(), originLabel(value.originCode()), value.version(), value.updatedAt());
   }
 
   private static String sourceLabel(String code) {

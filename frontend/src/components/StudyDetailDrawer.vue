@@ -2,6 +2,7 @@
 import { computed, ref, toRef, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type { Study, MilestonePage, RiskPage, TeamMatrixPage } from '../api/types'
 import PageState from '../components/PageState.vue'
 import { formatIsoDate } from '../domain/date-format'
@@ -78,7 +79,7 @@ function loadMilestone() {
   milestoneLoading.value = true; milestoneError.value = ''
   apiClient.getMilestones(props.study.id)
     .then(d => { milestoneData.value = d })
-    .catch(e => { milestoneError.value = e instanceof Error ? e.message : '里程碑加载失败' })
+    .catch(e => { milestoneError.value = formatApiError(e, '里程碑加载失败') })
     .finally(() => { milestoneLoading.value = false })
 }
 
@@ -88,7 +89,7 @@ async function loadTeam() {
   try {
     teamData.value = await apiClient.getStudyTeam(props.study.id)
   } catch (e) {
-    teamError.value = e instanceof Error ? e.message : '团队数据加载失败'
+    teamError.value = formatApiError(e, '团队数据加载失败')
   } finally {
     teamLoading.value = false
   }
@@ -99,7 +100,7 @@ function loadRisks() {
   riskLoading.value = true; riskError.value = ''
   apiClient.listRisks({ studyId: props.study.id, pageSize: 100 })
     .then(d => { riskData.value = d })
-    .catch(e => { riskError.value = e instanceof Error ? e.message : '风险数据加载失败' })
+    .catch(e => { riskError.value = formatApiError(e, '风险数据加载失败') })
     .finally(() => { riskLoading.value = false })
 }
 

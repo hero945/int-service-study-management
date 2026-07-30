@@ -3,9 +3,9 @@ package com.huadong.pipeline;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.setting.SettingRepository;
-import com.huadong.pipeline.domain.study.DuplicateStudyCodeException;
 import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.PipelineOverviewRepository;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
@@ -87,8 +87,8 @@ class RepositoryContractIntegrationTest {
   @Test
   void studiesUseHierarchySnapshotsDerivedStatusAndDuplicateCodeTranslation() {
     seedStudyHierarchy();
-    studies.save(study("STUDY-OLDER", true), "seed@example.com");
-    studies.save(study("STUDY-NEWER", false), "seed@example.com");
+    studies.save(study("STUDY-OLDER", true), 1, "seed@example.com");
+    studies.save(study("STUDY-NEWER", false), 1, "seed@example.com");
     jdbc.update("UPDATE hd_plt_study SET sys_update_time = ? WHERE study_code = ?",
         LocalDate.of(2026, 1, 1).atStartOfDay(), "STUDY-OLDER");
     jdbc.update("UPDATE hd_plt_study SET sys_update_time = ? WHERE study_code = ?",
@@ -119,7 +119,7 @@ class RepositoryContractIntegrationTest {
         });
 
     var generated = study("STUDY-GENERATED", true);
-    studies.save(generated, "tester@example.com");
+    studies.save(generated, 1, "tester@example.com");
     assertThat(studies.findAll())
         .filteredOn(study -> study.code().equals("STUDY-GENERATED"))
         .singleElement()
@@ -129,8 +129,9 @@ class RepositoryContractIntegrationTest {
         });
 
     assertThatThrownBy(() -> studies.save(
-        study("STUDY-OLDER", true), "tester@example.com"))
-        .isInstanceOf(DuplicateStudyCodeException.class);
+        study("STUDY-OLDER", true), 1, "tester@example.com"))
+        .isInstanceOf(BusinessException.class)
+        .satisfies(ex -> assertThat(((BusinessException) ex).code()).isEqualTo("STUDY_CODE_EXISTS"));
   }
 
   @Test
@@ -138,7 +139,7 @@ class RepositoryContractIntegrationTest {
     seedStudyHierarchy();
     IntStream.range(0, 501).forEach(index -> studies.save(
         study("STUDY-%03d".formatted(index), true),
-        "seed@example.com"));
+        1, "seed@example.com"));
 
     assertThat(studies.findAll()).hasSize(500);
   }
@@ -146,8 +147,8 @@ class RepositoryContractIntegrationTest {
   @Test
   void pipelineOverviewGroupsProjectsByAreaWithStudiesAndHonoursDataScope() {
     seedStudyHierarchy();
-    studies.save(study("STUDY-ACTIVE", true), "seed@example.com");
-    studies.save(study("STUDY-PLANNED", false), "seed@example.com");
+    studies.save(study("STUDY-ACTIVE", true), 1, "seed@example.com");
+    studies.save(study("STUDY-PLANNED", false), 1, "seed@example.com");
 
     var all = overviewRepository.findOverviewProjects(StudyAccessScope.all());
     assertThat(all).hasSize(1);

@@ -57,6 +57,14 @@ import type {
   UpdateUserInput,
 } from './types'
 import { createMockApiClient } from './mock'
+import {
+  createClientNetworkError,
+  parseApiErrorResponse,
+  parseJsonBody,
+} from './errors'
+
+export { ApiError, formatApiError } from './errors'
+export type { ApiErrorResponse } from './errors'
 
 export interface ApiClient {
   listAuditLogs(query: AuditLogQuery): Promise<AuditLogPage>
@@ -115,17 +123,6 @@ export interface ApiClient {
   deleteRole(roleId: number): Promise<void>
 }
 
-export class ApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code?: string,
-    readonly details?: Record<string, string>,
-  ) {
-    super(message)
-  }
-}
-
 type UnauthorizedHandler = () => void
 
 let unauthorizedHandler: UnauthorizedHandler | undefined
@@ -180,21 +177,29 @@ export function createHttpApiClient(): ApiClient {
     if (csrf && options.method && options.method !== 'GET') {
       headers.set(csrf.headerName, csrf.token)
     }
-    const response = await fetch(url, { ...options, headers })
+    let response: Response
+    try {
+      response = await fetch(url, { ...options, headers })
+    } catch (cause) {
+      throw createClientNetworkError(cause)
+    }
     const text = await response.text()
-    const data = text && response.headers.get('content-type')?.includes('json')
-      ? JSON.parse(text)
-      : undefined
+    const data = parseJsonBody(text, response.headers.get('content-type'))
     if (!response.ok) {
       if (response.status === 401) unauthorizedHandler?.()
-      throw new ApiError(
-        data?.message ?? `请求失败（${response.status}）`,
-        response.status,
-        data?.code,
-        data?.details,
-      )
+      throw parseApiErrorResponse(response, data)
     }
-    return data as T
+    if (!text) {
+      return undefined as T
+    }
+    if (data !== undefined) {
+      return data as T
+    }
+    try {
+      return JSON.parse(text) as T
+    } catch (cause) {
+      throw createClientNetworkError(cause)
+    }
   }
 
   const refreshCsrf = async () => {
@@ -332,22 +337,24 @@ export function createHttpApiClient(): ApiClient {
     previewMonthlyExport: (query) =>
       request<MonthlyExportReport>(`/api/v1/reports/monthly/preview?${toExportParams(query)}`),
     async downloadMonthlyExport(query, format) {
-      const response = await fetch(
-        `/api/v1/reports/monthly/export?${toExportParams(query, format)}`,
-      )
+      let response: Response
+      try {
+        response = await fetch(
+          `/api/v1/reports/monthly/export?${toExportParams(query, format)}`,
+        )
+      } catch (cause) {
+        throw createClientNetworkError(cause)
+      }
       if (!response.ok) {
         const text = await response.text()
-        let message = `请求失败（${response.status}）`
-        let code: string | undefined
+        let body
         try {
-          const data = text ? JSON.parse(text) : undefined
-          message = data?.message ?? message
-          code = data?.code
-        } catch {
-          /* ignore non-json */
+          body = parseJsonBody(text, response.headers.get('content-type'))
+        } catch (error) {
+          throw error
         }
         if (response.status === 401) unauthorizedHandler?.()
-        throw new ApiError(message, response.status, code)
+        throw parseApiErrorResponse(response, body)
       }
       const blob = await response.blob()
       const disposition = response.headers.get('Content-Disposition') ?? ''

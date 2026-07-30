@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type { MonthlyReport } from '../api/types'
 import PageState from '../components/PageState.vue'
 
@@ -14,7 +15,7 @@ async function load() {
   try {
     reports.value = await apiClient.listMonthlyReports(month.value)
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '月度汇报加载失败'
+    error.value = formatApiError(reason, '月度汇报加载失败')
   } finally {
     loading.value = false
   }

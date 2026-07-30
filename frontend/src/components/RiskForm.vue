@@ -22,7 +22,7 @@ const emit = defineEmits<{
 /** 已关闭且表单未重新打开时，整个表单只读 */
 const fieldsDisabled = computed(() =>
   !props.canUpdate || props.saving || (props.riskClosed && props.form.status === 'CLOSED'))
-const score = computed(() => props.form.impact * props.form.likelihood * props.form.detectability)
+const score = computed(() => props.form.impact * props.form.likelihood * (6 - props.form.detectability))
 const level = computed(() => riskScoreLevelLabel(score.value, props.options.scoringRule))
 const selectedStudy = computed(() => props.options.studies.find(item => item.id === props.form.studyId))
 const scaleHint = riskFactorScaleHint()
@@ -104,9 +104,10 @@ const scaleHint = riskFactorScaleHint()
         <select v-model.number="form.detectability" :disabled="!!detail && !includeAssessment">
           <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
         </select>
+        <small>风险分数：{{ 6 - form.detectability }}</small>
       </label>
       <div class="risk-score-result">
-        <span>总分 a × b × c</span>
+        <span>总分 a × b × 风险分数</span>
         <strong>{{ score }}</strong>
         <small>{{ level }}</small>
       </div>

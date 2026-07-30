@@ -32,6 +32,22 @@ test('frontend exposes a typed API boundary instead of calling fetch from views'
   }
 });
 
+test('login page uses an image-led Huadong composition with project-local assets', () => {
+  const loginView = read('frontend/src/views/LoginView.vue');
+
+  assert.match(loginView, /patient-centered-research-hero\.jpg/);
+  assert.match(loginView, /huadong-mark-blur-source\.png/);
+  assert.match(loginView, /class="portal-brand-mark"/);
+  assert.doesNotMatch(loginView, /huadong-medicine-logo\.png/);
+  assert.match(loginView, /class="login-panel-ambient"/);
+  assert.match(loginView, /class="portal-header"/);
+  assert.match(loginView, /class="portal-stage"/);
+  assert.match(loginView, /class="portal-footer"/);
+  assert.doesNotMatch(loginView, /核心价值观/);
+  assert.doesNotMatch(loginView, /服务大众健康/);
+  assert.doesNotMatch(loginView, /企业愿景/);
+});
+
 test('frontend navigation consumes permission codes instead of a coarse login role', () => {
   const types = read('frontend/src/api/types.ts');
   const router = read('frontend/src/router.ts');
@@ -85,6 +101,11 @@ test('pipeline entity forms use the reduced fields and database-backed therapeut
   }
   assert.match(configView, /class="[^"]*entity-program-table/);
   assert.match(configView, /class="project-drawer"/);
+  assert.match(configView, /class="program-row"/);
+  assert.match(configView, /class="project-sub-row"/);
+  assert.match(configView, /toggleProgramExpand/);
+  assert.match(configView, /expandedProgramIds/);
+  assert.match(configView, /startProjectRowEdit/);
   assert.match(configView, /class="[^"]*entity-form-drawer/);
   assert.match(configView, /ref="studyProgramDetails"/);
   assert.match(configView, /ref="studyProjectDetails"/);

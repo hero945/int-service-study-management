@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ApiError, apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   PlatformUser,
   TeamMatrixMember,
@@ -11,11 +12,12 @@ import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
+import { useNotice } from '../composables/useNotice'
 import { session } from '../session'
 
 const users = ref<PlatformUser[]>([])
 const saving = ref(false)
-const notice = ref('')
+const { notice, showNotice } = useNotice()
 const filters = reactive({ studyQuery: '', roleQuery: '' })
 const editMode = ref(false)
 const picker = ref<{ studyId: number; roleCode: string }>()
@@ -94,7 +96,7 @@ async function startEdit() {
     try {
       users.value = (await apiClient.listUsers({ page: 1, pageSize: 100 })).data
     } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : '平台账号加载失败'
+      error.value = formatApiError(reason, '平台账号加载失败')
       return
     }
   }
@@ -171,13 +173,13 @@ async function save() {
   error.value = ''
   try {
     await apiClient.replaceTeamAssignments({ studies })
-    notice.value = '团队矩阵已保存，成员数据范围已即时更新。'
+    showNotice('团队矩阵已保存，成员数据范围已即时更新。')
     cancelEdit()
     await load()
   } catch (reason) {
     error.value = reason instanceof ApiError && reason.code === 'TEAM_VERSION_CONFLICT'
       ? '团队矩阵已被其他用户修改，请刷新后重新编辑。'
-      : reason instanceof Error ? reason.message : '团队矩阵保存失败'
+      : formatApiError(reason, '团队矩阵保存失败')
   } finally {
     saving.value = false
   }
@@ -221,10 +223,7 @@ onMounted(load)
       </div>
     </form>
 
-    <p v-if="notice" class="team-notice" role="status">
-      {{ notice }}
-      <button type="button" aria-label="关闭提示" @click="notice = ''">×</button>
-    </p>
+    <p v-if="notice" class="team-notice" role="status">{{ notice }}</p>
     <p v-if="editMode" class="team-edit-hint">
       修改会暂存在当前页面；点击“保存矩阵”后一次性提交。团队分配同时决定 ASSIGNED_STUDY 用户的数据范围。
     </p>

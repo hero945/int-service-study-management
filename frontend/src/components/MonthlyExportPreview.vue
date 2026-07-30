@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MonthlyExportReport } from '../api/types'
+import LabeledValue from './LabeledValue.vue'
 
 defineProps<{
   report: MonthlyExportReport
@@ -78,11 +79,11 @@ function groupTitle(taCode: string, taName: string) {
               </thead>
               <tbody>
                 <tr v-for="row in group.rows" :key="row.studyCode">
-                  <td class="mono">{{ row.programCode }}</td>
-                  <td class="mono">{{ row.studyCode }}</td>
-                  <td>{{ row.indication }}</td>
-                  <td>{{ row.phase }}</td>
-                  <td :class="statusClass(row.projectStatus)">{{ row.projectStatus }}</td>
+                  <td class="mono"><LabeledValue label="Program:" :value="row.programCode" /></td>
+                  <td class="mono"><LabeledValue label="Study:" :value="row.studyCode" /></td>
+                  <td><LabeledValue label="Indication:" :value="row.indication" /></td>
+                  <td><LabeledValue label="Phase:" :value="row.phase" /></td>
+                  <td :class="statusClass(row.projectStatus)"><LabeledValue label="Status:" :value="row.projectStatus" /></td>
                 </tr>
               </tbody>
             </table>

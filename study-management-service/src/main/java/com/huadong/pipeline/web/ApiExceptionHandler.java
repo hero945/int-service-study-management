@@ -2,6 +2,8 @@ package com.huadong.pipeline.web;
 
 import lombok.extern.slf4j.Slf4j;
 
+import com.huadong.pipeline.audit.AuditRequestContext;
+import com.huadong.pipeline.audit.AuditRequestMetadata;
 import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.audit.AuditFailureRecorder;
 import io.sentry.Sentry;
@@ -120,15 +122,6 @@ public class ApiExceptionHandler {
         details = Map.of();
       }
     }
-    Sentry.withScope(
-            scope -> {
-//              scope.setTag("http.method", request.getMethod());
-//              scope.setTag("http.path", request.getRequestURI());
-              User user = new User();
-              user.setUsername(currentUsername());
-              scope.setUser(user);
-              Sentry.captureException(ex);
-            });
     return ResponseEntity.status(HttpStatus.BAD_REQUEST)
         .body(new ApiError("VALIDATION_FAILED", message, details, Instant.now()));
   }
@@ -184,9 +177,11 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   ResponseEntity<ApiError> unexpected(Exception ex, HttpServletRequest request) {
-    auditFailures.record(request, "FAILED", "INTERNAL_ERROR", "服务器内部错误");
+    auditFailures.record(request, "FAILED", ApiErrorMessages.SYSTEM_ERROR_CODE, "服务器内部错误");
+    String requestId = currentRequestId();
     log.error(
-        "未捕获异常 user={} method={} path={}",
+        "未捕获异常 requestId={} user={} method={} path={}",
+        requestId,
         currentUsername(),
         request.getMethod(),
         request.getRequestURI(),
@@ -196,13 +191,20 @@ public class ApiExceptionHandler {
         scope -> {
           scope.setTag("http.method", request.getMethod());
           scope.setTag("http.path", request.getRequestURI());
+          if (requestId != null) {
+            scope.setTag("requestId", requestId);
+          }
           User user = new User();
           user.setUsername(currentUsername());
           scope.setUser(user);
           Sentry.captureException(ex);
         });
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-        .body(new ApiError("INTERNAL_ERROR", "服务器内部错误", Map.of(), Instant.now()));
+        .body(new ApiError(
+            ApiErrorMessages.SYSTEM_ERROR_CODE,
+            ApiErrorMessages.SYSTEM_ERROR_MESSAGE,
+            Map.of(),
+            Instant.now()));
   }
 
   private static String currentUsername() {
@@ -212,6 +214,11 @@ public class ApiExceptionHandler {
     }
     String name = authentication.getName();
     return name == null || name.isBlank() ? "anonymous" : name;
+  }
+
+  private static String currentRequestId() {
+    AuditRequestMetadata metadata = AuditRequestContext.current();
+    return metadata == null ? null : metadata.requestId();
   }
 
   record ApiError(String code, String message, Map<String, String> details, Instant timestamp) {

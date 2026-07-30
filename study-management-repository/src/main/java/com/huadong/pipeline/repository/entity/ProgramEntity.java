@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class ProgramEntity {
   @TableId(type = IdType.AUTO)
   private Long id;
+  private Integer version;
   private String programCode;
   private String productName;
   private String moa;

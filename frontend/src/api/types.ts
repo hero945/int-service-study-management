@@ -569,6 +569,7 @@ export interface PipelineConfigRow {
   sourceLabel: string
   originCode: string
   originLabel: string
+  version: number
   updatedAt: string
 }
 
@@ -597,6 +598,7 @@ export interface PipelineProgram {
   originLabel: string
   projectCount: number
   studyCount: number
+  version: number
   updatedAt: string
 }
 
@@ -610,6 +612,7 @@ export interface PipelineProject {
   therapeuticAreaCode: string
   therapeuticAreaName: string
   studyCount: number
+  version: number
   updatedAt: string
 }
 
@@ -628,7 +631,7 @@ export interface ProgramInput {
   originCode: string
 }
 
-export type ProgramUpdateInput = Partial<Omit<ProgramInput, 'code'>>
+export type ProgramUpdateInput = Partial<Omit<ProgramInput, 'code'>> & { expectedVersion: number }
 
 export interface ProjectInput {
   code: string
@@ -637,11 +640,12 @@ export interface ProjectInput {
   therapeuticAreaCode: string
 }
 
-export type ProjectUpdateInput = Partial<Omit<ProjectInput, 'code' | 'programId'>>
+export type ProjectUpdateInput = Partial<Omit<ProjectInput, 'code' | 'programId'>> & { expectedVersion: number }
 
 export interface StudyConfigInput {
   projectId: number
   phaseStatusCode: string
+  expectedVersion: number
 }
 
 export interface CreateStudyConfigInput {

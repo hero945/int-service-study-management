@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   PlatformPermission,
   PlatformRole,
@@ -187,7 +188,7 @@ async function submitRole() {
     }
     await load()
   } catch (reason) {
-    formError.value = reason instanceof Error ? reason.message : '角色保存失败'
+    formError.value = formatApiError(reason, '角色保存失败')
   } finally {
     saving.value = false
   }
@@ -202,7 +203,7 @@ async function removeRole(role: PlatformRole) {
     showNotice('角色已删除')
     await load()
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '角色删除失败'
+    error.value = formatApiError(reason, '角色删除失败')
   }
 }
 
@@ -211,7 +212,7 @@ onMounted(async () => {
     permissions.value = await apiClient.listPermissions()
     await load()
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '权限字典加载失败'
+    error.value = formatApiError(reason, '权限字典加载失败')
     loading.value = false
   }
 })

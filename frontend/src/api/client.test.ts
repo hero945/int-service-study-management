@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createHttpApiClient, setUnauthorizedHandler } from './client'
+import { CLIENT_NETWORK_ERROR_CODE, SYSTEM_ERROR_MESSAGE } from './errors'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -35,5 +36,50 @@ describe('HTTP API authentication failures', () => {
       code: 'ACCESS_DENIED',
     })
     expect(onUnauthorized).not.toHaveBeenCalled()
+  })
+
+  it('maps network failures to a client-side system error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    await expect(createHttpApiClient().listStudies()).rejects.toMatchObject({
+      status: 0,
+      code: CLIENT_NETWORK_ERROR_CODE,
+      message: SYSTEM_ERROR_MESSAGE,
+    })
+  })
+
+  it('maps malformed json responses to a client-side system error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      '{not-json',
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
+    )))
+
+    await expect(createHttpApiClient().listStudies()).rejects.toMatchObject({
+      status: 0,
+      code: CLIENT_NETWORK_ERROR_CODE,
+      message: SYSTEM_ERROR_MESSAGE,
+    })
+  })
+
+  it('preserves request id from internal server error responses', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({
+        code: 'INTERNAL_ERROR',
+        message: '系统暂时不可用，请稍后重试',
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': '11111111-2222-3333-4444-555555555555',
+        },
+      },
+    )))
+
+    await expect(createHttpApiClient().listStudies()).rejects.toMatchObject({
+      status: 500,
+      code: 'INTERNAL_ERROR',
+      requestId: '11111111-2222-3333-4444-555555555555',
+    })
   })
 })

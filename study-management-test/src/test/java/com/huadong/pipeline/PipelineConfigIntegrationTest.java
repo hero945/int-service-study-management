@@ -175,6 +175,23 @@ class PipelineConfigIntegrationTest {
         .andExpect(jsonPath("$.totalItems").value(1));
   }
 
+  @Test
+  void rejectsDuplicateProjectCodeWithBusinessMessage() throws Exception {
+    long programId = createProgram("PRG-DUP");
+    createProject(programId, "PRJ-DUP");
+
+    mvc.perform(post("/api/v1/clinical-pipeline/projects")
+            .with(authority("config.create")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"code":"PRJ-DUP","programId":%d,"indication":"重复项目",
+                 "therapeuticAreaCode":"ONCOLOGY"}
+                """.formatted(programId)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("PROJECT_CODE_EXISTS"))
+        .andExpect(jsonPath("$.message").value("Project 编码已存在"));
+  }
+
   private long createProgram(String code) throws Exception {
     String response = mvc.perform(post("/api/v1/clinical-pipeline/programs")
             .with(authority("config.create")).with(csrf())

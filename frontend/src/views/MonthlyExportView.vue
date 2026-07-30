@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { apiClient, ApiError } from '../api/client'
+import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   MonthlyExportFormat,
   MonthlyExportQuery,
@@ -54,7 +55,7 @@ onMounted(async () => {
     therapeuticAreas.value = areas
     programs.value = programList
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '加载筛选选项失败'
+    error.value = formatApiError(err, '加载筛选选项失败')
   } finally {
     loadingOptions.value = false
   }
@@ -84,9 +85,7 @@ async function generatePreview() {
     report.value = await apiClient.previewMonthlyExport(query.value)
   } catch (err) {
     report.value = null
-    error.value = err instanceof ApiError || err instanceof Error
-      ? err.message
-      : '生成月报失败'
+    error.value = formatApiError(err, '生成月报失败')
   } finally {
     generating.value = false
   }
@@ -107,9 +106,7 @@ async function download(format: MonthlyExportFormat) {
   try {
     await apiClient.downloadMonthlyExport(query.value, format)
   } catch (err) {
-    error.value = err instanceof ApiError || err instanceof Error
-      ? err.message
-      : '导出失败'
+    error.value = formatApiError(err, '导出失败')
   } finally {
     exporting.value = false
   }

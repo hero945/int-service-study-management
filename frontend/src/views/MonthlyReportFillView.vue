@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   FunctionLineHistory,
   FunctionLineReport,
@@ -60,7 +61,7 @@ async function load(showLoading = true) {
   try {
     page.value = await apiClient.getMonthlyReports(studyId.value, month.value)
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '月报数据加载失败'
+    error.value = formatApiError(reason, '月报数据加载失败')
   } finally { loading.value = false }
 }
 
@@ -110,7 +111,7 @@ async function saveEdit(entry: MonthlyReportEntry) {
     })
     cancelEdit(entry.entryId)
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '保存失败'
+    error.value = formatApiError(reason, '保存失败')
   } finally {
     const next = new Set(saving.value)
     next.delete(key)
@@ -145,7 +146,7 @@ async function saveCreate(line: FunctionLineReport) {
     })
     cancelCreate()
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '保存失败'
+    error.value = formatApiError(reason, '保存失败')
   } finally {
     const next = new Set(saving.value)
     next.delete(key)
@@ -163,7 +164,7 @@ async function confirmDelete(entry: MonthlyReportEntry) {
   try {
     page.value = await apiClient.deleteMonthlyEntry(key)
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '删除失败'
+    error.value = formatApiError(reason, '删除失败')
   } finally {
     const after = new Set(deleting.value)
     after.delete(key)
@@ -184,7 +185,7 @@ async function toggleHistory(line: FunctionLineReport) {
       history[line.reportId] = await apiClient.getMonthlyReportHistory(
         studyId.value, line.functionLineId, month.value)
     } catch (reason) {
-      error.value = reason instanceof Error ? reason.message : '历史加载失败'
+      error.value = formatApiError(reason, '历史加载失败')
       historyOpen.value = new Set([...historyOpen.value].filter((id) => id !== line.reportId))
     } finally {
       historyLoading.value = new Set([...historyLoading.value].filter((id) => id !== line.reportId))

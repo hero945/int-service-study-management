@@ -4,9 +4,8 @@ package com.huadong.pipeline.repository;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.common.StudyStatus;
-import com.huadong.pipeline.domain.study.DuplicateStudyCodeException;
-import com.huadong.pipeline.domain.study.InvalidStudyHierarchyException;
 import com.huadong.pipeline.domain.study.Study;
 import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.study.StudyRepository;
@@ -15,6 +14,7 @@ import com.huadong.pipeline.domain.study.StudyRepository.StudyPage;
 import com.huadong.pipeline.repository.entity.StudyEntity;
 import com.huadong.pipeline.repository.mapper.StudyMapper;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -100,15 +100,32 @@ public class MybatisPlusStudyRepository implements StudyRepository {
   }
 
   @Override
-  public void save(Study study, String createdBy) {
+  public Optional<Integer> findMaxVersionByCode(String code) {
+    var query = Wrappers.<StudyEntity>lambdaQuery()
+        .eq(StudyEntity::getStudyCode, code)
+        .select(StudyEntity::getVersion)
+        .orderByDesc(StudyEntity::getVersion)
+        .last("LIMIT 1");
+    return Optional.ofNullable(mapper.selectOne(query)).map(StudyEntity::getVersion);
+  }
+
+  @Override
+  public Optional<Study> findByCode(String code) {
+    return Optional.ofNullable(mapper.findByCode(code)).map(MybatisPlusStudyRepository::toDomain);
+  }
+
+  @Override
+  public void save(Study study, int version, String createdBy) {
     var hierarchy = mapper.findHierarchy(
         study.programCode(), study.projectCode(), study.therapeuticAreaCode());
     if (hierarchy == null) {
-      throw new InvalidStudyHierarchyException();
+      throw new BusinessException(
+          "INVALID_STUDY_HIERARCHY", "Program、Project 或治疗领域不存在，或三者关系不匹配");
     }
 
     var entity = new StudyEntity();
     entity.setStudyCode(study.code());
+    entity.setVersion(version);
     entity.setPhaseStatusCode(study.phase());
     entity.setPlannedStartDate(study.startDate());
     entity.setPlannedEndDate(study.plannedEndDate());
@@ -132,7 +149,7 @@ public class MybatisPlusStudyRepository implements StudyRepository {
     try {
       mapper.insert(entity);
     } catch (DuplicateKeyException ex) {
-      throw new DuplicateStudyCodeException(ex);
+      throw new BusinessException("STUDY_CODE_EXISTS", "项目编号已存在", ex);
     }
   }
 
@@ -142,6 +159,7 @@ public class MybatisPlusStudyRepository implements StudyRepository {
         : entity.getActualStartDate() != null ? StudyStatus.ACTIVE : StudyStatus.PLANNED;
     return new Study(
         entity.getId(),
+        entity.getVersion(),
         entity.getStudyCode(),
         entity.getIndicationDescriptionSnapshot(),
         entity.getPhaseStatusCode(),

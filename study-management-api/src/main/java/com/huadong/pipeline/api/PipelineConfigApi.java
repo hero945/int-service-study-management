@@ -34,7 +34,8 @@ public interface PipelineConfigApi {
       @Size(max = 200) String productName,
       @Size(max = 500) String moa,
       @Pattern(regexp = "SELF_DEVELOPED|IN_LICENSE|COOPERATION") String sourceCode,
-      @Pattern(regexp = "DOMESTIC|IMPORTED") String originCode) {
+      @Pattern(regexp = "DOMESTIC|IMPORTED") String originCode,
+      int expectedVersion) {
   }
 
   record CreateProjectRequest(
@@ -46,24 +47,26 @@ public interface PipelineConfigApi {
 
   record UpdateProjectRequest(
       @Size(max = 500) String indication,
-      @Size(max = 64) String therapeuticAreaCode) {
+      @Size(max = 64) String therapeuticAreaCode,
+      int expectedVersion) {
   }
 
   record UpdateStudyConfigRequest(
       @Positive long projectId,
-      @NotBlank @Size(max = 32) String phaseStatusCode) {
+      @NotBlank @Size(max = 32) String phaseStatusCode,
+      int expectedVersion) {
   }
 
   record ProgramResponse(
       long id, String code, String productName, String moa,
       String sourceCode, String sourceLabel, String originCode, String originLabel,
-      long projectCount, long studyCount, LocalDateTime updatedAt) {
+      long projectCount, long studyCount, int version, LocalDateTime updatedAt) {
   }
 
   record ProjectResponse(
       long id, String code, long programId, String programCode,
       String indication, long therapeuticAreaId, String therapeuticAreaCode,
-      String therapeuticAreaName, long studyCount, LocalDateTime updatedAt) {
+      String therapeuticAreaName, long studyCount, int version, LocalDateTime updatedAt) {
   }
 
   record PipelineConfigRowResponse(
@@ -72,7 +75,7 @@ public interface PipelineConfigApi {
       String indication, String therapeuticAreaCode, String therapeuticAreaName,
       long programId, String programCode,
       String productName, String moa, String sourceCode, String sourceLabel,
-      String originCode, String originLabel, LocalDateTime updatedAt) {
+      String originCode, String originLabel, int version, LocalDateTime updatedAt) {
   }
 
   record PipelineConfigPageResponse(

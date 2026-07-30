@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type {
   CreateUserInput,
   PlatformRole,
@@ -131,7 +132,7 @@ async function submitForm() {
     closeDialog()
     await load()
   } catch (reason) {
-    formError.value = reason instanceof Error ? reason.message : '保存失败'
+    formError.value = formatApiError(reason, '保存失败')
   } finally {
     saving.value = false
   }
@@ -160,7 +161,7 @@ async function submitAssignRoles() {
     closeAssignDialog()
     await load()
   } catch (reason) {
-    formError.value = reason instanceof Error ? reason.message : '角色分配失败'
+    formError.value = formatApiError(reason, '角色分配失败')
   } finally {
     saving.value = false
   }
@@ -204,7 +205,7 @@ async function executeResetPassword() {
     showNotice(`已将 ${resetTargetName.value} 的密码重置为 ${DEFAULT_PASSWORD}`)
     closeResetConfirm()
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '重置密码失败'
+    error.value = formatApiError(reason, '重置密码失败')
   } finally {
     saving.value = false
   }
@@ -222,7 +223,7 @@ async function executeToggle() {
     closeToggleConfirm()
     await load()
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '操作失败'
+    error.value = formatApiError(reason, '操作失败')
   } finally {
     saving.value = false
   }

@@ -85,6 +85,9 @@ public class UserApiService implements UserApi {
     var before = manager.findById(id)
         .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "用户不存在"));
     manager.update(id, request.displayName(), request.enabled(), operator);
+    if (!request.enabled() && before.enabled()) {
+      sessions.invalidate(List.of(before.username()));
+    }
     var after = manager.findById(id).orElseThrow();
     audit.success(
         "ACCOUNT", "USER", id, after.username(), null,

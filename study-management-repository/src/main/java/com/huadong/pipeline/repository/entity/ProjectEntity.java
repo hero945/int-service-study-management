@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 public class ProjectEntity {
   @TableId(type = IdType.AUTO)
   private Long id;
+  private Integer version;
   private String projectCode;
   private Long programId;
   private String indicationDescription;

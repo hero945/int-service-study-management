@@ -18,22 +18,22 @@ describe('useNotice', () => {
   beforeEach(() => { vi.useFakeTimers() })
   afterEach(() => { vi.useRealTimers() })
 
-  it('showNotice 后 4s 自动消失', () => {
+  it('showNotice 后 2s 自动消失', () => {
     const { api } = setup()
     api.showNotice('已保存')
     expect(api.notice.value).toBe('已保存')
-    vi.advanceTimersByTime(4000)
+    vi.advanceTimersByTime(2000)
     expect(api.notice.value).toBe('')
   })
 
   it('重复 showNotice 重置计时', () => {
     const { api } = setup()
     api.showNotice('第一条')
-    vi.advanceTimersByTime(3000)
-    api.showNotice('第二条')
-    vi.advanceTimersByTime(3000)
-    expect(api.notice.value).toBe('第二条')
     vi.advanceTimersByTime(1000)
+    api.showNotice('第二条')
+    vi.advanceTimersByTime(1500)
+    expect(api.notice.value).toBe('第二条')
+    vi.advanceTimersByTime(500)
     expect(api.notice.value).toBe('')
   })
 

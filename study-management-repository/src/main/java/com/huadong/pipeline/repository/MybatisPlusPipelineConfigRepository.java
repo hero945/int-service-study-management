@@ -2,6 +2,7 @@ package com.huadong.pipeline.repository;
 
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.domain.config.PipelineConfigPage;
 import com.huadong.pipeline.domain.config.PipelineConfigRepository;
 import com.huadong.pipeline.domain.config.PipelineConfigRow;
@@ -45,7 +46,7 @@ public class MybatisPlusPipelineConfigRepository implements PipelineConfigReposi
 
   private PipelineConfigRow toRow(PipelineConfigRowData row) {
     return new PipelineConfigRow(
-        row.studyId(), row.studyCode(), row.phaseStatusCode(),
+        row.studyId(), row.version(), row.studyCode(), row.phaseStatusCode(),
         row.projectId(), row.projectCode(), row.indication(),
         row.therapeuticAreaCode(), row.therapeuticAreaName(), row.programId(), row.programCode(),
         row.productName(), row.moa(), row.sourceCode(), row.originCode(),
@@ -73,27 +74,33 @@ public class MybatisPlusPipelineConfigRepository implements PipelineConfigReposi
 
   @Override
   public void updateStudy(long studyId, long projectId, String phaseStatusCode,
-      String username) {
+      int expectedVersion, String username) {
     var hierarchy = mapper.findHierarchyByProjectId(projectId);
     if (hierarchy == null) throw new IllegalArgumentException("Project not found");
-    var entity = new StudyEntity();
-    entity.setId(studyId);
-    entity.setPhaseStatusCode(phaseStatusCode);
-    entity.setProgramId(hierarchy.getProgramId());
-    entity.setProgramCodeSnapshot(hierarchy.getProgramCode());
-    entity.setProductNameSnapshot(hierarchy.getProductName());
-    entity.setMoaSnapshot(hierarchy.getMoa());
-    entity.setSourceCodeSnapshot(hierarchy.getSourceCode());
-    entity.setOriginCodeSnapshot(hierarchy.getOriginCode());
-    entity.setProjectId(hierarchy.getProjectId());
-    entity.setProjectCodeSnapshot(hierarchy.getProjectCode());
-    entity.setTherapeuticAreaId(hierarchy.getTherapeuticAreaId());
-    entity.setTherapeuticAreaCodeSnapshot(hierarchy.getTherapeuticAreaCode());
-    entity.setTherapeuticAreaNameSnapshot(hierarchy.getTherapeuticAreaName());
-    entity.setIndicationDescriptionSnapshot(hierarchy.getIndicationDescription());
-    entity.setSysUpdateBy(username);
-    entity.setSysUpdateTime(LocalDateTime.now());
-    studyMapper.updateById(entity);
+    int rows = studyMapper.update(null,
+        Wrappers.<StudyEntity>lambdaUpdate()
+            .set(StudyEntity::getPhaseStatusCode, phaseStatusCode)
+            .set(StudyEntity::getProgramId, hierarchy.getProgramId())
+            .set(StudyEntity::getProgramCodeSnapshot, hierarchy.getProgramCode())
+            .set(StudyEntity::getProductNameSnapshot, hierarchy.getProductName())
+            .set(StudyEntity::getMoaSnapshot, hierarchy.getMoa())
+            .set(StudyEntity::getSourceCodeSnapshot, hierarchy.getSourceCode())
+            .set(StudyEntity::getOriginCodeSnapshot, hierarchy.getOriginCode())
+            .set(StudyEntity::getProjectId, hierarchy.getProjectId())
+            .set(StudyEntity::getProjectCodeSnapshot, hierarchy.getProjectCode())
+            .set(StudyEntity::getTherapeuticAreaId, hierarchy.getTherapeuticAreaId())
+            .set(StudyEntity::getTherapeuticAreaCodeSnapshot, hierarchy.getTherapeuticAreaCode())
+            .set(StudyEntity::getTherapeuticAreaNameSnapshot, hierarchy.getTherapeuticAreaName())
+            .set(StudyEntity::getIndicationDescriptionSnapshot, hierarchy.getIndicationDescription())
+            .set(StudyEntity::getSysUpdateBy, username)
+            .set(StudyEntity::getSysUpdateTime, LocalDateTime.now())
+            .setSql("version = version + 1")
+            .eq(StudyEntity::getId, studyId)
+            .eq(StudyEntity::getSysDeleted, 0)
+            .eq(StudyEntity::getVersion, expectedVersion));
+    if (rows == 0) {
+      throw new BusinessException("VERSION_CONFLICT", "数据已被他人修改，请刷新后重试");
+    }
   }
 
   @Override

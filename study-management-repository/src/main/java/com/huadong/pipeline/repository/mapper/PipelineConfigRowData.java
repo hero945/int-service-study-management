@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public record PipelineConfigRowData(
     long studyId,
+    int version,
     String studyCode,
     String phaseStatusCode,
     long projectId,

@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type { MilestoneNode, MilestonePage, MilestoneUpdateInput, StageProjection } from '../api/types'
 import PageState from '../components/PageState.vue'
 import AuditLogDrawer from '../components/AuditLogDrawer.vue'
@@ -39,7 +40,7 @@ async function load(showLoading = true) {
     page.value = milestones
     projection.value = proj
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '里程碑数据加载失败'
+    error.value = formatApiError(reason, '里程碑数据加载失败')
   } finally { loading.value = false }
 }
 
@@ -82,7 +83,7 @@ async function saveEdit(node: MilestoneNode) {
     cancelEdit(code)
     await load(false)
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '保存失败'
+    error.value = formatApiError(reason, '保存失败')
   } finally {
     const next = new Set(saving.value)
     next.delete(code)

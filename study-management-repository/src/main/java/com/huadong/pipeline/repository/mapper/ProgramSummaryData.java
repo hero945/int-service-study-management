@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 public record ProgramSummaryData(
     long id,
+    int version,
     String code,
     String productName,
     String moa,

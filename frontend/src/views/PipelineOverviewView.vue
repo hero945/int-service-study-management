@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import type { OverviewProject, OverviewStudy, PipelineOverview, Study } from '../api/types'
 import {
   CLINICAL_PHASE_CODES,
@@ -17,6 +18,7 @@ import {
   pipelineStatusOptions,
 } from '../domain/milestone-filters'
 import PageState from '../components/PageState.vue'
+import LabeledValue from '../components/LabeledValue.vue'
 import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 import { session } from '../session'
@@ -215,7 +217,7 @@ onMounted(async () => {
   try {
     overview.value = await apiClient.getPipelineOverview()
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '管线数据加载失败'
+    errorMessage.value = formatApiError(error, '管线数据加载失败')
   } finally {
     loading.value = false
   }
@@ -285,22 +287,22 @@ onMounted(async () => {
                 class="pipeline-id-cell"
                 @click="openProjectDrawer(project, area.therapeuticAreaName)"
               >
-                <strong>{{ project.productName || project.code }}</strong>
-                <small>{{ sourceLabel(project.sourceCode) }} · {{ originLabel(project.originCode) }}</small>
+                <strong><LabeledValue label="Product:" :value="project.productName || project.code" /></strong>
+                <small><LabeledValue label="Source:" :value="sourceLabel(project.sourceCode)" /> · <LabeledValue label="Origin:" :value="originLabel(project.originCode)" /></small>
               </td>
               <td
                 class="pipeline-id-cell"
                 @click="openProjectDrawer(project, area.therapeuticAreaName)"
               >
-                <strong class="mono">{{ project.programCode }}</strong>
-                <small>{{ project.moa }}</small>
+                <strong class="mono"><LabeledValue label="Program:" :value="project.programCode" /></strong>
+                <small><LabeledValue label="MOA:" :value="project.moa" /></small>
               </td>
               <td
                 class="pipeline-id-cell"
                 @click="openProjectDrawer(project, area.therapeuticAreaName)"
               >
-                <strong>{{ project.code }}</strong>
-                <small>{{ project.indication }}</small>
+                <strong><LabeledValue label="Project:" :value="project.code" /></strong>
+                <small><LabeledValue label="Indication:" :value="project.indication" /></small>
               </td>
               <td
                 v-for="phase in phases"

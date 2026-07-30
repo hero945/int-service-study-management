@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, toRef } from 'vue'
 import { apiClient } from '../api/client'
+import { formatApiError } from '../api/errors'
 import { PASSWORD_RULE_HINT, validateNewPassword } from '../domain/password-rules'
 import { useEscapeClose } from '../composables/useEscapeClose'
 
@@ -46,7 +47,7 @@ async function submit() {
     form.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
     emit('close')
   } catch (reason) {
-    error.value = reason instanceof Error ? reason.message : '修改密码失败'
+    error.value = formatApiError(reason, '修改密码失败')
   } finally {
     saving.value = false
   }

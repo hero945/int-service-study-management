@@ -39,6 +39,7 @@ public class SecurityConfig {
                 "/login",
                 "/index.html",
                 "/assets/**",
+                "/brand/**",
                 "/app.css",
                 "/overrides.css",
                 "/app.js",
@@ -75,7 +76,14 @@ public class SecurityConfig {
                   "登录失败 username={} reason={}",
                   username == null || username.isBlank() ? "(blank)" : username,
                   exception.getClass().getSimpleName());
-              writeApiError(response, mapper, 401, "AUTHENTICATION_FAILED", "账号或密码错误");
+              if (exception instanceof org.springframework.security.authentication.DisabledException) {
+                writeApiError(response, mapper, 401, "ACCOUNT_DISABLED", "账户已停用，请联系管理员");
+              } else if (exception
+                  instanceof org.springframework.security.authentication.LockedException) {
+                writeApiError(response, mapper, 401, "ACCOUNT_LOCKED", "账户已被锁定，请联系管理员");
+              } else {
+                writeApiError(response, mapper, 401, "AUTHENTICATION_FAILED", "账号或密码错误");
+              }
             }))
         .logout(logout -> logout
             .logoutUrl("/api/v1/platform/auth/logout")
