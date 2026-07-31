@@ -34,18 +34,39 @@ test('frontend exposes a typed API boundary instead of calling fetch from views'
 
 test('login page uses an image-led Huadong composition with project-local assets', () => {
   const loginView = read('frontend/src/views/LoginView.vue');
+  const panelRule = loginView.match(/\.login-form-panel\s*\{([^}]*)\}/)?.[1] ?? '';
 
-  assert.match(loginView, /patient-centered-research-hero\.jpg/);
+  assert.match(loginView, /patient-centered-research-hero-transparent\.png/);
+  assert.doesNotMatch(loginView, /patient-centered-research-hero\.jpg/);
   assert.match(loginView, /huadong-mark-blur-source\.png/);
   assert.match(loginView, /class="portal-brand-mark"/);
+  assert.doesNotMatch(loginView, /class="login-panel-ambient"/);
+  assert.doesNotMatch(loginView, /\.login-hero-figure::before/);
+  assert.doesNotMatch(loginView, /border-bottom:\s*2px solid #70d3ff/);
+  assert.match(loginView, /'has-error':\s*errorMessage/);
+  assert.match(loginView, /aria-invalid/);
   assert.doesNotMatch(loginView, /huadong-medicine-logo\.png/);
-  assert.match(loginView, /class="login-panel-ambient"/);
   assert.match(loginView, /class="portal-header"/);
   assert.match(loginView, /class="portal-stage"/);
   assert.match(loginView, /class="portal-footer"/);
+  assert.match(panelRule, /background:\s*transparent/);
+  assert.match(panelRule, /border-radius:\s*0/);
+  assert.match(panelRule, /box-shadow:\s*none/);
   assert.doesNotMatch(loginView, /核心价值观/);
   assert.doesNotMatch(loginView, /服务大众健康/);
   assert.doesNotMatch(loginView, /企业愿景/);
+});
+
+test('login visual styles stay isolated from the legacy global login selectors', () => {
+  const loginView = read('frontend/src/views/LoginView.vue');
+
+  assert.match(loginView, /class="portal-login-form"/);
+  assert.doesNotMatch(loginView, /class="login-form"/);
+  assert.doesNotMatch(loginView, /login-card-accent/);
+  assert.match(loginView, /class="portal-password-field login-input-wrap"/);
+  assert.match(loginView, /class="portal-password-toggle"/);
+  assert.match(loginView, /\.portal-login-form input:-webkit-autofill/);
+  assert.match(loginView, /\.portal-stage\s*\{[^}]*linear-gradient\(180deg,/s);
 });
 
 test('frontend navigation consumes permission codes instead of a coarse login role', () => {

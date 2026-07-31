@@ -15,7 +15,7 @@ const showPassword = ref(false)
 const capsLockOn = ref(false)
 const passwordInput = ref<HTMLInputElement>()
 const isMockMode = import.meta.env.VITE_API_MODE === 'mock'
-const heroImageUrl = `${import.meta.env.BASE_URL}brand/patient-centered-research-hero.jpg`
+const heroImageUrl = `${import.meta.env.BASE_URL}brand/patient-centered-research-hero-transparent.png`
 const brandMarkUrl = `${import.meta.env.BASE_URL}brand/huadong-mark-blur-source.png`
 
 function trackCapsLock(event: KeyboardEvent) {
@@ -61,20 +61,16 @@ async function submit() {
         </section>
 
         <section class="login-form-panel" aria-label="账号登录">
-          <div class="login-panel-ambient" aria-hidden="true">
-            <img :src="brandMarkUrl" alt="">
-          </div>
           <div class="login-card">
-            <span class="login-card-accent" aria-hidden="true"></span>
             <header class="login-card-header">
               <p>PIPELINE OPS</p>
               <h1 id="login-title">登录研发管理平台</h1>
               <span>使用华东医药内部账号继续</span>
             </header>
 
-            <form class="login-form" aria-labelledby="login-title" @submit.prevent="submit">
+            <form class="portal-login-form" aria-labelledby="login-title" @submit.prevent="submit">
               <label for="username">邮箱账号</label>
-              <div class="login-input-wrap">
+              <div class="login-input-wrap" :class="{ 'has-error': errorMessage }">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4 6.5h16v11H4zM4.5 7l7.5 6 7.5-6" />
                 </svg>
@@ -88,12 +84,14 @@ async function submit() {
                   placeholder="you@eastchinapharm.com"
                   autofocus
                   required
+                  :aria-invalid="Boolean(errorMessage)"
+                  :aria-describedby="errorMessage ? 'login-error' : undefined"
                   :disabled="submitting"
                 >
               </div>
 
               <label for="password">密码</label>
-              <div class="password-field login-input-wrap">
+              <div class="portal-password-field login-input-wrap" :class="{ 'has-error': errorMessage }">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="5" y="10" width="14" height="10" rx="1.5" />
                   <path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10M12 14v2.5" />
@@ -107,6 +105,8 @@ async function submit() {
                   autocomplete="current-password"
                   placeholder="请输入密码"
                   required
+                  :aria-invalid="Boolean(errorMessage)"
+                  :aria-describedby="errorMessage ? 'login-error' : undefined"
                   :disabled="submitting"
                   @keydown="trackCapsLock"
                   @keyup="trackCapsLock"
@@ -114,7 +114,7 @@ async function submit() {
                 >
                 <button
                   type="button"
-                  class="password-toggle"
+                  class="portal-password-toggle"
                   :aria-label="showPassword ? '隐藏密码' : '显示密码'"
                   :aria-pressed="showPassword"
                   :disabled="submitting"
@@ -131,8 +131,8 @@ async function submit() {
               </div>
               <p v-if="capsLockOn" class="caps-lock-hint" role="status">大写锁定已开启（Caps Lock）</p>
 
-              <p v-if="errorMessage" class="form-error" role="alert">{{ errorMessage }}</p>
-              <p v-if="isMockMode" class="demo-accounts">
+              <p v-if="errorMessage" id="login-error" class="form-error" role="alert">{{ errorMessage }}</p>
+              <p v-if="isMockMode" class="portal-demo-accounts">
                 演示模式可使用：<br>
                 <span>chen@eastchinapharm.com · 管理员</span><br>
                 <span>zhangwei@eastchinapharm.com · 成员（PL）</span><br>
@@ -140,14 +140,14 @@ async function submit() {
                 密码均为 <strong>1234</strong>
               </p>
 
-              <button class="primary-button login-button" type="submit" :disabled="submitting">
+              <button class="primary-button portal-login-button" type="submit" :disabled="submitting">
                 <span>{{ submitting ? '正在登录…' : '登录' }}</span>
                 <svg v-if="!submitting" viewBox="0 0 20 20" aria-hidden="true">
                   <path d="m7 4 6 6-6 6M3 10h10" />
                 </svg>
               </button>
 
-              <p class="login-footer">华东医药 · 仅限内部授权用户使用</p>
+              <p class="portal-login-footer">华东医药 · 仅限内部授权用户使用</p>
             </form>
           </div>
         </section>
@@ -181,11 +181,14 @@ async function submit() {
   z-index: 2;
   display: flex;
   align-items: center;
-  background: var(--login-blue);
 }
 
-.portal-header { border-bottom: 2px solid #70d3ff; }
-.portal-footer { border-top: 1px solid rgba(255, 255, 255, .16); }
+.portal-header {
+  background: var(--login-blue);
+}
+.portal-footer {
+  background: #e9eff7;
+}
 
 .portal-header-inner,
 .portal-footer-inner {
@@ -220,34 +223,23 @@ async function submit() {
   min-height: 0;
   overflow: hidden;
   background:
-    radial-gradient(circle at 22% 42%, rgba(255, 255, 255, .98), transparent 45%),
-    radial-gradient(circle at 87% 46%, rgba(92, 137, 220, .16), transparent 32%),
-    #edf3fb;
-}
-
-.portal-stage::after {
-  position: absolute;
-  right: -14vw;
-  bottom: -26vw;
-  width: 48vw;
-  aspect-ratio: 1;
-  border: 1px solid rgba(36, 87, 188, .08);
-  border-radius: 50%;
-  content: "";
-  pointer-events: none;
+    linear-gradient(180deg, rgba(36, 87, 188, .055) 0, rgba(36, 87, 188, .018) 18px, transparent 48px),
+    radial-gradient(ellipse 44% 62% at 24% 48%, rgba(255, 255, 255, .94), transparent 74%),
+    radial-gradient(ellipse 30% 52% at 82% 48%, rgba(87, 126, 201, .12), transparent 76%),
+    #edf2f8;
 }
 
 .portal-stage-inner {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(390px, .8fr);
-  gap: clamp(32px, 5vw, 76px);
-  width: min(1320px, 100%);
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: clamp(48px, 5vw, 80px);
+  width: min(1320px, calc(100% - 48px));
   height: 100%;
   align-items: center;
   margin: 0 auto;
-  padding: 24px clamp(32px, 5vw, 72px);
+  padding: clamp(28px, 4vw, 56px) 0;
 }
 
 .login-visual {
@@ -259,7 +251,6 @@ async function submit() {
 }
 
 .login-hero-figure {
-  position: relative;
   display: grid;
   width: 100%;
   height: 100%;
@@ -267,23 +258,12 @@ async function submit() {
   margin: 0;
 }
 
-.login-hero-figure::before {
-  position: absolute;
-  inset: 12% 2%;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .72);
-  filter: blur(28px);
-  content: "";
-}
-
 .login-hero-figure img {
-  position: relative;
-  width: min(100%, 680px);
+  display: block;
+  width: min(100%, 720px);
   max-height: min(64dvh, 560px);
   object-fit: contain;
   filter: saturate(.94) contrast(.99);
-  mix-blend-mode: multiply;
-  mask-image: radial-gradient(ellipse 76% 82% at center, #000 62%, rgba(0, 0, 0, .74) 86%, transparent 100%);
 }
 
 .login-form-panel {
@@ -293,42 +273,19 @@ async function submit() {
   place-items: center;
   margin: 0;
   padding: 20px 0;
-}
-
-.login-panel-ambient {
-  position: absolute;
-  inset: -18%;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.login-panel-ambient img {
-  position: absolute;
-  top: 50%;
-  left: -28%;
-  width: 560px;
-  opacity: .09;
-  filter: blur(14px) saturate(.8);
-  transform: translateY(-50%);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .login-card {
   position: relative;
   width: min(420px, 100%);
   padding: 36px 40px 30px;
-  border: 1px solid rgba(205, 217, 235, .9);
+  border: 1px solid rgba(205, 217, 235, .72);
   border-radius: 16px;
-  background: rgba(255, 255, 255, .96);
-  box-shadow: 0 18px 42px rgba(32, 67, 124, .14);
-}
-
-.login-card-accent {
-  position: absolute;
-  top: 0;
-  right: 42px;
-  left: 42px;
-  height: 3px;
-  background: var(--login-blue);
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(32, 67, 124, .1);
 }
 
 .login-card-header { margin-bottom: 24px; }
@@ -354,7 +311,7 @@ async function submit() {
   font-size: 12px;
 }
 
-.login-form label {
+.portal-login-form label {
   display: block;
   margin: 16px 0 7px;
   color: #3c4b5e;
@@ -376,6 +333,15 @@ async function submit() {
   border-color: var(--login-blue);
   box-shadow: 0 0 0 3px rgba(36, 87, 188, .1);
 }
+.login-input-wrap.has-error {
+  border-color: #c55353;
+  box-shadow: 0 0 0 1px rgba(197, 83, 83, .08);
+}
+.login-input-wrap.has-error:focus-within {
+  border-color: #b64242;
+  box-shadow: 0 0 0 3px rgba(182, 66, 66, .1);
+}
+.login-input-wrap.has-error > svg { stroke: #b64242; }
 
 .login-input-wrap > svg {
   width: 18px;
@@ -404,8 +370,20 @@ async function submit() {
 }
 .login-input-wrap input::placeholder { color: #a1aab6; }
 .login-input-wrap input:disabled { cursor: not-allowed; opacity: .62; }
+.portal-login-form input:focus {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+.portal-login-form input:-webkit-autofill,
+.portal-login-form input:-webkit-autofill:hover,
+.portal-login-form input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #1c2a3a;
+  -webkit-box-shadow: 0 0 0 1000px #fff inset;
+  caret-color: #1c2a3a;
+}
 
-.password-toggle {
+.portal-password-toggle {
   width: 34px;
   height: 34px;
   flex: none;
@@ -417,9 +395,13 @@ async function submit() {
   background: transparent;
   color: #778599;
 }
-.password-field { margin: 0; }
-.password-toggle:hover:not(:disabled) { background: #f0f4f9; color: var(--login-blue); }
-.password-toggle svg {
+.portal-password-field { margin: 0; }
+.portal-password-toggle:hover:not(:disabled) { background: #f0f4f9; color: var(--login-blue); }
+.portal-password-toggle:focus-visible {
+  outline: 2px solid var(--login-blue);
+  outline-offset: 1px;
+}
+.portal-password-toggle svg {
   width: 16px;
   height: 16px;
   fill: none;
@@ -436,9 +418,13 @@ async function submit() {
   line-height: 1.5;
 }
 .caps-lock-hint { color: var(--orange-text); }
-.form-error { color: var(--red-text); }
+.form-error {
+  padding-left: 9px;
+  border-left: 2px solid #c55353;
+  color: #ad3f3f;
+}
 
-.demo-accounts {
+.portal-demo-accounts {
   margin: 16px 0 0;
   padding: 11px 12px;
   border-left: 3px solid #b9c9e6;
@@ -447,9 +433,9 @@ async function submit() {
   font-size: 10.5px;
   line-height: 1.65;
 }
-.demo-accounts span { color: #315caa; }
+.portal-demo-accounts span { color: #315caa; }
 
-.login-button {
+.portal-login-button {
   width: 100%;
   min-height: 46px;
   display: flex;
@@ -464,13 +450,13 @@ async function submit() {
   font-size: 13px;
   letter-spacing: .12em;
 }
-.login-button:hover:not(:disabled) {
+.portal-login-button:hover:not(:disabled) {
   border-color: var(--login-blue-dark);
   background: var(--login-blue-dark);
   transform: translateY(-1px);
 }
-.login-button:active:not(:disabled) { transform: translateY(0); }
-.login-button svg {
+.portal-login-button:active:not(:disabled) { transform: translateY(0); }
+.portal-login-button svg {
   width: 17px;
   height: 17px;
   fill: none;
@@ -480,7 +466,7 @@ async function submit() {
   stroke-linejoin: round;
 }
 
-.login-footer {
+.portal-login-footer {
   margin: 18px 0 0;
   padding-top: 14px;
   border-top: 1px solid #e7ebf0;
@@ -494,7 +480,7 @@ async function submit() {
   align-items: center;
 }
 .portal-footer-inner small {
-  color: rgba(255, 255, 255, .7);
+  color: #748397;
   font-size: 10.5px;
 }
 
@@ -507,8 +493,9 @@ async function submit() {
   .portal-stage-inner {
     grid-template-columns: 1fr;
     gap: 10px;
+    width: min(100% - 36px, 720px);
     height: auto;
-    padding: 24px 20px 38px;
+    padding: 24px 0 38px;
   }
   .login-visual { height: 320px; }
   .login-hero-figure img { max-height: 340px; }
@@ -524,7 +511,10 @@ async function submit() {
     font-size: 11px;
     letter-spacing: .03em;
   }
-  .portal-stage-inner { padding: 18px 14px 28px; }
+  .portal-stage-inner {
+    width: calc(100% - 28px);
+    padding: 18px 0 28px;
+  }
   .login-visual { height: 230px; }
   .login-hero-figure img { max-height: 240px; }
   .login-card { padding: 30px 22px 26px; border-radius: 13px; }
@@ -533,7 +523,7 @@ async function submit() {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .login-button,
+  .portal-login-button,
   .login-input-wrap { transition: none; }
 }
 </style>
