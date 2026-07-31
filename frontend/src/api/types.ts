@@ -360,16 +360,6 @@ export interface StageProjection {
   statusText: string
 }
 
-export interface MonthlyReport {
-  studyCode: string
-  month: string
-  functionCode: string
-  functionName: string
-  content: string
-  updatedBy: string
-  updatedAt: string
-}
-
 // ── 月报填写（按功能线） ──
 
 export interface MonthlyReportEntry {

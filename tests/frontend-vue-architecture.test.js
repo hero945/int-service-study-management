@@ -52,22 +52,48 @@ test('frontend navigation consumes permission codes instead of a coarse login ro
   const types = read('frontend/src/api/types.ts');
   const router = read('frontend/src/router.ts');
   const shell = read('frontend/src/layout/AppShell.vue');
+  const navigation = read('frontend/src/navigation.ts');
+  const login = read('frontend/src/views/LoginView.vue');
 
   assert.match(types, /permissions:\s*PermissionCode\[\]/);
   assert.match(router, /requiredPermission/);
   assert.doesNotMatch(router, /user\.role\s*[!=]==?\s*['"]ADMIN['"]/);
   assert.doesNotMatch(shell, /user\.value\?\.role\s*[!=]==?\s*['"]ADMIN['"]/);
+  assert.match(navigation, /visibleNavigationGroups/);
+  assert.match(navigation, /permission:/);
+  assert.doesNotMatch(navigation, /name:\s*'monthly'/);
+  assert.match(shell, /NavIcon/);
+  assert.doesNotMatch(shell, /icon:\s*'[◆◇⚠▦⚙⭐♑⌘]'/);
+  assert.doesNotMatch(login, /from ['"]\.\.\/router['"]/);
+});
+
+test('cross-study monthly overview is removed without deleting study monthly reporting', () => {
+  const router = read('frontend/src/router.ts');
+  const apiClient = read('frontend/src/api/client.ts');
+  const studyList = read('frontend/src/views/StudyListView.vue');
+
+  assert.doesNotMatch(router, /MonthlyReportView/);
+  assert.doesNotMatch(router, /path:\s*'monthly'/);
+  assert.doesNotMatch(apiClient, /listMonthlyReports/);
+  assert.equal(
+    fs.existsSync(path.join(root, 'frontend/src/views/MonthlyReportView.vue')),
+    false,
+  );
+
+  assert.match(router, /path:\s*'studies\/:studyId\/monthly-report'/);
+  assert.match(apiClient, /getMonthlyReports/);
+  assert.match(studyList, /\/studies\/\$\{studyId\}\/monthly-report/);
 });
 
 test('role permission management is a protected page after account management and uses the API boundary', () => {
   const router = read('frontend/src/router.ts');
-  const shell = read('frontend/src/layout/AppShell.vue');
+  const navigation = read('frontend/src/navigation.ts');
   const apiClient = read('frontend/src/api/client.ts');
   const roleView = read('frontend/src/views/RolePermissionManagementView.vue');
 
   assert.match(router, /path:\s*'roles'/);
   assert.match(router, /requiredPermission:\s*'role\.page\.view'/);
-  assert.ok(shell.indexOf("to: '/accounts'") < shell.indexOf("to: '/roles'"));
+  assert.ok(navigation.indexOf("path: '/accounts'") < navigation.indexOf("path: '/roles'"));
   assert.match(apiClient, /listRoles/);
   assert.match(apiClient, /listPermissions/);
   assert.match(apiClient, /createRole/);
@@ -203,9 +229,14 @@ test('production packaging consumes the compiled frontend output', () => {
 
 test('mock development mode is configured in version-controlled Vite config', () => {
   const viteConfig = read('frontend/vite.config.ts');
+  const mockSource = read('frontend/src/api/mock.ts');
 
   assert.match(viteConfig, /mode === 'mock'/);
   assert.match(viteConfig, /VITE_API_MODE/);
+  assert.doesNotMatch(mockSource, /\?{3,}/);
+  assert.match(mockSource, /displayName:\s*'陈研发'/);
+  assert.match(mockSource, /indication:\s*'晚期实体瘤'/);
+  assert.match(mockSource, /\['milestone',\s*'milestone\.read',\s*'查看里程碑'/);
 });
 
 test('integrated local builds use root paths while Docker publishes the frontend under PLM', () => {

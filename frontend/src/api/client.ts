@@ -7,7 +7,6 @@ import type {
   CsrfToken,
   CurrentUser,
   LoginCredentials,
-  MonthlyReport,
   CreateStudyConfigInput,
   PipelineConfigPage,
   PipelineConfigQuery,
@@ -85,7 +84,6 @@ export interface ApiClient {
   getMilestones(studyId: number): Promise<MilestonePage>
   updateMilestone(studyId: number, milestoneCode: string, input: MilestoneUpdateInput): Promise<MilestonePage>
   getStageProjection(studyId: number): Promise<StageProjection>
-  listMonthlyReports(month?: string): Promise<MonthlyReport[]>
   getMonthlyReports(studyId: number, month: string): Promise<MonthlyReportPage>
   createMonthlyEntry(reportId: number, input: MonthlyEntryCreateInput): Promise<MonthlyReportPage>
   updateMonthlyEntry(entryId: number, input: MonthlyEntryUpdateInput): Promise<MonthlyReportPage>
@@ -307,10 +305,6 @@ export function createHttpApiClient(): ApiClient {
     },
     getStageProjection: (studyId) =>
       request<StageProjection>(`/api/v1/studies/${studyId}/stage-projection`),
-    listMonthlyReports: (month) =>
-      request<MonthlyReport[]>(
-        `/api/v1/monthly-reports${querySuffix({ month })}`,
-      ),
     getMonthlyReports: (studyId, month) =>
       request<MonthlyReportPage>(
         `/api/v1/studies/${studyId}/monthly-reports?${toSearchParams({ month })}`,

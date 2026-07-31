@@ -206,7 +206,7 @@ function goBack() { router.push('/studies') }
       <label class="monthly-month-picker"><span>月份</span><input v-model="month" type="month"></label>
     </div>
 
-    <PageState :loading :error :empty="!page?.functionLines.length" empty-title="暂无月报数据">
+    <PageState :loading :error retryable :empty="!page?.functionLines.length" empty-title="暂无月报数据" @retry="load">
       <div v-if="page" class="monthly-lines">
         <div v-for="line in page.functionLines" :key="line.reportId" class="data-card monthly-line-card">
           <header class="monthly-line-header">

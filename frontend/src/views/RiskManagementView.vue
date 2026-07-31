@@ -191,7 +191,7 @@ onMounted(async () => {
       </button>
     </div>
 
-    <PageState :loading :error :empty="!result?.data.length" empty-title="暂无风险记录">
+    <PageState :loading :error retryable :empty="!result?.data.length" empty-title="暂无风险记录" @retry="loadWithOptions">
       <div class="data-card risk-table-card">
         <table class="data-table risk-table">
           <thead>

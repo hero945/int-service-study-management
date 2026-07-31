@@ -231,9 +231,11 @@ onMounted(load)
     <PageState
       :loading
       :error
+      retryable
       :empty="!matrix?.studies.length"
       empty-title="暂无可见 Study"
       empty-description="请调整搜索条件，或由管理员检查 Study 和团队分配。"
+      @retry="load"
     >
       <div class="team-matrix-card">
         <div class="team-matrix-scroll" tabindex="0" aria-label="团队成员矩阵，可横向滚动">

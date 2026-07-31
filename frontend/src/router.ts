@@ -1,10 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { firstAllowedHome } from './navigation'
 import { session } from './session'
 import LoginView from './views/LoginView.vue'
 import AppShell from './layout/AppShell.vue'
 import PipelineOverviewView from './views/PipelineOverviewView.vue'
 import StudyListView from './views/StudyListView.vue'
-import MonthlyReportView from './views/MonthlyReportView.vue'
 import RiskManagementView from './views/RiskManagementView.vue'
 import TeamMatrixView from './views/TeamMatrixView.vue'
 import PipelineConfigView from './views/PipelineConfigView.vue'
@@ -46,16 +46,6 @@ export const router = createRouter({
             title: '研究 Study 列表',
             subtitle: '研究项目主数据与当前状态',
             requiredPermission: 'study.read',
-          },
-        },
-        {
-          path: 'monthly',
-          name: 'monthly',
-          component: MonthlyReportView,
-          meta: {
-            title: '研究月度汇报',
-            subtitle: '按部门维护研究月度进展',
-            requiredPermission: 'monthly.read',
           },
         },
         {
@@ -142,29 +132,6 @@ export const router = createRouter({
     },
   ],
 })
-
-const HOME_CANDIDATES = [
-  'pipeline',
-  'studies',
-  'monthly',
-  'risks',
-  'team',
-  'config',
-  'reports',
-  'accounts',
-  'roles',
-] as const
-
-export function firstAllowedHome(permissions: string[]): string {
-  for (const name of HOME_CANDIDATES) {
-    const route = router.resolve({ name })
-    const required = route.meta.requiredPermission
-    if (typeof required !== 'string' || permissions.includes(required)) {
-      return name
-    }
-  }
-  return 'login'
-}
 
 router.beforeEach(async (to) => {
   const user = await session.restore()

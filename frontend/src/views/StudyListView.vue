@@ -113,7 +113,7 @@ onMounted(load)
       <span class="filter-count">共 {{ total }} 个研究</span>
     </form>
 
-    <PageState :loading :error :empty="!studies.length">
+    <PageState :loading :error retryable :empty="!studies.length" @retry="load">
       <div class="data-card">
         <table class="data-table">
           <thead><tr>

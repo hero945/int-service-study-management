@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { firstAllowedHome } from './router'
+import { firstAllowedHome } from './navigation'
 
 describe('firstAllowedHome', () => {
   it('returns pipeline when user has pipeline.page.view', () => {
@@ -10,8 +10,8 @@ describe('firstAllowedHome', () => {
     expect(firstAllowedHome(['study.read'])).toBe('studies')
   })
 
-  it('returns monthly when user only has monthly.read', () => {
-    expect(firstAllowedHome(['monthly.read'])).toBe('monthly')
+  it('returns login when permissions do not expose a primary destination', () => {
+    expect(firstAllowedHome(['monthly.read'])).toBe('login')
   })
 
   it('falls back to login when no permissions match', () => {

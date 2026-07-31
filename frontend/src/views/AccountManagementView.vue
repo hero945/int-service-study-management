@@ -286,7 +286,7 @@ onUnmounted(() => {
 
     <div v-if="notice" class="role-notice">{{ notice }}</div>
 
-    <PageState :loading :error :empty="!users.length">
+    <PageState :loading :error retryable :empty="!users.length" @retry="load">
       <div class="data-card">
         <table class="data-table">
           <thead>

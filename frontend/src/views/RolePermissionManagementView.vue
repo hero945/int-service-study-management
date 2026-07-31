@@ -207,15 +207,19 @@ async function removeRole(role: PlatformRole) {
   }
 }
 
-onMounted(async () => {
+async function loadWithPermissions() {
   try {
-    permissions.value = await apiClient.listPermissions()
+    if (!permissions.value.length) {
+      permissions.value = await apiClient.listPermissions()
+    }
     await load()
   } catch (reason) {
     error.value = formatApiError(reason, '权限字典加载失败')
     loading.value = false
   }
-})
+}
+
+onMounted(loadWithPermissions)
 </script>
 
 <template>
@@ -246,9 +250,11 @@ onMounted(async () => {
     <PageState
       :loading
       :error
+      retryable
       :empty="!roles.length"
       empty-title="暂无匹配角色"
       empty-description="可调整筛选条件，或新增一个业务角色。"
+      @retry="loadWithPermissions"
     >
       <div class="data-card role-table-card">
         <table class="data-table role-table">

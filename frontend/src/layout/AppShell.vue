@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ChangePasswordDialog from '../components/ChangePasswordDialog.vue'
+import NavIcon from '../components/NavIcon.vue'
+import { visibleNavigationGroups } from '../navigation'
 import { riskBadge } from '../risk-badge'
 import { session } from '../session'
 
@@ -22,6 +24,7 @@ const roleLabel = computed(() => {
 })
 
 const menuOpen = ref(false)
+const navigationOpen = ref(false)
 const passwordDialogOpen = ref(false)
 
 onMounted(() => {
@@ -29,10 +32,13 @@ onMounted(() => {
     void riskBadge.refresh()
   }
   document.addEventListener('click', onDocumentClick)
+  document.addEventListener('keydown', onDocumentKeydown)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', onDocumentClick)
+  document.removeEventListener('keydown', onDocumentKeydown)
+  document.body.classList.remove('navigation-open')
 })
 
 function onDocumentClick(event: MouseEvent) {
@@ -42,40 +48,31 @@ function onDocumentClick(event: MouseEvent) {
   }
 }
 
-const navItems = computed(() => {
-  const permissions = user.value?.permissions ?? []
-  const items: Array<{ label: string; icon: string; to: string; badge?: string }> = []
-  if (permissions.includes('pipeline.page.view')) {
-    items.push({ label: '管线总览', icon: '◆', to: '/pipeline' })
-  }
-  if (permissions.includes('study.read')) {
-    items.push({ label: '研究 Study 列表', icon: '◇', to: '/studies' })
-  }
-  if (permissions.includes('risk.page.view')) {
-    items.push({
-      label: '风险管理',
-      icon: '⚠',
-      to: '/risks',
-      badge: riskBadge.openCount.value != null ? String(riskBadge.openCount.value) : undefined,
-    })
-  }
-  if (permissions.includes('team.page.view')) {
-    items.push({ label: '团队矩阵', icon: '▦', to: '/team' })
-  }
-  if (permissions.includes('config.page.view')) {
-    items.push({ label: '管线配置', icon: '⚙', to: '/config' })
-  }
-  if (permissions.includes('report.page.view')) {
-    items.push({ label: '月报导出', icon: '⭐', to: '/reports' })
-  }
-  if (permissions.includes('account.page.view')) {
-    items.push({ label: '账号管理', icon: '♑', to: '/accounts' })
-  }
-  if (permissions.includes('role.page.view')) {
-    items.push({ label: '角色权限管理', icon: '⌘', to: '/roles' })
-  }
-  return items
+const navGroups = computed(() => visibleNavigationGroups(user.value?.permissions ?? []))
+
+watch(
+  () => route.fullPath,
+  () => {
+    navigationOpen.value = false
+    menuOpen.value = false
+  },
+)
+
+watch(navigationOpen, (open) => {
+  document.body.classList.toggle('navigation-open', open)
 })
+
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Escape') return
+  navigationOpen.value = false
+  menuOpen.value = false
+}
+
+function badgeFor(name: string) {
+  if (name !== 'risks' || riskBadge.openCount.value == null) return undefined
+  return String(riskBadge.openCount.value)
+}
+
 async function logout() {
   menuOpen.value = false
   await session.logout()
@@ -90,34 +87,71 @@ function openPasswordDialog() {
 
 <template>
   <div class="app-shell">
-    <aside class="sidebar">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <button
+      v-if="navigationOpen"
+      class="navigation-backdrop"
+      type="button"
+      aria-label="关闭导航"
+      @click="navigationOpen = false"
+    ></button>
+
+    <aside id="primary-navigation" class="sidebar" :class="{ 'sidebar--open': navigationOpen }">
       <div class="sidebar-brand">
-        <div class="brand-mark brand-mark--small">研</div>
-        <div>
+        <span class="sidebar-brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32">
+            <path d="M16 3.5 27 9.8v12.4L16 28.5 5 22.2V9.8L16 3.5Z" />
+            <path d="M10.5 18.7 16 8.5l5.5 10.2M12.6 15h6.8" />
+          </svg>
+        </span>
+        <div class="sidebar-brand-copy">
           <strong>临床研发平台</strong>
-          <span>PIPELINE OPS</span>
+          <span>R&amp;D PIPELINE OPS</span>
         </div>
+        <button class="sidebar-close" type="button" aria-label="关闭导航" @click="navigationOpen = false">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" /></svg>
+        </button>
       </div>
 
       <nav aria-label="主要功能">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="nav-item"
-        >
-          <span class="nav-icon" aria-hidden="true">{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
-          <span v-if="item.badge != null" class="nav-badge">{{ item.badge }}</span>
-        </RouterLink>
+        <section v-for="group in navGroups" :key="group.label" class="nav-group">
+          <h2>{{ group.label }}</h2>
+          <RouterLink
+            v-for="item in group.items"
+            :key="item.path"
+            :to="item.path"
+            class="nav-item"
+          >
+            <span class="nav-icon" aria-hidden="true"><NavIcon :name="item.icon" /></span>
+            <span class="nav-label">{{ item.label }}</span>
+            <span v-if="badgeFor(item.name) != null" class="nav-badge">{{ badgeFor(item.name) }}</span>
+          </RouterLink>
+        </section>
       </nav>
+
+      <div class="sidebar-footnote">
+        <span aria-hidden="true"></span>
+        内部授权访问
+      </div>
     </aside>
 
-    <main class="workspace">
+    <main id="main-content" class="workspace" tabindex="-1">
       <header class="topbar">
-        <div>
+        <div class="topbar-heading">
+          <button
+            class="navigation-trigger"
+            type="button"
+            aria-label="打开导航"
+            aria-controls="primary-navigation"
+            :aria-expanded="navigationOpen"
+            @click="navigationOpen = true"
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg>
+          </button>
+          <div>
           <h1>{{ pageTitle }}</h1>
           <p>{{ pageSubtitle }}</p>
+          </div>
         </div>
         <div class="topbar-actions">
           <div class="topbar-user-menu">
@@ -129,7 +163,8 @@ function openPasswordDialog() {
               @click.stop="menuOpen = !menuOpen"
             >
               <span class="avatar">{{ userInitials }}</span>
-              <span><strong>{{ user?.displayName }}</strong><small>{{ roleLabel }}</small></span>
+              <span class="topbar-user-copy"><strong>{{ user?.displayName }}</strong></span>
+              <svg class="topbar-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
             </button>
             <div v-if="menuOpen" class="topbar-user-dropdown" role="menu">
               <button type="button" role="menuitem" @click="openPasswordDialog">修改密码</button>

@@ -108,7 +108,7 @@ function goBack() { router.push('/studies') }
       </div>
     </div>
 
-    <PageState :loading :error :empty="!page?.groups.length" empty-title="暂无里程碑数据">
+    <PageState :loading :error retryable :empty="!page?.groups.length" empty-title="暂无里程碑数据" @retry="load">
       <div class="data-card milestone-card" v-if="page">
         <div class="milestone-table-wrap">
           <table class="data-table milestone-table">

@@ -213,15 +213,19 @@ function closeStudyDrawer() {
   selectedStudy.value = null
 }
 
-onMounted(async () => {
+async function loadOverview() {
+  loading.value = true
+  errorMessage.value = ''
   try {
     overview.value = await apiClient.getPipelineOverview()
-  } catch (error) {
-    errorMessage.value = formatApiError(error, '管线数据加载失败')
+  } catch (reason) {
+    errorMessage.value = formatApiError(reason, '管线数据加载失败')
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadOverview)
 </script>
 
 <template>
@@ -260,9 +264,11 @@ onMounted(async () => {
     <PageState
       :loading="loading"
       :error="errorMessage"
+      retryable
       :empty="!loading && !errorMessage && !areaGroups.length"
       empty-title="暂无匹配项目"
       empty-description="请调整筛选条件后重试。"
+      @retry="loadOverview"
     >
       <div class="pipeline-table-wrap">
         <table class="pipeline-table">
