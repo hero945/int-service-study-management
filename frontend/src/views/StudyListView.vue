@@ -87,7 +87,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="page-content">
+  <section class="page-content page-content--fill">
     <form class="page-toolbar" role="search" @submit.prevent="applyFilters">
       <div class="filter-group">
         <label class="filter-field">

@@ -11,7 +11,7 @@ import {
   sourceLabel,
   type PipelinePhase,
 } from '../domain/pipeline-status'
-import { getProjectCell, type ProjectCell } from '../domain/pipeline-aggregation'
+import { getProjectCell, hasChipContent, type ProjectCell } from '../domain/pipeline-aggregation'
 import {
   PIPELINE_PHASE_STATUS_OPTIONS,
   phaseCodeToColumn,
@@ -229,7 +229,7 @@ onMounted(loadOverview)
 </script>
 
 <template>
-  <section class="page-content">
+  <section class="page-content page-content--fill">
     <div class="page-toolbar">
       <div class="filter-group">
         <label class="filter-field">
@@ -321,7 +321,7 @@ onMounted(loadOverview)
                 @mouseleave="hideCellTip"
               >
                 <div
-                  v-if="cell(project, phase).tone !== 'empty'"
+                  v-if="hasChipContent(cell(project, phase))"
                   class="pipeline-stage-wrap"
                 >
                   <span

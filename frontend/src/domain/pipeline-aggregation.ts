@@ -183,6 +183,32 @@ function withTip(
   }
 }
 
+function trimmedOrUndefined(value: string | null | undefined): string | undefined {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : undefined
+}
+
+function emptyCell(): ProjectCell {
+  return { label: '—', tone: 'empty', clickable: false }
+}
+
+/** 是否应在管线总览渲染 pill（有 tone 且有可见文案） */
+export function hasChipContent(cell: ProjectCell): boolean {
+  return cell.tone !== 'empty' && Boolean(trimmedOrUndefined(cell.label))
+}
+
+function ensureRenderableCell(cell: ProjectCell): ProjectCell {
+  if (!hasChipContent(cell)) return emptyCell()
+  return cell
+}
+
+/** 里程碑子状态 → 主节点 → Study 基础状态；空字符串视为缺失。 */
+function resolveDisplayLabel(study: CellStudy): string | undefined {
+  return trimmedOrUndefined(study.subStatusLabel)
+    ?? trimmedOrUndefined(study.mainStageLabel)
+    ?? trimmedOrUndefined(study.statusLabel)
+}
+
 /**
  * 监管列 → 里程碑主阶段 + 取数 Study 的临床 phase code。
  * PRE_IND / IND ← PHASE_1 study 的 PreIND / IND 里程碑；
@@ -300,23 +326,25 @@ function getRegulatoryMilestoneCell(
   if (stageDone) {
     return completedRegulatoryCell(source, targetPhase, stageCode)
   }
-  const subStatus = source.subStatusLabel?.trim()
+  const subStatus = trimmedOrUndefined(source.subStatusLabel)
   if (subStatus) {
-    const stage = source.mainStageLabel ?? stageCode
+    const stage = trimmedOrUndefined(source.mainStageLabel) ?? stageCode
     return withTip(
       {
         label: subStatus,
         tone: 'blue',
         clickable: true,
         studyId: source.id,
-        subText: source.mainStageLabel ?? undefined,
+        subText: trimmedOrUndefined(source.mainStageLabel),
       },
       stage,
       subStatus,
       source,
     )
   }
-  const fallback = source.mainStageLabel ?? source.statusLabel
+  const fallback = trimmedOrUndefined(source.mainStageLabel)
+    ?? trimmedOrUndefined(source.statusLabel)
+  if (!fallback) return emptyCell()
   return withTip(
     {
       label: fallback,
@@ -324,7 +352,7 @@ function getRegulatoryMilestoneCell(
       clickable: true,
       studyId: source.id,
     },
-    source.mainStageLabel ?? stageCode,
+    trimmedOrUndefined(source.mainStageLabel) ?? stageCode,
     fallback,
     source,
   )
@@ -343,7 +371,7 @@ function getRegulatoryMilestoneCell(
  */
 export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase): ProjectCell {
   const regulatory = getRegulatoryMilestoneCell(studies, targetPhase)
-  if (regulatory) return regulatory
+  if (regulatory) return ensureRenderableCell(regulatory)
 
   const study = findStudyByPhase(studies, targetPhase)
   if (!study) {
@@ -363,32 +391,33 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
       study,
     )
   }
-  const subStatus = study.subStatusLabel?.trim()
+  const subStatus = trimmedOrUndefined(study.subStatusLabel)
   if (subStatus) {
-    const stage = study.mainStageLabel ?? targetPhase
+    const stage = trimmedOrUndefined(study.mainStageLabel) ?? targetPhase
     return withTip(
       {
         label: subStatus,
         tone: 'blue',
         clickable: true,
         studyId: study.id,
-        subText: study.mainStageLabel ?? undefined,
+        subText: trimmedOrUndefined(study.mainStageLabel),
       },
       stage,
       subStatus,
       study,
     )
   }
-  const fallback = study.mainStageLabel ?? study.statusLabel
-  return withTip(
+  const fallback = resolveDisplayLabel(study)
+  if (!fallback) return emptyCell()
+  return ensureRenderableCell(withTip(
     {
       label: fallback,
       tone: 'blue',
       clickable: true,
       studyId: study.id,
     },
-    study.mainStageLabel ?? targetPhase,
+    trimmedOrUndefined(study.mainStageLabel) ?? targetPhase,
     fallback,
     study,
-  )
+  ))
 }

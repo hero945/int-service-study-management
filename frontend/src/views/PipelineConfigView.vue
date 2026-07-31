@@ -400,7 +400,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="page-content config-page">
+  <section class="page-content page-content--fill config-page">
     <div class="config-tabs" role="tablist" aria-label="管线配置视图">
       <button :class="{ active: view === 'studies' }" role="tab" type="button" @click="view = 'studies'">Study 明细</button>
       <button :class="{ active: view === 'entities' }" role="tab" type="button" @click="view = 'entities'">Program / Project 管理</button>

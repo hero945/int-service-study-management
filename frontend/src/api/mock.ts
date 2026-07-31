@@ -119,66 +119,28 @@ function expand(base: StudyBase, variants: StudyVariant[]): StudySeed[] {
   return variants.map((variant) => ({ ...base, ...variant }))
 }
 
-// 覆盖 6 个治疗领域；同一 project 下含多个不同 phase 的 study，用于验证 byProject 聚合与回填
+// 演示数据集：3 Program · 4 Project · 10 Study，覆盖肿瘤/自免/代谢三个 TA 与多阶段里程碑场景
 const studySeeds: StudySeed[] = [
-  // 肿瘤
+  // HDM2020 · 肿瘤 ADC · 2 Project · 5 Study
   ...expand({ indication: '晚期实体瘤', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-1', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
     { code: 'HDM2020-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-03-10', updatedAt: '2026-07-15T09:20:00' },
     { code: 'HDM2020-002', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-09-01', updatedAt: '2026-07-10T14:05:00' },
+    { code: 'HDM2020-003', phase: 'PHASE_3_1', status: 'PLANNED', ownerName: '张伟', startDate: '2026-10-01', updatedAt: '2026-07-06T10:20:00' },
   ]),
   ...expand({ indication: '非小细胞肺癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-2', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
     { code: 'HDM2020-101', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '李静', startDate: '2025-06-20', updatedAt: '2026-07-08T10:30:00' },
+    { code: 'HDM2020-102', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '李静', startDate: '2025-11-12', updatedAt: '2026-07-04T15:35:00' },
   ]),
-  ...expand({ indication: '乳腺癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-3', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2020-201', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-11-05', updatedAt: '2026-07-01T16:40:00' },
-    { code: 'HDM2020-202', phase: 'PHASE_2', status: 'PLANNED', ownerName: '王芳', startDate: '2026-08-01', updatedAt: '2026-06-28T11:00:00' },
-  ]),
-  ...expand({ indication: '胃癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2031', projectCode: 'HDM2031-1', productName: 'HDM2031', moa: '单克隆抗体', sourceCode: 'IN_LICENSE', originCode: 'IMPORTED' }, [
-    { code: 'HDM2031-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-05-12', updatedAt: '2026-07-12T13:10:00' },
-    { code: 'HDM2031-002', phase: 'PHASE_3_2', status: 'PLANNED', ownerName: '陈研发', startDate: '2026-09-01', updatedAt: '2026-07-05T09:45:00' },
-  ]),
-  // 自身免疫
+  // HDM2015 · 自身免疫 · 1 Project · 3 Study
   ...expand({ indication: '系统性红斑狼疮', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '自身免疫', programCode: 'HDM2015', projectCode: 'HDM2015-1', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
     { code: 'HDM2015-101', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-02-18', updatedAt: '2026-07-14T16:40:00' },
     { code: 'HDM2015-102', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '王芳', startDate: '2023-08-01', updatedAt: '2025-12-20T10:00:00' },
+    { code: 'HDM2015-103', phase: 'IND', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-10-10', updatedAt: '2026-07-09T15:20:00' },
   ]),
-  ...expand({ indication: '类风湿关节炎', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '自身免疫', programCode: 'HDM2015', projectCode: 'HDM2015-2', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2015-201', phase: 'IND', status: 'ACTIVE', ownerName: '李静', startDate: '2025-10-10', updatedAt: '2026-07-09T15:20:00' },
-  ]),
-  // 代谢与心血管
+  // HDM1005 · 代谢与心血管 · 1 Project · 2 Study
   ...expand({ indication: '2 型糖尿病', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '代谢与心血管', programCode: 'HDM1005', projectCode: 'HDM1005-3', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
     { code: 'HDM1005-301', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '李静', startDate: '2023-05-06', updatedAt: '2024-11-30T09:00:00' },
     { code: 'HDM1005-302', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '李静', startDate: '2025-01-15', updatedAt: '2026-07-12T13:10:00' },
-    { code: 'HDM1005-303', phase: 'PHASE_3_1', status: 'PLANNED', ownerName: '李静', startDate: '2026-10-01', updatedAt: '2026-07-06T10:20:00' },
-  ]),
-  ...expand({ indication: '肥胖', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '代谢与心血管', programCode: 'HDM1005', projectCode: 'HDM1005-5', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM1005-501', phase: 'PRE_IND', status: 'ACTIVE', ownerName: '张伟', startDate: '2026-01-20', updatedAt: '2026-07-03T14:00:00' },
-  ]),
-  // 呼吸系统
-  ...expand({ indication: '哮喘', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-1', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2042-001', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '刘洋', startDate: '2025-04-22', updatedAt: '2026-07-11T09:30:00' },
-  ]),
-  ...expand({ indication: '慢阻肺', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-2', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2042-201', phase: 'PHASE_1', status: 'PLANNED', ownerName: '刘洋', startDate: '2026-07-01', updatedAt: '2026-06-30T17:00:00' },
-  ]),
-  ...expand({ indication: '特发性肺纤维化', therapeuticAreaCode: 'RESPIRATORY', therapeuticAreaName: '呼吸系统', programCode: 'HDM2042', projectCode: 'HDM2042-3', productName: 'HDM2042', moa: '吸入剂', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2042-301', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-12-08', updatedAt: '2026-07-07T11:15:00' },
-  ]),
-  // 感染性疾病
-  ...expand({ indication: '慢性乙肝', therapeuticAreaCode: 'INFECTIOUS_DISEASE', therapeuticAreaName: '感染性疾病', programCode: 'HDM2050', projectCode: 'HDM2050-1', productName: 'HDM2050', moa: '抗病毒', sourceCode: 'COOPERATION', originCode: 'IMPORTED' }, [
-    { code: 'HDM2050-001', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-03-15', updatedAt: '2026-07-13T10:50:00' },
-    { code: 'HDM2050-002', phase: 'PHASE_3_2', status: 'ACTIVE', ownerName: '陈研发', startDate: '2024-11-20', updatedAt: '2026-07-04T15:35:00' },
-  ]),
-  // 神经科学
-  ...expand({ indication: '阿尔茨海默病', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-1', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2066-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '李静', startDate: '2025-07-30', updatedAt: '2026-07-10T09:10:00' },
-    { code: 'HDM2066-002', phase: 'PRE_IND', status: 'COMPLETED', ownerName: '李静', startDate: '2024-02-14', updatedAt: '2025-06-30T14:20:00' },
-  ]),
-  ...expand({ indication: '帕金森病', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-2', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2066-201', phase: 'IND', status: 'PLANNED', ownerName: '张伟', startDate: '2026-08-15', updatedAt: '2026-07-02T10:40:00' },
-  ]),
-  ...expand({ indication: '抑郁症', therapeuticAreaCode: 'NEUROSCIENCE', therapeuticAreaName: '神经科学', programCode: 'HDM2066', projectCode: 'HDM2066-3', productName: 'HDM2066', moa: '小分子', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2066-301', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-05-25', updatedAt: '2026-07-09T13:25:00' },
   ]),
 ]
 
@@ -198,27 +160,42 @@ const mockOverviewMilestoneView: Record<string, {
 }> = {
   'HDM2020-001': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPI', currentPhaseCompleted: false },
   'HDM2020-002': { mainStageLabel: 'IA', subStatusLabel: 'IA 数据冻结', currentPhaseCompleted: false },
+  'HDM2020-003': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
   'HDM2020-101': { mainStageLabel: 'SSU', subStatusLabel: '所有中心启动', currentPhaseCompleted: false },
-  'HDM2020-201': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
-  'HDM2020-202': { mainStageLabel: 'Protocol', subStatusLabel: '方案定稿', currentPhaseCompleted: false },
-  'HDM2031-001': { mainStageLabel: 'Data & Report', subStatusLabel: 'DBL', currentPhaseCompleted: false },
-  'HDM2031-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
+  'HDM2020-102': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
   'HDM2015-101': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR初稿', currentPhaseCompleted: false },
   'HDM2015-102': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
-  'HDM2015-201': { mainStageLabel: 'IND', subStatusLabel: 'IND 获批', currentPhaseCompleted: false },
+  'HDM2015-103': { mainStageLabel: 'IND', subStatusLabel: 'IND 获批', currentPhaseCompleted: false },
   'HDM1005-301': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
   'HDM1005-302': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR定稿', currentPhaseCompleted: false },
-  'HDM1005-303': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
-  'HDM1005-501': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-药学', currentPhaseCompleted: false },
-  'HDM2042-001': { mainStageLabel: 'IA', subStatusLabel: 'IA 数据分析', currentPhaseCompleted: false },
-  'HDM2042-201': { mainStageLabel: 'Protocol', subStatusLabel: '方案讨论会', currentPhaseCompleted: false },
-  'HDM2042-301': { mainStageLabel: 'SSU', subStatusLabel: '首家中心启动', currentPhaseCompleted: false },
-  'HDM2050-001': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR定稿', currentPhaseCompleted: false },
-  'HDM2050-002': { mainStageLabel: 'NDA/BLA', subStatusLabel: '临床核查', currentPhaseCompleted: false },
-  'HDM2066-001': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPI', currentPhaseCompleted: false },
-  'HDM2066-002': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-药学', currentPhaseCompleted: true },
-  'HDM2066-201': { mainStageLabel: 'IND', subStatusLabel: 'IND 递交', currentPhaseCompleted: false },
-  'HDM2066-301': { mainStageLabel: 'SSU', subStatusLabel: '所有中心启动', currentPhaseCompleted: false },
+}
+
+/** 全量里程碑 code 顺序（与 MilestoneDefinition 一致） */
+const MILESTONE_CODE_ORDER = [
+  ...Array.from({ length: 6 }, (_, i) => `PreIND-${i}`),
+  ...Array.from({ length: 5 }, (_, i) => `IND-${i}`),
+  ...Array.from({ length: 6 }, (_, i) => `Pre3-${i}`),
+  ...Array.from({ length: 3 }, (_, i) => `Protocol-${i}`),
+  ...Array.from({ length: 12 }, (_, i) => `SSU-${i}`),
+  ...Array.from({ length: 3 }, (_, i) => `Enrollment-${i}`),
+  ...Array.from({ length: 2 }, (_, i) => `IA-${i}`),
+  ...Array.from({ length: 8 }, (_, i) => `Data_Report-${i}`),
+  ...Array.from({ length: 6 }, (_, i) => `PreNDA_BLA-${i}`),
+  ...Array.from({ length: 9 }, (_, i) => `NDA_BLA-${i}`),
+] as const
+
+/** 每个 Study 的里程碑 frontier（与 mockOverviewMilestoneView 对齐） */
+const STUDY_MILESTONE_FRONTIER: Record<string, { frontierCode: string; completed?: boolean }> = {
+  'HDM2020-001': { frontierCode: 'Enrollment-1' },           // LPI
+  'HDM2020-002': { frontierCode: 'IA-0' },                   // IA 数据冻结
+  'HDM2020-003': { frontierCode: 'NDA_BLA-0' },              // NDA/BLA 递交（计划中）
+  'HDM2020-101': { frontierCode: 'SSU-7' },                  // 所有中心启动
+  'HDM2020-102': { frontierCode: 'Enrollment-0' },           // FPI
+  'HDM2015-101': { frontierCode: 'Data_Report-5' },          // CSR初稿
+  'HDM2015-102': { frontierCode: 'Enrollment-2', completed: true }, // LPO · I 期完成
+  'HDM2015-103': { frontierCode: 'IND-4' },                  // IND 获批
+  'HDM1005-301': { frontierCode: 'Enrollment-2', completed: true }, // LPO · I 期完成
+  'HDM1005-302': { frontierCode: 'Data_Report-2' },          // TLR定稿
 }
 
 const SOURCE_LABEL = SOURCE_LABELS
@@ -251,8 +228,8 @@ function deriveOverviewCompletionFromStage(
   }
 }
 
-let nextRiskId = 19
-let nextRiskActionId = 2
+let nextRiskId = 6
+let nextRiskActionId = 10
 
 /** find 的断言版本：mock 场景找不到即数据错误，直接抛出明确信息 */
 function mustFind<T>(items: T[], predicate: (item: T) => boolean, message: string): T {
@@ -280,31 +257,115 @@ function syncRiskTracking(detail: RiskDetail) {
   if (detail.closedTime === undefined) detail.closedTime = null
 }
 
-const mockRisks: RiskDetail[] = [{
-  risk: {
-    riskId: 18, riskCode: 'RSK-2026-000018', studyId: 3, studyCode: 'HDM1005-302',
-    programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'RA',
-    functionName: '注册', description: '监管沟通窗口可能影响计划节点',
-    ownerUserId: 2, ownerName: '张伟', score: 48, level: 'HIGH', status: 'OPEN',
-    actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-15',
-    version: 0, updatedAt: '2026-07-22T09:00:00Z',
+const mockRisks: RiskDetail[] = [
+  {
+    risk: {
+      riskId: 1, riskCode: 'RSK-2026-000001', studyId: 10, studyCode: 'HDM1005-302',
+      programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'RA',
+      functionName: '注册', description: '监管沟通窗口可能影响 III 期关键节点',
+      ownerUserId: 2, ownerName: '张伟', score: 48, level: 'HIGH', status: 'OPEN',
+      actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-15',
+      version: 0, updatedAt: '2026-07-22T09:00:00Z',
+    },
+    registeredDate: '2026-07-15', closeReason: '', closedTime: null,
+    assessments: [{ id: 1, number: 1, impact: 4, likelihood: 4, detectability: 3,
+      score: 48, level: 'HIGH', reason: '首次评估', assessedBy: '张伟',
+      assessedAt: '2026-07-15T09:00:00Z' }],
+    actions: [{ id: 1, description: '提前准备 Pre-NDA 沟通材料', ownerUserId: 2,
+      ownerName: '张伟', plannedDate: '2026-08-15', completedDate: null,
+      status: 'IN_PROGRESS', completionNote: '', version: 0, overdue: false }],
+    activities: [{
+      type: 'ASSESSMENT', title: '第 1 次评估 · 48 分 · HIGH',
+      detail: '4 × 4 × 3 · 首次评估', at: '2026-07-15T09:00:00Z', by: '张伟',
+    }, {
+      type: 'ACTION', title: '新增控制措施',
+      detail: '提前准备 Pre-NDA 沟通材料', at: '2026-07-15T09:05:00Z', by: '张伟',
+    }],
   },
-  registeredDate: '2026-07-15', closeReason: '', closedTime: null,
-  assessments: [{ id: 1, number: 1, impact: 4, likelihood: 4, detectability: 3,
-    score: 48, level: 'HIGH', reason: '首次评估', assessedBy: '张伟',
-    assessedAt: '2026-07-15T09:00:00Z' }],
-  actions: [{ id: 1, description: '提前准备沟通材料', ownerUserId: 2,
-    ownerName: '张伟', plannedDate: '2026-08-15', completedDate: null,
-    status: 'IN_PROGRESS', completionNote: '', version: 0, overdue: false }],
-  activities: [{
-    type: 'ASSESSMENT', title: '第 1 次评估 · 48 分 · HIGH',
-    detail: '4 × 4 × 3 · 首次评估', at: '2026-07-15T09:00:00Z', by: '张伟',
-  }, {
-    type: 'ACTION', title: '新增控制措施',
-    detail: '提前准备沟通材料', at: '2026-07-15T09:05:00Z', by: '张伟',
-  }],
-}]
-syncRiskTracking(mockRisks[0])
+  {
+    risk: {
+      riskId: 2, riskCode: 'RSK-2026-000002', studyId: 1, studyCode: 'HDM2020-001',
+      programCode: 'HDM2020', projectCode: 'HDM2020-1', functionCode: 'PM',
+      functionName: '项目管理', description: 'I 期入组进度滞后，可能推迟 LPI 计划',
+      ownerUserId: 2, ownerName: '张伟', score: 24, level: 'MEDIUM', status: 'OPEN',
+      actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-01',
+      version: 0, updatedAt: '2026-07-18T10:00:00Z',
+    },
+    registeredDate: '2026-07-10', closeReason: '', closedTime: null,
+    assessments: [{ id: 2, number: 1, impact: 3, likelihood: 2, detectability: 4,
+      score: 24, level: 'MEDIUM', reason: '中心启动偏慢', assessedBy: '张伟',
+      assessedAt: '2026-07-10T09:00:00Z' }],
+    actions: [{ id: 2, description: '每周跟踪各中心入组周报', ownerUserId: 2,
+      ownerName: '张伟', plannedDate: '2026-08-01', completedDate: null,
+      status: 'OPEN', completionNote: '', version: 0, overdue: false }],
+    activities: [{
+      type: 'ASSESSMENT', title: '第 1 次评估 · 24 分 · MEDIUM',
+      detail: '3 × 2 × 2', at: '2026-07-10T09:00:00Z', by: '张伟',
+    }],
+  },
+  {
+    risk: {
+      riskId: 3, riskCode: 'RSK-2026-000003', studyId: 4, studyCode: 'HDM2020-101',
+      programCode: 'HDM2020', projectCode: 'HDM2020-2', functionCode: 'CO',
+      functionName: '临床运营', description: 'CRO 交付 SSU 包可能晚于合同节点',
+      ownerUserId: 2, ownerName: '张伟', score: 36, level: 'MEDIUM', status: 'OPEN',
+      actionCount: 1, openActionCount: 1, overdueActionCount: 1, nextPlannedDate: '2026-07-20',
+      version: 0, updatedAt: '2026-07-20T08:00:00Z',
+    },
+    registeredDate: '2026-07-01', closeReason: '', closedTime: null,
+    assessments: [{ id: 3, number: 1, impact: 4, likelihood: 3, detectability: 3,
+      score: 36, level: 'MEDIUM', reason: 'CRO 资源冲突', assessedBy: '张伟',
+      assessedAt: '2026-07-01T09:00:00Z' }],
+    actions: [{ id: 3, description: '与 CRO 召开专项协调会', ownerUserId: 2,
+      ownerName: '张伟', plannedDate: '2026-07-20', completedDate: null,
+      status: 'IN_PROGRESS', completionNote: '', version: 0, overdue: true }],
+    activities: [{
+      type: 'ASSESSMENT', title: '第 1 次评估 · 36 分 · MEDIUM',
+      detail: '4 × 3 × 3', at: '2026-07-01T09:00:00Z', by: '张伟',
+    }],
+  },
+  {
+    risk: {
+      riskId: 4, riskCode: 'RSK-2026-000004', studyId: 6, studyCode: 'HDM2015-101',
+      programCode: 'HDM2015', projectCode: 'HDM2015-1', functionCode: 'RA',
+      functionName: '注册', description: 'II 期 CSR 递交前需补充稳定性数据说明',
+      ownerUserId: 1, ownerName: '陈研发', score: 20, level: 'MEDIUM', status: 'OPEN',
+      actionCount: 0, openActionCount: 0, overdueActionCount: 0, nextPlannedDate: null,
+      version: 0, updatedAt: '2026-07-12T14:00:00Z',
+    },
+    registeredDate: '2026-07-12', closeReason: '', closedTime: null,
+    assessments: [{ id: 4, number: 1, impact: 4, likelihood: 2, detectability: 3,
+      score: 20, level: 'MEDIUM', reason: '药学资料缺口', assessedBy: '陈研发',
+      assessedAt: '2026-07-12T14:00:00Z' }],
+    actions: [],
+    activities: [{
+      type: 'ASSESSMENT', title: '第 1 次评估 · 20 分 · MEDIUM',
+      detail: '4 × 2 × 3', at: '2026-07-12T14:00:00Z', by: '陈研发',
+    }],
+  },
+  {
+    risk: {
+      riskId: 5, riskCode: 'RSK-2026-000005', studyId: 9, studyCode: 'HDM1005-301',
+      programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'PM',
+      functionName: '项目管理', description: 'I 期总结报告归档延迟（已关闭）',
+      ownerUserId: 2, ownerName: '张伟', score: 8, level: 'LOW', status: 'CLOSED',
+      actionCount: 1, openActionCount: 0, overdueActionCount: 0, nextPlannedDate: null,
+      version: 1, updatedAt: '2026-06-30T16:00:00Z',
+    },
+    registeredDate: '2026-05-01', closeReason: '归档已完成，风险消除', closedTime: '2026-06-30T16:00:00Z',
+    assessments: [{ id: 5, number: 1, impact: 2, likelihood: 2, detectability: 4,
+      score: 8, level: 'LOW', reason: '文档流程延迟', assessedBy: '张伟',
+      assessedAt: '2026-05-01T09:00:00Z' }],
+    actions: [{ id: 4, description: '完成 TMF 归档检查清单', ownerUserId: 2,
+      ownerName: '张伟', plannedDate: '2026-06-15', completedDate: '2026-06-28',
+      status: 'COMPLETED', completionNote: '已全部归档', version: 1, overdue: false }],
+    activities: [{
+      type: 'STATUS', title: '状态 OPEN → CLOSED',
+      detail: '归档已完成，风险消除', at: '2026-06-30T16:00:00Z', by: '张伟',
+    }],
+  },
+]
+mockRisks.forEach((detail) => syncRiskTracking(detail))
 
 
 const teamRoles: TeamMatrixRole[] = [
@@ -362,7 +423,63 @@ function delay(ms: number) { return new Promise(r => setTimeout(r, ms)) }
 
 const mockMilestones = new Map<number, MilestonePage>()
 
-function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage {
+function findMilestoneNode(page: MilestonePage, code: string): MilestoneNode | undefined {
+  for (const group of page.groups) {
+    const node = group.nodes.find((n) => n.milestoneCode === code)
+    if (node) return node
+  }
+  return undefined
+}
+
+function milestoneDateOffset(baseIndex: number): string {
+  const dt = new Date('2025-01-01T00:00:00')
+  dt.setDate(dt.getDate() + baseIndex * 7)
+  return dt.toISOString().slice(0, 10)
+}
+
+/** 将 frontier 之前节点标为已完成，frontier 本身进行中或已完成。 */
+function applyMilestoneFrontier(
+  page: MilestonePage,
+  frontierCode: string,
+  completed = false,
+): void {
+  const frontierIdx = MILESTONE_CODE_ORDER.indexOf(frontierCode as typeof MILESTONE_CODE_ORDER[number])
+  if (frontierIdx < 0) throw new Error(`Unknown milestone frontier: ${frontierCode}`)
+
+  for (let i = 0; i < MILESTONE_CODE_ORDER.length; i++) {
+    const code = MILESTONE_CODE_ORDER[i]
+    const node = findMilestoneNode(page, code)
+    if (!node) continue
+
+    if (i < frontierIdx) {
+      node.planV1Date = milestoneDateOffset(i)
+      node.actualStartDate = milestoneDateOffset(i)
+      node.actualEndDate = milestoneDateOffset(i + 1)
+      node.status = 'COMPLETED'
+      continue
+    }
+    if (i === frontierIdx) {
+      node.planV1Date = milestoneDateOffset(i)
+      node.actualStartDate = milestoneDateOffset(i)
+      if (completed) {
+        node.actualEndDate = milestoneDateOffset(i + 1)
+        node.status = 'COMPLETED'
+      } else {
+        node.actualEndDate = null
+        node.status = 'IN_PROGRESS'
+      }
+      continue
+    }
+    node.planV1Date = null
+    node.planV2Date = null
+    node.actualStartDate = null
+    node.actualEndDate = null
+    node.status = 'NOT_STARTED'
+    node.deviationNote = null
+  }
+}
+
+function buildBaseMilestones(studyCode: string): MilestonePage {
   const notStarted = (code: string, name: string): MilestoneNode => ({
     milestoneCode: code,
     milestoneName: name,
@@ -469,51 +586,18 @@ function buildDemoMilestones(studyId: number, studyCode: string): MilestonePage 
   }
 }
 
-// Populate with full SSU, PreNDA/BLA, NDA/BLA nodes for demo
-;(() => {
-  const demo = buildDemoMilestones(3, 'HDM1005-302')
-  // SSU nodes
-  demo.groups[4].nodes = [
-    { milestoneCode: 'SSU-0', milestoneName: '组长单位立项递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-1', milestoneName: '组长单位立项获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-2', milestoneName: '组长单位伦理递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-3', milestoneName: '组长单位伦理获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-4', milestoneName: '组长单位合同签署', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-5', milestoneName: '首家中心启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-6', milestoneName: '组长单位启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-7', milestoneName: '所有中心启动', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-8', milestoneName: '人遗递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-9', milestoneName: '人遗批准', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-10', milestoneName: 'CDE 平台登记', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'SSU-11', milestoneName: 'ClinicalTrial 登记', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-  ]
-  // PreNDA/BLA nodes
-  demo.groups[8].nodes = [
-    { milestoneCode: 'PreNDA_BLA-0', milestoneName: 'PreNDA 递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-1', milestoneName: 'PreNDA 反馈-临床医学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-2', milestoneName: 'PreNDA 反馈-数统', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-3', milestoneName: 'PreNDA 反馈-临床药理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-4', milestoneName: 'PreNDA 反馈-非临床', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'PreNDA_BLA-5', milestoneName: 'PreNDA 反馈-药学', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-  ]
-  // NDA/BLA nodes
-  demo.groups[9].nodes = [
-    { milestoneCode: 'NDA_BLA-0', milestoneName: 'NDA/BLA 递交', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-1', milestoneName: 'NDA/BLA 形审发补', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-2', milestoneName: 'NDA/BLA 形审补正', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-3', milestoneName: 'NDA/BLA 受理', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-4', milestoneName: '临床核查', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-5', milestoneName: '药学核查', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-6', milestoneName: 'NDA/BLA 发补', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-7', milestoneName: 'NDA/BLA 补正', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-    { milestoneCode: 'NDA_BLA-8', milestoneName: 'NDA/BLA 获批', planV1Date: null, planV2Date: null, actualStartDate: null, actualEndDate: null, status: 'NOT_STARTED', deviationNote: null },
-  ]
-  mockMilestones.set(3, demo)
-  // Also for study ID 1 and 2
-  mockMilestones.set(1, buildDemoMilestones(1, 'HDM1005-101'))
-  mockMilestones.set(2, buildDemoMilestones(2, 'HDM1005-201'))
+function buildStudyMilestones(studyId: number, studyCode: string): MilestonePage {
+  const page = buildBaseMilestones(studyCode)
+  const profile = STUDY_MILESTONE_FRONTIER[studyCode]
+  if (profile) {
+    applyMilestoneFrontier(page, profile.frontierCode, profile.completed ?? false)
+  }
+  return page
+}
 
-})()
+for (const study of demoStudies) {
+  mockMilestones.set(study.id, buildStudyMilestones(study.id, study.code))
+}
 
 function overviewCompletionForStudy(study: Study, mv: {
   mainStageLabel: string
@@ -598,7 +682,7 @@ function buildDemoMonthlyPage(studyId: number, month: string): MonthlyReportPage
         [7, '12', '更新研究者手册临床章节。', 'lijing@eastchinapharm.com', '10:30:00'],
       ]),
     ],
-    3: [
+    10: [
       line(301, 7, 'CO', '临床运营', false, [
         [8, '09', 'FPI 后首例受试者随访完成。', 'lijing@eastchinapharm.com', '13:00:00'],
       ]),
@@ -828,7 +912,7 @@ export function createMockApiClient(): ApiClient {
       const roleNames = (studyId: number, roleCode: string) =>
         (teamAssignments.get(`${studyId}|${roleCode}`) ?? []).map(nameOf).filter(Boolean).join(' / ')
       const all = demoStudies.map((study) => {
-        const milestones = mockMilestones.get(study.id) ?? buildDemoMilestones(study.id, study.code)
+        const milestones = mockMilestones.get(study.id) ?? buildStudyMilestones(study.id, study.code)
         const { currentPhase, currentStatus } = deriveCurrentPhaseStatus(milestones)
         return {
           ...study,
@@ -1428,7 +1512,7 @@ export function createMockApiClient(): ApiClient {
           }
         }),
         dataScope: user.dataScope,
-        visibleStudyCount: user.roles.includes('ADMIN') ? 3 : (user.roles.includes('USER') ? 2 : 1),
+        visibleStudyCount: user.roles.includes('ADMIN') ? 10 : (user.roles.includes('USER') ? 8 : 5),
         enabled: true,
       }))
       if (keyword) {
@@ -1555,8 +1639,13 @@ export function createMockApiClient(): ApiClient {
     },
     async getMilestones(studyId) {
       await delay(200)
-      const data = mockMilestones.get(studyId)
-      if (!data) throw new Error('Study 不存在或暂无里程碑数据')
+      let data = mockMilestones.get(studyId)
+      if (!data) {
+        const study = demoStudies.find((row) => row.id === studyId)
+        if (!study) throw new Error('Study 不存在或暂无里程碑数据')
+        data = buildStudyMilestones(studyId, study.code)
+        mockMilestones.set(studyId, data)
+      }
       return structuredClone(data)
     },
     async updateMilestone(studyId, milestoneCode, input) {

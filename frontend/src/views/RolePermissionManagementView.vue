@@ -223,7 +223,7 @@ onMounted(loadWithPermissions)
 </script>
 
 <template>
-  <section class="page-content role-page">
+  <section class="page-content page-content--fill role-page">
     <div class="page-toolbar role-toolbar">
       <div class="toolbar-filters">
         <label class="inline-search">

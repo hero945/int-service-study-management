@@ -129,7 +129,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="page-content risk-page">
+  <section class="page-content page-content--fill risk-page">
     <form class="page-toolbar risk-toolbar" role="search" @submit.prevent="applyFilters">
       <div class="toolbar-filters">
         <label class="inline-search">

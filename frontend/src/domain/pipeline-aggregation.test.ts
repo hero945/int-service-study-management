@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Study } from '../api/types'
 import type { CellStudy } from './pipeline-aggregation'
-import { furthestPhaseOf, getProjectCell, groupByProject, displaySubNodeLabel } from './pipeline-aggregation'
+import { furthestPhaseOf, getProjectCell, groupByProject, displaySubNodeLabel, hasChipContent } from './pipeline-aggregation'
 
 let seq = 0
 const study = (init: Partial<Study> & { phase: string }): Study => ({
@@ -183,6 +183,38 @@ describe('getProjectCell', () => {
       ms({ phase: 'PHASE_1', statusLabel: '新', updatedAt: '2026-07-01T00:00:00' }),
     ]
     expect(getProjectCell(studies, 'PHASE_1').label).toBe('新')
+  })
+
+  it('falls back to statusLabel when milestone fields are empty strings', () => {
+    const studies = [ms({
+      phase: 'PHASE_1',
+      mainStageLabel: '',
+      subStatusLabel: '',
+      statusLabel: '计划中',
+    })]
+    expect(getProjectCell(studies, 'PHASE_1')).toMatchObject({
+      label: '计划中',
+      tone: 'blue',
+    })
+  })
+
+  it('shows — instead of an empty chip when no milestone or status text exists', () => {
+    const studies = [ms({
+      phase: 'PHASE_2',
+      mainStageLabel: '',
+      subStatusLabel: '',
+      statusLabel: '   ',
+    })]
+    expect(getProjectCell(studies, 'PHASE_2')).toMatchObject({
+      label: '—',
+      tone: 'empty',
+      clickable: false,
+    })
+  })
+
+  it('hasChipContent is false for blue tone with blank label', () => {
+    expect(hasChipContent({ label: '  ', tone: 'blue', clickable: true })).toBe(false)
+    expect(hasChipContent({ label: '进行中', tone: 'blue', clickable: true })).toBe(true)
   })
 
   it('PreIND/IND follow Phase 1 milestones; PRE-3 does not use Phase 1', () => {

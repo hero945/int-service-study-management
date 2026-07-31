@@ -94,7 +94,7 @@ function goBack() { router.push('/studies') }
 </script>
 
 <template>
-  <section class="page-content milestone-page">
+  <section class="page-content page-content--fill milestone-page">
     <div class="page-toolbar milestone-toolbar">
       <div>
         <button class="text-button" type="button" @click="goBack">&larr; 返回 Study 列表</button>

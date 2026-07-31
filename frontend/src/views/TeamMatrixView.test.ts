@@ -71,10 +71,19 @@ describe('TeamMatrixView', () => {
         dataScope: 'ASSIGNED_STUDY',
         visibleStudyCount: 0,
         enabled: true,
+      }, {
+        id: 22,
+        username: 'another@example.com',
+        displayName: '李娜',
+        roles: ['USER'],
+        roleDescriptions: ['普通成员'],
+        dataScope: 'ASSIGNED_STUDY',
+        visibleStudyCount: 0,
+        enabled: true,
       }],
       page: 1,
       pageSize: 100,
-      totalItems: 1,
+      totalItems: 2,
       totalPages: 1,
     })
   })
@@ -115,5 +124,30 @@ describe('TeamMatrixView', () => {
 
     expect(replaceTeamAssignments).not.toHaveBeenCalled()
     expect(wrapper.text()).not.toContain('张伟')
+  })
+
+  it('filters member options by keyword in the picker', async () => {
+    const wrapper = mount(TeamMatrixView)
+    await vi.waitFor(() => expect(listTeamMatrix).toHaveBeenCalled())
+    await wrapper.vm.$nextTick()
+
+    await wrapper.get('[data-testid="edit-team"]').trigger('click')
+    await wrapper.get('[data-testid="add-member-11-PL"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="member-option-21"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="member-option-22"]').exists()).toBe(true)
+
+    await wrapper.find('.team-picker__search').setValue('张伟')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="member-option-21"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="member-option-22"]').exists()).toBe(false)
+
+    await wrapper.find('.team-picker__search').setValue('another')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('[data-testid="member-option-21"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="member-option-22"]').exists()).toBe(true)
   })
 })

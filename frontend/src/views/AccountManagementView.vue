@@ -254,7 +254,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="page-content">
+  <section class="page-content page-content--fill">
     <div class="page-toolbar">
       <div class="toolbar-filters">
         <div class="inline-search">

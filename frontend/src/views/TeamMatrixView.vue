@@ -21,6 +21,7 @@ const { notice, showNotice } = useNotice()
 const filters = reactive({ studyQuery: '', roleQuery: '' })
 const editMode = ref(false)
 const picker = ref<{ studyId: number; roleCode: string }>()
+const pickerKeyword = ref('')
 const drafts = ref(new Map<string, TeamMatrixMember[]>())
 
 const { can } = usePermissions()
@@ -106,10 +107,12 @@ async function startEdit() {
 function cancelEdit() {
   drafts.value = new Map()
   picker.value = undefined
+  pickerKeyword.value = ''
   editMode.value = false
 }
 
 function openPicker(studyId: number, roleCode: string) {
+  pickerKeyword.value = ''
   picker.value = { studyId, roleCode }
 }
 
@@ -135,7 +138,13 @@ function removeMember(studyId: number, roleCode: string, userId: number) {
 
 function availableUsers(studyId: number, roleCode: string) {
   const assigned = new Set(membersFor(studyId, roleCode).map(member => member.userId))
-  return enabledUsers.value.filter(user => !assigned.has(user.id))
+  const term = pickerKeyword.value.trim().toLowerCase()
+  return enabledUsers.value.filter(user => {
+    if (!user.enabled || assigned.has(user.id)) return false
+    if (!term) return true
+    return user.displayName.toLowerCase().includes(term)
+      || user.username.toLowerCase().includes(term)
+  })
 }
 
 async function save() {
@@ -189,7 +198,7 @@ onMounted(load)
 </script>
 
 <template>
-  <section class="page-content team-page">
+  <section class="page-content page-content--fill team-page">
     <form class="page-toolbar team-toolbar" role="search" @submit.prevent="applyFilters">
       <button v-if="canAudit" class="secondary-button" type="button" @click="openAllAuditLogs('团队全部操作日志')">全部操作日志</button>
       <div class="toolbar-filters">
@@ -290,6 +299,13 @@ onMounted(load)
                       v-if="editMode && picker?.studyId === study.studyId && picker?.roleCode === role.roleCode"
                       class="team-picker"
                     >
+                      <input
+                        v-model="pickerKeyword"
+                        type="search"
+                        class="filter-input team-picker__search"
+                        placeholder="搜索姓名或登录邮箱…"
+                        :aria-label="`搜索可添加到 ${study.studyCode} ${role.roleName} 的成员`"
+                      />
                       <button
                         v-for="user in availableUsers(study.studyId, role.roleCode)"
                         :key="user.id"
@@ -300,7 +316,9 @@ onMounted(load)
                         <strong>{{ user.displayName }}</strong>
                         <small>{{ user.username }}</small>
                       </button>
-                      <span v-if="!availableUsers(study.studyId, role.roleCode).length">没有可添加的启用账号</span>
+                      <span v-if="!availableUsers(study.studyId, role.roleCode).length">
+                        {{ pickerKeyword.trim() ? '未找到匹配账号' : '没有可添加的启用账号' }}
+                      </span>
                       <button type="button" @click="picker = undefined">关闭</button>
                     </div>
                   </div>
