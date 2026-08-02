@@ -8,6 +8,8 @@ const props = defineProps<{ activities: RiskActivity[] }>()
 interface ActivityRow extends RiskActivity {
   payload: { description: string; meta: string[] }
   time: { date: string; time: string; full: string }
+  tone: string
+  typeLabel: string
 }
 
 const activityRows = computed<ActivityRow[]>(() =>
@@ -15,19 +17,35 @@ const activityRows = computed<ActivityRow[]>(() =>
     ...activity,
     payload: parseActivityPayload(activity.type, activity.detail),
     time: formatActivityTime(activity.at),
+    tone: activityTone(activity),
+    typeLabel: activityTypeLabel(activity),
   })),
 )
 
-function activityTone(type: RiskActivityType) {
-  if (type === 'STATUS') return 'risk-axis-node--status'
-  if (type === 'ACTION') return 'risk-axis-node--action'
+function activityTone(activity: RiskActivity) {
+  if (activity.type === 'ASSESSMENT') return 'risk-axis-node--assessment'
+  if (activity.type === 'STATUS') return 'risk-axis-node--status'
+  if (activity.type === 'ACTION') {
+    if (activity.title === '新增控制措施') return 'risk-axis-node--action-create'
+    if (activity.title.includes('→ 已完成') || activity.title.includes('已完成')) {
+      return 'risk-axis-node--action-complete'
+    }
+    return 'risk-axis-node--action'
+  }
   return 'risk-axis-node--assessment'
 }
 
-function activityTypeLabel(type: RiskActivityType) {
-  if (type === 'STATUS') return '状态'
-  if (type === 'ACTION') return '措施'
-  return '评估'
+function activityTypeLabel(activity: RiskActivity) {
+  if (activity.type === 'ASSESSMENT') {
+    return activity.title.startsWith('重新评估') ? '重新评估' : '评估'
+  }
+  if (activity.type === 'STATUS') return '状态'
+  if (activity.type === 'ACTION') {
+    if (activity.title === '新增控制措施') return '新增措施'
+    if (activity.title.includes('→ 已完成') || activity.title.includes('已完成')) return '措施完成'
+    return '措施'
+  }
+  return '活动'
 }
 
 function formatActivityTime(value: string) {
@@ -78,7 +96,7 @@ function parseActivityPayload(type: RiskActivityType, detail: string) {
         class="risk-axis-item"
       >
         <div class="risk-axis-track" aria-hidden="true">
-          <span class="risk-axis-node" :class="activityTone(activity.type)" :title="activityTypeLabel(activity.type)"></span>
+          <span class="risk-axis-node" :class="activity.tone" :title="activity.typeLabel"></span>
           <span class="risk-axis-time">
             <strong>{{ activity.time.date }}</strong>
             <small>{{ activity.time.time }}</small>
@@ -86,7 +104,7 @@ function parseActivityPayload(type: RiskActivityType, detail: string) {
         </div>
         <div class="risk-axis-content">
           <div class="risk-axis-head">
-            <span class="risk-axis-type" :class="activityTone(activity.type)">{{ activityTypeLabel(activity.type) }}</span>
+            <span class="risk-axis-type" :class="activity.tone">{{ activity.typeLabel }}</span>
             <strong>{{ activity.title }}</strong>
           </div>
           <template v-if="activity.type === 'ACTION'">

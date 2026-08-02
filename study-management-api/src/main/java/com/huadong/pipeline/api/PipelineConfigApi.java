@@ -20,6 +20,7 @@ public interface PipelineConfigApi {
   ProjectResponse updateProject(long id, @Valid UpdateProjectRequest request, String username);
   void deleteProject(long id, String username);
   PipelineConfigRowResponse updateStudy(long id, @Valid UpdateStudyConfigRequest request, String username);
+  StudyDeletePreviewResponse getStudyDeletePreview(long id);
   void deleteStudy(long id, String username);
 
   record CreateProgramRequest(
@@ -87,5 +88,14 @@ public interface PipelineConfigApi {
   }
 
   record TherapeuticAreaResponse(long id, String code, String name, String englishName) {
+  }
+
+  record StudyDeletePreviewResponse(
+      long studyId,
+      String studyCode,
+      long milestoneCount,
+      long riskCount,
+      long teamCount,
+      long monthlyReportCount) {
   }
 }

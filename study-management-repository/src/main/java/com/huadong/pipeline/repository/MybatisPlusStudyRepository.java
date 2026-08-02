@@ -53,6 +53,12 @@ public class MybatisPlusStudyRepository implements StudyRepository {
     if (!q.program().isBlank()) {
       wrapper.like(StudyEntity::getProgramCodeSnapshot, q.program());
     }
+    if (!q.product().isBlank()) {
+      wrapper.like(StudyEntity::getProductNameSnapshot, q.product());
+    }
+    if (!q.studyCode().isBlank()) {
+      wrapper.like(StudyEntity::getStudyCode, q.studyCode());
+    }
     var result = mapper.selectPage(Page.of(q.page(), q.pageSize(), true), wrapper);
     return new StudyPage(
         result.getRecords().stream().map(MybatisPlusStudyRepository::toDomain).toList(),

@@ -36,12 +36,21 @@ public class StudyController {
   StudyApi.StudyPageResponse list(
       @RequestParam(defaultValue = "") String therapeuticArea,
       @RequestParam(defaultValue = "") String program,
+      @RequestParam(defaultValue = "") String product,
+      @RequestParam(defaultValue = "") String studyCode,
       @RequestParam(defaultValue = "") String milestoneStatus,
       @RequestParam(defaultValue = "1") @Min(1) int page,
       @RequestParam(defaultValue = "10") @Min(1) @Max(100) int pageSize,
       Principal principal) {
     return studyApi.list(
-        principal.getName(), therapeuticArea, program, milestoneStatus, page, pageSize);
+        principal.getName(),
+        therapeuticArea,
+        program,
+        product,
+        studyCode,
+        milestoneStatus,
+        page,
+        pageSize);
   }
 
   @PostMapping("/studies")

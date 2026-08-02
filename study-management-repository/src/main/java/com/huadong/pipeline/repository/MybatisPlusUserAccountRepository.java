@@ -77,7 +77,8 @@ public class MybatisPlusUserAccountRepository implements UserAccountRepository {
     int safeSize = Math.min(Math.max(pageSize, 1), maximumPageSize);
     var query = Wrappers.<UserAccountEntity>lambdaQuery()
         .eq(UserAccountEntity::getSysDeleted, 0)
-        .orderByAsc(UserAccountEntity::getId);
+        .orderByDesc(UserAccountEntity::getSysUpdateTime)
+        .orderByDesc(UserAccountEntity::getId);
     if (keyword != null && !keyword.isBlank()) {
       var term = keyword.trim().toLowerCase();
       query.and(w -> w

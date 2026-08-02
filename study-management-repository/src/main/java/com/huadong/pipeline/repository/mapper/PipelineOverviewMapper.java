@@ -47,7 +47,7 @@ public interface PipelineOverviewMapper {
           SELECT 1 FROM hd_plt_team_assignment t
           WHERE t.study_id = s.id AND t.sys_deleted = 0 AND t.user_id = #{userId})
       </if>
-      ORDER BY s.project_id, s.study_code
+      ORDER BY s.sys_update_time DESC, s.study_code
       </script>
       """)
   List<OverviewStudyRow> findStudies(

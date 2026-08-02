@@ -52,7 +52,8 @@ public class StudyApiService implements StudyApi {
                             study.startDate(),
                             study.updatedAt(),
                             study.plName(),
-                            study.pmName()))
+                            study.pmName(),
+                            study.openRiskCount()))
                         .toList()))
                 .toList()))
         .toList();
@@ -64,11 +65,13 @@ public class StudyApiService implements StudyApi {
       String username,
       String therapeuticArea,
       String program,
+      String product,
+      String studyCode,
       String milestoneStatus,
       int page,
       int pageSize) {
     var result = manager.list(username, new StudyRepository.StudyListQuery(
-        therapeuticArea, program, milestoneStatus, page, pageSize));
+        therapeuticArea, program, product, studyCode, milestoneStatus, page, pageSize));
     int totalPages = Math.max(1, (int) Math.ceil((double) result.totalItems() / result.pageSize()));
     return new StudyPageResponse(
         result.data().stream().map(this::toResponse).toList(),
@@ -101,7 +104,8 @@ public class StudyApiService implements StudyApi {
         study.productName(),
         study.moa(),
         study.sourceCode(),
-        study.originCode());
+        study.originCode(),
+        study.openRiskCount());
   }
 
   @Override

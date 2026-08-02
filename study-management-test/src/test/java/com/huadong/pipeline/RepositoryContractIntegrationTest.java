@@ -73,9 +73,10 @@ class RepositoryContractIntegrationTest {
     var result = users.findAll();
 
     assertThat(result).hasSize(500);
-    assertThat(result).extracting(user -> user.id()).isSorted();
-    assertThat(result.getFirst().username()).isEqualTo("user-000@example.com");
-    assertThat(result.getLast().username()).isEqualTo("user-499@example.com");
+    assertThat(result).extracting(user -> user.id()).isSortedAccordingTo(
+        java.util.Comparator.reverseOrder());
+    assertThat(result.getFirst().username()).isEqualTo("user-500@example.com");
+    assertThat(result.getLast().username()).isEqualTo("user-001@example.com");
     assertThat(users.findByUsername("USER-250@EXAMPLE.COM")).get()
         .satisfies(user -> assertThat(user.passwordHash()).isEqualTo("hash-250"));
     assertThat(users.findByUsername("missing@example.com")).isEmpty();

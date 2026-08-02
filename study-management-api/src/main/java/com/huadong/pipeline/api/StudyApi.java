@@ -15,6 +15,8 @@ public interface StudyApi {
       String username,
       String therapeuticArea,
       String program,
+      String product,
+      String studyCode,
       String milestoneStatus,
       int page,
       int pageSize);
@@ -57,10 +59,10 @@ public interface StudyApi {
       String productName,
       String moa,
       String sourceCode,
-      String originCode) {
+      String originCode,
+      int openRiskCount) {
   }
 
-  /** 标准翻页：当页数据 + 总数 + 当前页 + 页大小 + 总页数 */
   record StudyPageResponse(
       List<StudyResponse> data,
       long total,
@@ -86,7 +88,8 @@ public interface StudyApi {
       LocalDate startDate,
       LocalDateTime updatedAt,
       String plName,
-      String pmName) {
+      String pmName,
+      int openRiskCount) {
   }
 
   record OverviewProjectResponse(

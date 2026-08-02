@@ -12,7 +12,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -125,6 +127,32 @@ public class JdbcRiskRepository implements RiskRepository {
     sql.append(scopeClause(scope, args, "r.study_id"));
     sql.append(" ORDER BY r.current_score DESC, r.risk_code");
     return jdbc.query(sql.toString(), (rs, row) -> summary(rs), args.toArray());
+  }
+
+  @Override
+  public Map<Long, Integer> countOpenByStudyIds(StudyAccessScope scope, List<Long> studyIds) {
+    if (studyIds == null || studyIds.isEmpty()) {
+      return Map.of();
+    }
+    List<Object> args = new ArrayList<>();
+    StringJoiner placeholders = new StringJoiner(", ");
+    for (Long studyId : studyIds) {
+      placeholders.add("?");
+      args.add(studyId);
+    }
+    StringBuilder sql = new StringBuilder("""
+        SELECT r.study_id, COUNT(*) AS cnt
+        FROM hd_plt_risk r
+        WHERE r.sys_deleted = 0 AND r.status_code = 'OPEN'
+          AND r.study_id IN (""");
+    sql.append(placeholders).append(")");
+    sql.append(scopeClause(scope, args, "r.study_id"));
+    sql.append(" GROUP BY r.study_id");
+    Map<Long, Integer> counts = new HashMap<>();
+    jdbc.query(sql.toString(), rs -> {
+      counts.put(rs.getLong("study_id"), rs.getInt("cnt"));
+    }, args.toArray());
+    return counts;
   }
 
   @Override
@@ -414,10 +442,12 @@ public class JdbcRiskRepository implements RiskRepository {
       sql.append("""
            AND (LOWER(r.risk_code) LIKE LOWER(?) OR LOWER(r.risk_description) LIKE LOWER(?)
              OR LOWER(r.owner_name_snapshot) LIKE LOWER(?)
-             OR LOWER(r.program_code_snapshot) LIKE LOWER(?))
+             OR LOWER(r.program_code_snapshot) LIKE LOWER(?)
+             OR LOWER(r.study_code_snapshot) LIKE LOWER(?)
+             OR LOWER(r.project_code_snapshot) LIKE LOWER(?))
           """);
       String like = "%" + query.trim() + "%";
-      args.add(like); args.add(like); args.add(like); args.add(like);
+      args.add(like); args.add(like); args.add(like); args.add(like); args.add(like); args.add(like);
     }
     if (present(functionCode)) {
       sql.append(" AND r.function_line_code_snapshot = ?"); args.add(functionCode);
@@ -479,11 +509,14 @@ public class JdbcRiskRepository implements RiskRepository {
     List<ActivityView> items = new ArrayList<>();
     for (AssessmentView assessment : assessments(riskId)) {
       items.add(new ActivityView("ASSESSMENT",
-          "第 %d 次评估 · %d 分 · %s".formatted(
-              assessment.number(), assessment.score(), assessment.level().name()),
-          "%d × %d × %d · %s".formatted(assessment.impact(), assessment.likelihood(),
-              assessment.detectability(),
-              present(assessment.reason()) ? assessment.reason() : "未填写评估原因"),
+          assessment.number() <= 1 ? "首次评估 · %d 分 · %s".formatted(
+              assessment.score(), assessment.level().name())
+              : "重新评估 · 第 %d 次 · %d 分 · %s".formatted(
+                  assessment.number(), assessment.score(), assessment.level().name()),
+          "影响 %d × 可能性 %d × 可探测性 %d = %d 分%s".formatted(
+              assessment.impact(), assessment.likelihood(), assessment.detectability(),
+              assessment.score(),
+              present(assessment.reason()) ? " · " + assessment.reason() : " · 未填写评估原因"),
           assessment.assessedAt(), assessment.assessedBy()));
     }
     List<ActivityView> statusItems = jdbc.query("""
@@ -529,8 +562,13 @@ public class JdbcRiskRepository implements RiskRepository {
   }
 
   private static String actionHistoryDetail(String snapshot, String reason) {
-    if (present(snapshot)) return snapshot.trim();
-    if (present(reason)) return reason.trim();
+    String formatted = formatActionSnapshot(snapshot);
+    if (present(formatted)) {
+      return formatted;
+    }
+    if (present(reason)) {
+      return reason.trim();
+    }
     return "";
   }
 

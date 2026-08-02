@@ -18,7 +18,6 @@ import {
   pipelineStatusOptions,
 } from '../domain/milestone-filters'
 import PageState from '../components/PageState.vue'
-import LabeledValue from '../components/LabeledValue.vue'
 import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 import { session } from '../session'
@@ -283,8 +282,11 @@ onMounted(loadOverview)
           <tbody v-for="area in areaGroups" :key="area.therapeuticAreaName">
             <tr class="area-row">
               <td colspan="3" class="area-row-sticky">
-                <span class="area-dot" :class="areaDotClass(area.therapeuticAreaCode)"></span>{{ area.therapeuticAreaName }}
-                <small>{{ area.projects.length }} 个项目</small>
+                <span class="area-row-heading">
+                  <span class="area-dot" :class="areaDotClass(area.therapeuticAreaCode)"></span>
+                  <span class="area-row-name">{{ area.therapeuticAreaName }}</span>
+                  <small>{{ area.projects.length }} 个项目</small>
+                </span>
               </td>
               <td v-for="phase in phases" :key="`area-${phase}`" class="area-row-fill"></td>
             </tr>
@@ -293,22 +295,22 @@ onMounted(loadOverview)
                 class="pipeline-id-cell"
                 @click="openProjectDrawer(project, area.therapeuticAreaName)"
               >
-                <strong><LabeledValue label="Product:" :value="project.productName || project.code" /></strong>
-                <small><LabeledValue label="Source:" :value="sourceLabel(project.sourceCode)" /> · <LabeledValue label="Origin:" :value="originLabel(project.originCode)" /></small>
+                <strong>{{ project.productName || project.code }}</strong>
+                <small>{{ sourceLabel(project.sourceCode) }} · {{ originLabel(project.originCode) }}</small>
               </td>
               <td
                 class="pipeline-id-cell"
                 @click="openProjectDrawer(project, area.therapeuticAreaName)"
               >
-                <strong class="mono"><LabeledValue label="Program:" :value="project.programCode" /></strong>
-                <small><LabeledValue label="MOA:" :value="project.moa" /></small>
+                <strong class="mono">{{ project.programCode }}</strong>
+                <small>{{ project.moa || '—' }}</small>
               </td>
               <td
                 class="pipeline-id-cell"
                 @click="openProjectDrawer(project, area.therapeuticAreaName)"
               >
-                <strong><LabeledValue label="Project:" :value="project.code" /></strong>
-                <small><LabeledValue label="Indication:" :value="project.indication" /></small>
+                <strong>{{ project.code }}</strong>
+                <small>{{ project.indication || '—' }}</small>
               </td>
               <td
                 v-for="phase in phases"
@@ -328,10 +330,17 @@ onMounted(loadOverview)
                     v-if="cell(project, phase).subText"
                     class="cell-stage-caption"
                   >{{ cell(project, phase).subText }}</span>
-                  <span
-                    class="status-chip"
-                    :class="`status-chip--${cell(project, phase).tone}`"
-                  >{{ cell(project, phase).label }}</span>
+                  <div class="pipeline-stage-chip-row">
+                    <span
+                      class="status-chip"
+                      :class="`status-chip--${cell(project, phase).tone}`"
+                    >{{ cell(project, phase).label }}</span>
+                    <span
+                      v-if="cell(project, phase).openRiskCount"
+                      class="study-risk-badge"
+                      title="Open 风险"
+                    >{{ cell(project, phase).openRiskCount }}</span>
+                  </div>
                 </div>
                 <span
                   v-else
@@ -386,8 +395,13 @@ onMounted(loadOverview)
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 4px;
-  min-height: 46px;
+  gap: 2px;
+}
+.pipeline-stage-chip-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
 }
 .cell-stage-caption {
   display: block;

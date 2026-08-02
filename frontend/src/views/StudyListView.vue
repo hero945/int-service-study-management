@@ -7,7 +7,7 @@ import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 import { ALL_MILESTONE_SUB_STATUSES } from '../domain/milestone-filters'
-import { TA_OPTIONS } from '../domain/therapeutic-areas'
+import { TA_OPTIONS, areaDotClass } from '../domain/therapeutic-areas'
 import { plPmLabel } from '../domain/study-labels'
 import { formatDate } from '../domain/date-format'
 import { useClientSort } from '../composables/useClientSort'
@@ -19,7 +19,7 @@ const { can } = usePermissions()
 const canReadMonthly = can('monthly.read')
 const canReadMilestone = can('milestone.read')
 
-const filters = reactive({ ta: '', program: '', status: '' })
+const filters = reactive({ ta: '', program: '', product: '', studyCode: '', status: '' })
 const statusOptions = ALL_MILESTONE_SUB_STATUSES
 
 const {
@@ -31,6 +31,8 @@ const {
   fetcher: (q) => apiClient.listStudies({
     therapeuticArea: q.ta || undefined,
     program: q.program || undefined,
+    product: q.product || undefined,
+    studyCode: q.studyCode || undefined,
     milestoneStatus: q.status || undefined,
     page: q.page,
     pageSize: q.pageSize,
@@ -102,6 +104,14 @@ onMounted(load)
           <input v-model.trim="filters.program" type="text" class="filter-input" placeholder="输入编号搜索">
         </label>
         <label class="filter-field">
+          <span class="filter-field__label">Product</span>
+          <input v-model.trim="filters.product" type="text" class="filter-input" placeholder="输入产品名搜索">
+        </label>
+        <label class="filter-field">
+          <span class="filter-field__label">Study</span>
+          <input v-model.trim="filters.studyCode" type="text" class="filter-input" placeholder="输入 Study 编号">
+        </label>
+        <label class="filter-field">
           <span class="filter-field__label">里程碑节点</span>
           <select v-model="filters.status" class="filter-select filter-select--status">
             <option value="">全部</option>
@@ -130,10 +140,21 @@ onMounted(load)
           </tr></thead>
           <tbody>
             <tr v-for="study in sortedStudies" :key="study.id" class="study-row--clickable" @click="openDrawer(study)">
-              <td>{{ study.therapeuticAreaName || study.therapeuticArea || study.therapeuticAreaCode || '—' }}</td>
+              <td>
+                <span class="area-dot" :class="areaDotClass(study.therapeuticAreaCode)"></span>{{ study.therapeuticAreaName || study.therapeuticArea || study.therapeuticAreaCode || '—' }}
+              </td>
               <td class="mono">{{ study.programCode || study.program || '—' }}</td>
               <td class="mono">{{ study.productName || study.product || '—' }}</td>
-              <td class="mono strong">{{ study.code }}</td>
+              <td class="mono strong">
+                <span class="study-no-with-risk">
+                  {{ study.code }}
+                  <span
+                    v-if="study.openRiskCount"
+                    class="study-risk-badge"
+                    title="Open 风险"
+                  >{{ study.openRiskCount }}</span>
+                </span>
+              </td>
               <td>{{ study.indication }}</td>
               <td>{{ study.currentPhase || '—' }}</td>
               <td>{{ study.currentStatus || '—' }}</td>

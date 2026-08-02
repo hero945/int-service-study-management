@@ -4,6 +4,7 @@ import com.huadong.pipeline.domain.study.StudyAccessScope;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface RiskRepository {
@@ -11,6 +12,9 @@ public interface RiskRepository {
 
   /** Open risks for the given study ids (already scope-filtered caller-side). */
   List<RiskSummary> findOpenByStudyIds(StudyAccessScope scope, List<Long> studyIds);
+
+  /** Open risk counts keyed by study id (missing ids imply zero). */
+  Map<Long, Integer> countOpenByStudyIds(StudyAccessScope scope, List<Long> studyIds);
 
   Optional<RiskDetail> findDetail(StudyAccessScope scope, String riskCode);
   FormOptions findFormOptions(StudyAccessScope scope, Long studyId);

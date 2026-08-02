@@ -114,6 +114,12 @@ public class PipelineConfigController {
     return api.updateStudy(id, request, principal.getName());
   }
 
+  @GetMapping("/studies/{id}/delete-preview")
+  @PreAuthorize("hasAuthority('config.delete')")
+  PipelineConfigApi.StudyDeletePreviewResponse getStudyDeletePreview(@PathVariable long id) {
+    return api.getStudyDeletePreview(id);
+  }
+
   @DeleteMapping("/studies/{id}")
   @PreAuthorize("hasAuthority('config.delete')")
   @ResponseStatus(HttpStatus.NO_CONTENT)

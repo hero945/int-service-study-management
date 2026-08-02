@@ -4,7 +4,7 @@ import { apiClient } from '../api/client'
 import { formatApiError } from '../api/errors'
 import type {
   PipelineConfigRow, PipelineProgram, PipelineProject, ProgramInput,
-  ProgramUpdateInput, ProjectInput, ProjectUpdateInput, TherapeuticArea,
+  ProgramUpdateInput, ProjectInput, ProjectUpdateInput, StudyDeletePreview, TherapeuticArea,
 } from '../api/types'
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
@@ -16,6 +16,7 @@ import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 import { useNotice } from '../composables/useNotice'
+import { useEscapeClose } from '../composables/useEscapeClose'
 
 const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
 
@@ -41,6 +42,11 @@ const editingStudy = ref<PipelineConfigRow>()
 const returnToStudyAfterCreate = ref(false)
 const studyProgramDetails = ref<HTMLDetailsElement>()
 const studyProjectDetails = ref<HTMLDetailsElement>()
+const studyDeleteDialog = ref(false)
+const studyDeleteTarget = ref<{ id: number; label: string }>()
+const studyDeletePreview = ref<StudyDeletePreview>()
+const studyDeleteLoading = ref(false)
+const studyDeleteSaving = ref(false)
 const filters = reactive({ keyword: '' })
 
 const { can } = usePermissions()
@@ -363,12 +369,15 @@ async function saveStudy() {
 }
 
 async function remove(kind: 'program' | 'project' | 'study', id: number, label: string) {
+  if (kind === 'study') {
+    await confirmRemoveStudy(id, label)
+    return
+  }
   if (!window.confirm(`确认删除 ${label}？存在引用时系统会拒绝删除。`)) return
   resetFeedback()
   try {
     if (kind === 'program') await apiClient.deleteProgram(id)
-    else if (kind === 'project') await apiClient.deleteProject(id)
-    else await apiClient.deleteStudyConfig(id)
+    else await apiClient.deleteProject(id)
     showNotice(`${label} 已删除`)
     await loadAll()
   } catch (reason) {
@@ -376,13 +385,61 @@ async function remove(kind: 'program' | 'project' | 'study', id: number, label: 
   }
 }
 
+async function confirmRemoveStudy(id: number, label: string) {
+  studyDeleteTarget.value = { id, label }
+  studyDeletePreview.value = undefined
+  studyDeleteDialog.value = true
+  studyDeleteLoading.value = true
+  resetFeedback()
+  try {
+    studyDeletePreview.value = await apiClient.getStudyDeletePreview(id)
+  } catch (reason) {
+    closeStudyDeleteDialog()
+    showNotice(messageOf(reason, '无法加载删除预览'), 'error')
+  } finally {
+    studyDeleteLoading.value = false
+  }
+}
+
+function closeStudyDeleteDialog() {
+  studyDeleteDialog.value = false
+  studyDeleteTarget.value = undefined
+  studyDeletePreview.value = undefined
+}
+
+async function executeRemoveStudy() {
+  if (!studyDeleteTarget.value) return
+  studyDeleteSaving.value = true
+  resetFeedback()
+  try {
+    await apiClient.deleteStudyConfig(studyDeleteTarget.value.id)
+    const label = studyDeleteTarget.value.label
+    closeStudyDeleteDialog()
+    showNotice(`${label} 已删除`)
+    await loadAll()
+  } catch (reason) {
+    showNotice(messageOf(reason, '删除失败'), 'error')
+  } finally {
+    studyDeleteSaving.value = false
+  }
+}
+
+const studyDeleteReferenceTotal = computed(() => {
+  const preview = studyDeletePreview.value
+  if (!preview) return 0
+  return preview.milestoneCount + preview.riskCount + preview.teamCount + preview.monthlyReportCount
+})
+
+useEscapeClose(studyDeleteDialog, closeStudyDeleteDialog)
+
 function messageOf(reason: unknown, fallback: string) {
   return formatApiError(reason, fallback)
 }
 
 function onEscape(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
-  if (entityDialog.value) closeEntityDialog()
+  if (studyDeleteDialog.value) closeStudyDeleteDialog()
+  else if (entityDialog.value) closeEntityDialog()
   else if (studyDialog.value) studyDialog.value = false
   else projectDrawerOpen.value = false
 }
@@ -409,7 +466,7 @@ onUnmounted(() => {
 
     <template v-if="view === 'studies'">
       <div class="page-toolbar">
-        <label class="config-study-search"><span class="sr-only">搜索 Study、TA 或 Program</span><input v-model="filters.keyword" type="search" placeholder="搜索 Study / TA / Program" @input="filterStudies"></label>
+        <label class="config-study-search"><span class="sr-only">搜索 Study、TA、Program 或 Project</span><input v-model="filters.keyword" type="search" placeholder="搜索 Study / TA / Program / Project" @input="filterStudies"></label>
         <button v-if="canCreate" class="primary-button" type="button" @click="openStudy()">＋ 新增 Study</button>
       </div>
       <PageState :loading :empty="!rows.length">
@@ -447,7 +504,7 @@ onUnmounted(() => {
     </template>
 
     <template v-else>
-      <div class="entity-toolbar"><div><strong>Program 管理</strong><span>点击 Program 行展开 Project 列表并直接编辑；新增 Project 在「管理」抽屉中维护。</span></div><button v-if="canCreate" class="primary-button" type="button" @click="openProgram()">＋ 新增 Program</button></div>
+      <div class="page-toolbar entity-toolbar"><div><strong>Program 管理</strong><span>点击 Program 行展开 Project 列表并直接编辑；新增 Project 在「管理」抽屉中维护。</span></div><button v-if="canCreate" class="primary-button" type="button" @click="openProgram()">＋ 新增 Program</button></div>
       <PageState :loading :empty="!programs.length">
         <div class="data-card"><table class="data-table entity-program-table"><thead><tr>
           <th v-bind="programSortHeader('program')">Program</th>
@@ -463,7 +520,7 @@ onUnmounted(() => {
             <template v-if="expandedProgramIds.has(program.id)">
               <tr v-if="!projectsOfProgram(program.id).length" class="project-sub-row"><td class="empty-inline" :colspan="canAudit ? 7 : 6">该 Program 尚无 Project</td></tr>
               <tr v-for="(project, index) in projectsOfProgram(program.id)" :key="project.id" class="project-sub-row">
-                <td class="mono"><span class="project-index">({{ index + 1 }})</span><LabeledValue label="Code:" :value="project.code" /></td>
+                <td class="mono"><span class="project-index">({{ index + 1 }})</span><LabeledValue label="Project:" :value="project.code" /></td>
                 <td><select v-if="isRowEditing(project)" v-model="projectForm.therapeuticAreaCode" required @click.stop><option value="" disabled>请选择治疗领域</option><option v-for="area in therapeuticAreas" :key="area.id" :value="area.code">{{ area.name }}（{{ area.code }}）</option></select><LabeledValue v-else label="TA:" :value="project.therapeuticAreaName" /></td>
                 <td colspan="3"><textarea v-if="isRowEditing(project)" v-model="projectForm.indication" required maxlength="500" rows="1" @click.stop></textarea><LabeledValue v-else label="Indication:" :value="project.indication" /></td>
                 <td class="row-actions">
@@ -487,7 +544,7 @@ onUnmounted(() => {
           <table class="data-table drawer-project-table">
             <thead><tr><th>Project</th><th>Study</th><th>操作</th><th v-if="canAudit">操作日志</th></tr></thead>
             <tbody><tr v-for="project in selectedProjects" :key="project.id">
-              <td><strong class="mono"><LabeledValue label="Code:" :value="project.code" /></strong><p><LabeledValue label="Indication:" :value="project.indication" /></p><small><LabeledValue label="TA:" :value="project.therapeuticAreaName" /></small></td>
+              <td><strong class="mono"><LabeledValue label="Project:" :value="project.code" /></strong><p><LabeledValue label="Indication:" :value="project.indication" /></p><small><LabeledValue label="TA:" :value="project.therapeuticAreaName" /></small></td>
               <td><LabeledValue label="Study:" :value="project.studyCount" /></td>
               <td class="row-actions"><button v-if="canUpdate" type="button" @click="openProject(project)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click="remove('project', project.id, project.code)">删除</button></td>
               <td v-if="canAudit"><button class="text-button" type="button" @click="openRecordAuditLogs(`${project.code} 操作日志`, 'PROJECT', project.id)">查看</button></td>
@@ -515,6 +572,48 @@ onUnmounted(() => {
         </div>
         <footer><button class="secondary-button" type="button" @click="closeEntityDialog">取消</button><button class="primary-button" type="submit" :disabled="entityDialog === 'program' ? programSaving : projectSaving">{{ entityDialog === 'program' ? (programSaving ? '保存中…' : '保存 Program') : (projectSaving ? '保存中…' : '保存 Project') }}</button></footer>
       </form>
+    </div>
+
+    <div v-if="studyDeleteDialog" class="dialog-backdrop" @mousedown.self="closeStudyDeleteDialog">
+      <div class="role-dialog role-dialog--sm" role="dialog" aria-modal="true" aria-labelledby="study-delete-title">
+        <header>
+          <div>
+            <h2 id="study-delete-title">确认删除 Study</h2>
+            <p>删除后关联业务数据将一并移除，且不可恢复。</p>
+          </div>
+          <button type="button" aria-label="关闭" @click="closeStudyDeleteDialog">×</button>
+        </header>
+        <div class="dialog-body">
+          <p v-if="studyDeleteLoading" class="dialog-text">正在统计关联数据…</p>
+          <template v-else-if="studyDeletePreview && studyDeleteTarget">
+            <p class="dialog-text">
+              确定删除 Study <strong class="mono">{{ studyDeleteTarget.label }}</strong> 吗？
+            </p>
+            <ul class="delete-preview-list">
+              <li><span>里程碑</span><strong>{{ studyDeletePreview.milestoneCount }}</strong></li>
+              <li><span>风险</span><strong>{{ studyDeletePreview.riskCount }}</strong></li>
+              <li><span>团队管理</span><strong>{{ studyDeletePreview.teamCount }}</strong></li>
+              <li v-if="studyDeletePreview.monthlyReportCount > 0">
+                <span>Study 月报</span><strong>{{ studyDeletePreview.monthlyReportCount }}</strong>
+              </li>
+            </ul>
+            <p v-if="studyDeleteReferenceTotal > 0" class="dialog-text dialog-text--muted">
+              以上 {{ studyDeleteReferenceTotal }} 条关联数据将随 Study 一并删除。
+            </p>
+          </template>
+        </div>
+        <footer>
+          <button class="secondary-button" type="button" @click="closeStudyDeleteDialog">取消</button>
+          <button
+            class="primary-button danger-solid-button"
+            type="button"
+            :disabled="studyDeleteLoading || studyDeleteSaving || !studyDeletePreview"
+            @click="executeRemoveStudy"
+          >
+            {{ studyDeleteSaving ? '删除中…' : '确认删除' }}
+          </button>
+        </footer>
+      </div>
     </div>
 
     <div v-if="studyDialog" class="dialog-backdrop" @mousedown.self="studyDialog = false">

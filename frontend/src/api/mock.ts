@@ -705,6 +705,10 @@ function getMockMonthlyPage(studyId: number, month: string): MonthlyReportPage {
   return page
 }
 
+function sortByUpdatedAtDesc<T extends { updatedAt?: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
+}
+
 export function createMockApiClient(): ApiClient {
   let currentUser: CurrentUser | undefined
   const teamVersions = new Map(demoStudies.map((study) => [study.id, 0]))
@@ -891,6 +895,8 @@ export function createMockApiClient(): ApiClient {
               updatedAt: s.updatedAt,
               plName: roleNames(s.id, 'PL'),
               pmName: roleNames(s.id, 'PM'),
+              openRiskCount: mockRisks.filter(({ risk }) =>
+                risk.studyId === s.id && risk.status === 'OPEN').length,
             }
           }),
         }
@@ -924,6 +930,8 @@ export function createMockApiClient(): ApiClient {
           pmName: roleNames(study.id, 'PM'),
           currentPhase,
           currentStatus,
+          openRiskCount: mockRisks.filter(({ risk }) =>
+            risk.studyId === study.id && risk.status === 'OPEN').length,
         }
       }).filter((study) => {
         if (query.therapeuticArea && !(
@@ -935,15 +943,21 @@ export function createMockApiClient(): ApiClient {
           (study.programCode ?? '').includes(query.program) ||
           (study.program ?? '').includes(query.program)
         )) return false
+        if (query.product && !(
+          (study.productName ?? '').includes(query.product) ||
+          (study.product ?? '').includes(query.product)
+        )) return false
+        if (query.studyCode && !(study.code ?? '').includes(query.studyCode)) return false
         if (query.milestoneStatus && study.currentStatus !== query.milestoneStatus) return false
         return true
       })
       const page = query.page ?? 1
       const pageSize = query.pageSize ?? 10
-      const total = all.length
+      const sorted = sortByUpdatedAtDesc(all)
+      const total = sorted.length
       const totalPages = Math.max(1, Math.ceil(total / pageSize))
       return {
-        data: all.slice((page - 1) * pageSize, page * pageSize),
+        data: sorted.slice((page - 1) * pageSize, page * pageSize),
         total,
         page,
         pageSize,
@@ -953,20 +967,21 @@ export function createMockApiClient(): ApiClient {
     async listRisks(query = {}) {
       const keyword = query.query?.trim().toLowerCase() ?? ''
       const base = mockRisks.filter(({ risk }) =>
-        (!keyword || [risk.riskCode, risk.description, risk.ownerName, risk.programCode]
+        (!keyword || [risk.riskCode, risk.description, risk.ownerName, risk.programCode,
+          risk.studyCode, risk.projectCode]
           .some(value => value.toLowerCase().includes(keyword))) &&
         (!query.functionCode || risk.functionCode === query.functionCode))
       const filtered = base.filter(({ risk }) =>
         (!query.status || risk.status === query.status) &&
         (!query.level || risk.level === query.level) &&
-        (!query.studyId || risk.studyId === query.studyId) &&
         (!query.ownerUserId || risk.ownerUserId === query.ownerUserId) &&
         (!query.overdueOnly || risk.overdueActionCount > 0))
+      filtered.forEach(item => syncRiskTracking(item))
       const page = query.page ?? 1
       const pageSize = query.pageSize ?? 10
-      filtered.forEach(item => syncRiskTracking(item))
+      const sorted = sortByUpdatedAtDesc(filtered.map(item => item.risk))
       return {
-        data: filtered.slice((page - 1) * pageSize, page * pageSize).map(item => item.risk),
+        data: sorted.slice((page - 1) * pageSize, page * pageSize),
         stats: {
           total: base.length,
           open: base.filter(item => item.risk.status === 'OPEN').length,
@@ -1379,12 +1394,14 @@ export function createMockApiClient(): ApiClient {
         }
       }).filter((row) => !keyword || [
         row.studyCode, row.therapeuticAreaCode, row.therapeuticAreaName, row.programCode,
+        row.projectCode,
       ].some((value) => value.toLowerCase().includes(keyword)))
       const page = query.page ?? 1
       const pageSize = query.pageSize ?? 10
-      const totalItems = all.length
+      const sorted = sortByUpdatedAtDesc(all)
+      const totalItems = sorted.length
       return {
-        data: all.slice((page - 1) * pageSize, page * pageSize),
+        data: sorted.slice((page - 1) * pageSize, page * pageSize),
         page,
         pageSize,
         totalItems,
@@ -1396,8 +1413,8 @@ export function createMockApiClient(): ApiClient {
     },
     async listPrograms(keyword = '') {
       const query = keyword.trim().toLowerCase()
-      return programs.filter((item) => !query || [item.code, item.productName]
-        .some((value) => value.toLowerCase().includes(query)))
+      return sortByUpdatedAtDesc(programs.filter((item) => !query || [item.code, item.productName]
+        .some((value) => value.toLowerCase().includes(query))))
     },
     async createProgram(input) {
       if (programs.some((item) => item.code === input.code)) throw new Error('Program 编码已存在')
@@ -1427,8 +1444,8 @@ export function createMockApiClient(): ApiClient {
     },
     async listProjects(programId, keyword = '') {
       const query = keyword.trim().toLowerCase()
-      return projects.filter((item) => (!programId || item.programId === programId) &&
-        (!query || item.code.toLowerCase().includes(query)))
+      return sortByUpdatedAtDesc(projects.filter((item) => (!programId || item.programId === programId) &&
+        (!query || item.code.toLowerCase().includes(query))))
     },
     async createProject(input) {
       if (projects.some((item) => item.code === input.code)) throw new Error('Project 编码已存在')
@@ -1489,6 +1506,22 @@ export function createMockApiClient(): ApiClient {
       study.indication = project.indication
       row.version++
       return row
+    },
+    async getStudyDeletePreview(id) {
+      const study = demoStudies.find((item) => item.id === id)
+      if (!study) throw new Error('Study 不存在')
+      const milestoneCount = 0
+      const riskCount = mockRisks.filter(({ risk }) => risk.studyId === id).length
+      const teamCount = [...teamAssignments.keys()].filter((key) => key.startsWith(`${id}|`)).length
+      const monthlyReportCount = 0
+      return {
+        studyId: id,
+        studyCode: study.code,
+        milestoneCount,
+        riskCount,
+        teamCount,
+        monthlyReportCount,
+      }
     },
     async deleteStudyConfig(id) {
       const index = demoStudies.findIndex((item) => item.id === id)
@@ -1588,11 +1621,12 @@ export function createMockApiClient(): ApiClient {
           role.roleDescription?.toLowerCase().includes(keyword)) &&
         (!filters.status || role.status === filters.status),
       )
+      const sorted = sortByUpdatedAtDesc(filtered)
       const page = filters.page ?? 1
       const pageSize = filters.pageSize ?? 10
       const start = (page - 1) * pageSize
       return {
-        data: filtered.slice(start, start + pageSize),
+        data: sorted.slice(start, start + pageSize),
         page,
         pageSize,
         totalItems: filtered.length,

@@ -35,6 +35,7 @@ export interface OverviewStudy {
   updatedAt: string
   plName?: string
   pmName?: string
+  openRiskCount?: number
 }
 
 export interface OverviewProject {
@@ -89,11 +90,14 @@ export interface Study {
   moa?: string
   sourceCode?: string
   originCode?: string
+  openRiskCount?: number
 }
 
 export interface StudyListQuery {
   therapeuticArea?: string
   program?: string
+  product?: string
+  studyCode?: string
   milestoneStatus?: string
   page?: number
   pageSize?: number
@@ -569,6 +573,15 @@ export interface PipelineConfigPage {
   pageSize: number
   totalItems: number
   totalPages: number
+}
+
+export interface StudyDeletePreview {
+  studyId: number
+  studyCode: string
+  milestoneCount: number
+  riskCount: number
+  teamCount: number
+  monthlyReportCount: number
 }
 
 export interface PipelineConfigQuery {

@@ -17,6 +17,7 @@ import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.milestone.CurrentMilestoneStatus;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilestone;
+import com.huadong.pipeline.domain.risk.RiskRepository;
 import com.huadong.pipeline.domain.config.ProjectRepository;
 import com.huadong.pipeline.domain.team.TeamMatrixRepository;
 import com.huadong.pipeline.domain.user.DataScope;
@@ -50,6 +51,8 @@ public class StudyManager {
   private MilestoneManager milestoneManager;
   @Autowired
   private TeamMatrixRepository team;
+  @Autowired
+  private RiskRepository risks;
 
   public StudyListPage list(String username, StudyListQuery rawQuery) {
     UserAccount user = currentUser(username);
@@ -61,14 +64,14 @@ public class StudyManager {
     if (!filterByMilestoneStatus) {
       StudyPage page = studies.findPage(scope, query);
       return new StudyListPage(
-          enrichViews(page.data(), canReadMilestone),
+          enrichViews(page.data(), scope, canReadMilestone),
           page.totalItems(), page.page(), page.pageSize());
     }
 
     // Milestone node labels are derived after load; filter in memory then page.
     StudyPage candidates = studies.findPage(
         scope, query.withoutMilestoneStatus().withPaging(1, 500));
-    List<StudyView> matched = enrichViews(candidates.data(), canReadMilestone).stream()
+    List<StudyView> matched = enrichViews(candidates.data(), scope, canReadMilestone).stream()
         .filter(view -> query.milestoneStatus().equals(view.currentStatus()))
         .toList();
     int from = Math.min((query.page() - 1) * query.pageSize(), matched.size());
@@ -77,13 +80,15 @@ public class StudyManager {
         matched.subList(from, to), matched.size(), query.page(), query.pageSize());
   }
 
-  private List<StudyView> enrichViews(List<Study> rows, boolean canReadMilestone) {
+  private List<StudyView> enrichViews(
+      List<Study> rows, StudyAccessScope scope, boolean canReadMilestone) {
     if (rows.isEmpty()) {
       return List.of();
     }
     Set<Long> studyIds = rows.stream().map(Study::id).collect(Collectors.toSet());
     Map<Long, String> plNames = team.findRoleMemberNames(studyIds, "PL");
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIds, "PM");
+    Map<Long, Integer> openRiskCounts = risks.countOpenByStudyIds(scope, List.copyOf(studyIds));
     Map<Long, List<PersistedMilestone>> milestonesByStudy = canReadMilestone
         ? studyMilestones.findByStudyIds(List.copyOf(studyIds)).stream()
             .collect(Collectors.groupingBy(PersistedMilestone::studyId))
@@ -116,7 +121,8 @@ public class StudyManager {
               study.productName(),
               study.moa(),
               study.sourceCode(),
-              study.originCode());
+              study.originCode(),
+              openRiskCounts.getOrDefault(study.id(), 0));
         })
         .toList();
   }
@@ -140,10 +146,12 @@ public class StudyManager {
         : Map.of();
     Map<Long, String> plNames = team.findRoleMemberNames(studyIdSet, "PL");
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIdSet, "PM");
+    Map<Long, Integer> openRiskCounts = risks.countOpenByStudyIds(accessScope, studyIds);
 
     // Override each study's status with its milestone-derived status where milestones exist.
     List<OverviewProject> enriched = projects.stream()
-        .map(project -> enrichProject(project, milestonesByStudy, plNames, pmNames, canReadMilestone))
+        .map(project -> enrichProject(
+            project, milestonesByStudy, plNames, pmNames, openRiskCounts, canReadMilestone))
         .toList();
 
     Map<String, List<OverviewProject>> projectsByArea = new LinkedHashMap<>();
@@ -164,22 +172,24 @@ public class StudyManager {
       Map<Long, List<PersistedMilestone>> milestonesByStudy,
       Map<Long, String> plNames,
       Map<Long, String> pmNames,
+      Map<Long, Integer> openRiskCounts,
       boolean canReadMilestone) {
     List<OverviewStudy> enrichedStudies = project.studies().stream()
         .map(study -> {
+          int openRiskCount = openRiskCounts.getOrDefault(study.id(), 0);
           String plName = plNames.getOrDefault(study.id(), "");
           String pmName = pmNames.getOrDefault(study.id(), "");
           if (!canReadMilestone) {
-            return withOwners(study, plName, pmName);
+            return withOwners(study, plName, pmName, openRiskCount);
           }
           List<PersistedMilestone> milestones = milestonesByStudy.get(study.id());
           if (milestones == null || milestones.isEmpty()) {
-            return withOwners(study, plName, pmName);
+            return withOwners(study, plName, pmName, openRiskCount);
           }
           MilestoneManager.MilestoneOverviewStatus derived =
               milestoneManager.computeOverviewStatus(milestones);
           if (derived == null) {
-            return withOwners(study, plName, pmName);
+            return withOwners(study, plName, pmName, openRiskCount);
           }
           return new OverviewStudy(
               study.id(), study.code(), study.phase(), derived.status(),
@@ -187,7 +197,7 @@ public class StudyManager {
               derived.mainStageCode(), derived.mainStageLabel(),
               derived.subStatusLabel(),
               derived.preindCompleted(), derived.indCompleted(), derived.globallyCompleted(),
-              derived.currentPhaseCompleted(), plName, pmName);
+              derived.currentPhaseCompleted(), plName, pmName, openRiskCount);
         })
         .toList();
     return new OverviewProject(
@@ -196,7 +206,8 @@ public class StudyManager {
         project.therapeuticAreaCode(), project.therapeuticAreaName(), enrichedStudies);
   }
 
-  private static OverviewStudy withOwners(OverviewStudy study, String plName, String pmName) {
+  private static OverviewStudy withOwners(
+      OverviewStudy study, String plName, String pmName, int openRiskCount) {
     return new OverviewStudy(
         study.id(), study.code(), study.phase(), study.status(),
         study.startDate(), study.updatedAt(),
@@ -204,7 +215,7 @@ public class StudyManager {
         nullToEmpty(study.mainStageLabel()),
         nullToEmpty(study.subStatusLabel()),
         study.preindCompleted(), study.indCompleted(), study.globallyCompleted(),
-        study.currentPhaseCompleted(), plName, pmName);
+        study.currentPhaseCompleted(), plName, pmName, openRiskCount);
   }
 
   private static String nullToEmpty(String value) {
@@ -321,6 +332,7 @@ public class StudyManager {
       String productName,
       String moa,
       String sourceCode,
-      String originCode) {
+      String originCode,
+      int openRiskCount) {
   }
 }

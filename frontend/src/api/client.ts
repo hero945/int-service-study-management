@@ -48,6 +48,7 @@ import type {
   StudyListQuery,
   StudyPage,
   StudyConfigInput,
+  StudyDeletePreview,
   TeamMatrixBatchInput,
   TeamMatrixBatchResult,
   TeamMatrixPage,
@@ -106,6 +107,7 @@ export interface ApiClient {
   deleteProject(id: number): Promise<void>
   createStudyConfig(input: CreateStudyConfigInput): Promise<void>
   updateStudyConfig(id: number, input: StudyConfigInput): Promise<PipelineConfigRow>
+  getStudyDeletePreview(id: number): Promise<StudyDeletePreview>
   deleteStudyConfig(id: number): Promise<void>
   listUsers(query?: UserListQuery): Promise<UserPage>
   createUser(input: CreateUserInput): Promise<void>
@@ -243,6 +245,8 @@ export function createHttpApiClient(): ApiClient {
         pageSize: query.pageSize ?? 10,
         therapeuticArea: query.therapeuticArea,
         program: query.program,
+        product: query.product,
+        studyCode: query.studyCode,
         milestoneStatus: query.milestoneStatus,
       })}`),
     listRisks: (query = {}) =>
@@ -437,6 +441,9 @@ export function createHttpApiClient(): ApiClient {
       return request<PipelineConfigRow>(`/api/v1/clinical-pipeline/studies/${id}`, {
         method: 'PATCH', body: JSON.stringify(input),
       })
+    },
+    async getStudyDeletePreview(id) {
+      return request<StudyDeletePreview>(`/api/v1/clinical-pipeline/studies/${id}/delete-preview`)
     },
     async deleteStudyConfig(id) {
       await refreshCsrf()

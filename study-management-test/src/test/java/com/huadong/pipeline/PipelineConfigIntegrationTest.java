@@ -176,6 +176,50 @@ class PipelineConfigIntegrationTest {
   }
 
   @Test
+  void previewsAndDeletesStudyWithRelatedData() throws Exception {
+    long programId = createProgram("PRG-DEL");
+    long projectId = createProject(programId, "PRJ-DEL");
+    mvc.perform(post("/api/v1/clinical-pipeline/studies")
+            .with(authority("config.create")).with(csrf())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {"code":"STD-DEL","projectId":%d,"phase":"PHASE_1"}
+                """.formatted(projectId)))
+        .andExpect(status().isCreated());
+
+    long studyId = jdbc.queryForObject(
+        "SELECT id FROM hd_plt_study WHERE study_code = 'STD-DEL' AND sys_deleted = 0",
+        Long.class);
+    jdbc.update("""
+        INSERT INTO hd_plt_study_milestone(
+            study_id, stage_code, milestone_code, sys_create_by, sys_update_by)
+        VALUES (?, 'PreIND', '1.1', 'seed', 'seed')
+        """, studyId);
+
+    mvc.perform(get("/api/v1/clinical-pipeline/studies/{id}/delete-preview", studyId)
+            .with(authority("config.delete")))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.studyCode").value("STD-DEL"))
+        .andExpect(jsonPath("$.milestoneCount").value(1))
+        .andExpect(jsonPath("$.riskCount").value(0))
+        .andExpect(jsonPath("$.teamCount").value(0))
+        .andExpect(jsonPath("$.monthlyReportCount").value(0));
+
+    mvc.perform(delete("/api/v1/clinical-pipeline/studies/{id}", studyId)
+            .with(authority("config.delete")).with(csrf()))
+        .andExpect(status().isNoContent());
+
+    Integer milestoneCount = jdbc.queryForObject(
+        "SELECT COUNT(*) FROM hd_plt_study_milestone WHERE study_id = ? AND sys_deleted = 0",
+        Integer.class, studyId);
+    Integer studyCount = jdbc.queryForObject(
+        "SELECT COUNT(*) FROM hd_plt_study WHERE id = ? AND sys_deleted = 0",
+        Integer.class, studyId);
+    org.junit.jupiter.api.Assertions.assertEquals(0, milestoneCount);
+    org.junit.jupiter.api.Assertions.assertEquals(0, studyCount);
+  }
+
+  @Test
   void rejectsDuplicateProjectCodeWithBusinessMessage() throws Exception {
     long programId = createProgram("PRG-DUP");
     createProject(programId, "PRJ-DUP");

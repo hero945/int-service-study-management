@@ -553,22 +553,5 @@ onUnmounted(() => {
   align-items: center;
   gap: 12px;
 }
-.link-button {
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font-size: 12px;
-  cursor: pointer;
-  padding: 0;
-}
-.link-button:hover {
-  text-decoration: underline;
-}
-.link-button--danger {
-  color: var(--red-text);
-}
-.link-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
+/* .link-button / .link-button--danger 复用全局规则（main.css），不再 scoped 覆盖 */
 </style>

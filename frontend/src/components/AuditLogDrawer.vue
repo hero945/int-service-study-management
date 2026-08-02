@@ -121,14 +121,14 @@ function display(value: unknown) {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="audit-overlay" @mousedown.self="close">
+    <div v-if="open" class="drawer-overlay" @mousedown.self="close">
       <aside class="audit-drawer" role="dialog" aria-modal="true" aria-labelledby="audit-title">
         <header class="audit-header">
           <div>
             <h2 id="audit-title">{{ title }}</h2>
             <p>共 {{ totalItems }} 条操作记录，按发生时间倒序展示</p>
           </div>
-          <button ref="closeButton" type="button" class="audit-close" aria-label="关闭操作日志" @click="close">×</button>
+          <button ref="closeButton" type="button" class="drawer-close" aria-label="关闭操作日志" @click="close">×</button>
         </header>
 
         <div class="audit-toolbar">
@@ -207,23 +207,62 @@ function display(value: unknown) {
 </template>
 
 <style scoped>
-.audit-overlay{position:fixed;inset:0;z-index:1200;background:rgba(15,23,42,.36);display:flex;justify-content:flex-end}
-.audit-drawer{width:min(680px,100vw);height:100%;background:#fff;box-shadow:-18px 0 42px rgba(15,23,42,.16);display:flex;flex-direction:column}
-.audit-header{display:flex;justify-content:space-between;gap:20px;padding:24px;border-bottom:1px solid #e2e8f0}
-.audit-header h2{margin:0;font-size:20px}.audit-header p{margin:6px 0 0;color:#64748b;font-size:13px}
-.audit-close{border:0;background:transparent;font-size:28px;line-height:1;cursor:pointer}
-.audit-toolbar{display:flex;align-items:end;justify-content:space-between;padding:14px 24px;border-bottom:1px solid #e2e8f0}
-.audit-toolbar label{display:grid;gap:5px;font-size:12px;color:#475569}.audit-toolbar select{min-width:132px;padding:7px}
-.audit-body{flex:1;overflow:auto;padding:18px 24px;background:#f8fafc}.audit-state{text-align:center;color:#64748b;padding:44px 12px}
-.audit-state--error{color:#b91c1c}.audit-event{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:12px}
-.audit-event__summary{display:flex;justify-content:space-between;gap:12px}.audit-event__summary>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.audit-event__summary time{color:#64748b;font-size:12px;white-space:nowrap}.audit-result{font-size:12px;padding:2px 7px;border-radius:999px}
-.audit-result--success{background:#dcfce7;color:#166534}.audit-result--failed{background:#fee2e2;color:#991b1b}.audit-result--denied{background:#ffedd5;color:#9a3412}
-.audit-subject{color:#475569;font-family:monospace}.audit-operator,.audit-reason,.audit-error{margin:9px 0 0;font-size:13px}.audit-error{color:#b91c1c}
-details{margin-top:14px;border-top:1px dashed #cbd5e1;padding-top:12px}summary{cursor:pointer;color:#2563eb}
-.audit-change-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px}.audit-change-table th,.audit-change-table td{border:1px solid #e2e8f0;padding:7px;text-align:left;vertical-align:top;word-break:break-word}
-.audit-change-table thead th{background:#f1f5f9}.audit-history-note{color:#92400e;background:#fffbeb;padding:8px;border-radius:6px}
-.audit-request{display:grid;gap:6px;font-size:12px}.audit-request div{display:grid;grid-template-columns:110px 1fr}.audit-request dt{color:#64748b}.audit-request dd{margin:0;word-break:break-all}
-.audit-footer{display:flex;justify-content:center;align-items:center;gap:14px;padding:14px;border-top:1px solid #e2e8f0}
-@media(max-width:640px){.audit-header,.audit-toolbar,.audit-body{padding-left:16px;padding-right:16px}.audit-event__summary{display:block}.audit-event__summary time{display:block;margin-top:8px}}
+/* 遮罩/阴影/关闭按钮复用全局 .drawer-overlay / .drawer-close（z-drawer、滑入动画与其余抽屉一致） */
+.audit-drawer {
+  width: min(720px, 90vw);
+  max-width: 100%;
+  height: 100%;
+  background: var(--surface);
+  box-shadow: var(--shadow-drawer);
+  display: flex;
+  flex-direction: column;
+  animation: drawer-slide-in .2s ease-out;
+}
+.audit-header { display: flex; justify-content: space-between; gap: 20px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.audit-header h2 { margin: 0; font-size: 18px; }
+.audit-header p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.audit-toolbar { display: flex; align-items: end; justify-content: space-between; padding: 12px 22px; border-bottom: 1px solid var(--line); }
+.audit-toolbar label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); }
+.audit-toolbar select {
+  min-width: 132px;
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line-input);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.audit-toolbar select:focus { border-color: var(--accent); box-shadow: var(--shadow-focus); outline: none; }
+.audit-body { flex: 1; overflow: auto; padding: 18px 22px; background: #f8fafc; }
+.audit-state { text-align: center; color: var(--muted); font-size: 12.5px; padding: 44px 12px; }
+.audit-state--error { color: var(--red-text); }
+.audit-event { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+.audit-event__summary { display: flex; justify-content: space-between; gap: 12px; }
+.audit-event__summary > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.audit-event__summary time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.audit-result { font-size: 12px; padding: 2px 7px; border-radius: 999px; }
+.audit-result--success { background: var(--green-bg); color: var(--green-text); }
+.audit-result--failed { background: var(--red-bg); color: var(--red-text); }
+.audit-result--denied { background: var(--orange-bg); color: var(--orange-text); }
+.audit-subject { color: var(--text-2); font-family: var(--font-mono); }
+.audit-operator, .audit-reason, .audit-error { margin: 9px 0 0; font-size: 13px; }
+.audit-error { color: var(--red-text); }
+details { margin-top: 14px; border-top: 1px dashed var(--line-strong); padding-top: 12px; }
+summary { cursor: pointer; color: var(--accent); }
+.audit-change-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12.5px; }
+.audit-change-table th, .audit-change-table td { border: 1px solid #eef1f4; padding: 7px; text-align: left; vertical-align: top; word-break: break-word; }
+.audit-change-table thead th { background: #f7f9fb; color: #7a8493; font-size: 11px; font-weight: 600; letter-spacing: .35px; }
+.audit-change-table tbody tr:hover th, .audit-change-table tbody tr:hover td { background: #f5f8fd; }
+.audit-history-note { color: var(--orange-text); background: var(--orange-bg); padding: 8px; border-radius: 6px; }
+.audit-request { display: grid; gap: 6px; font-size: 12px; }
+.audit-request div { display: grid; grid-template-columns: 110px 1fr; }
+.audit-request dt { color: var(--muted); }
+.audit-request dd { margin: 0; word-break: break-all; }
+.audit-footer { display: flex; justify-content: center; align-items: center; gap: 14px; padding: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; }
+@media (max-width: 640px) {
+  .audit-header, .audit-toolbar, .audit-body { padding-left: 16px; padding-right: 16px; }
+  .audit-event__summary { display: block; }
+  .audit-event__summary time { display: block; margin-top: 8px; }
+}
 </style>

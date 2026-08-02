@@ -22,7 +22,7 @@ public interface RoleMapper extends BaseMapper<RoleEntity> {
              OR LOWER(COALESCE(r.role_description, '')) LIKE CONCAT('%', LOWER(#{keyword}), '%'))
       </if>
       <if test="status != null">AND r.status_code = #{status}</if>
-      ORDER BY r.is_system_role DESC, r.role_name ASC
+      ORDER BY r.sys_update_time DESC, r.id DESC
       LIMIT #{limit} OFFSET #{offset}
       </script>
       """)

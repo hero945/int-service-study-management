@@ -29,5 +29,7 @@ public record OverviewStudy(
     /** 项目负责人姓名（可多名，顿号分隔） */
     String plName,
     /** 项目经理姓名（可多名，顿号分隔） */
-    String pmName) {
+    String pmName,
+    /** 未关闭（OPEN）风险条数 */
+    int openRiskCount) {
 }

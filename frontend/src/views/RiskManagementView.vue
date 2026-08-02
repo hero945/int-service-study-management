@@ -6,7 +6,6 @@ import type { RiskFormOptions, RiskLevel, RiskPage, RiskStatus, RiskSummary } fr
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import RiskEditorDrawer from '../components/RiskEditorDrawer.vue'
-import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { formatDateTime } from '../domain/date-format'
 import {
   riskActionSummaryLabel,
@@ -17,7 +16,6 @@ import {
 } from '../domain/risk-labels'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
-import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 import { useServerSort } from '../composables/useServerSort'
 
 const route = useRoute()
@@ -30,18 +28,13 @@ const filters = reactive({
   functionCode: '',
   status: '' as RiskStatus | '',
   level: '' as RiskLevel | '',
-  studyId: undefined as number | undefined,
   overdueOnly: false,
 })
 const scoreTip = ref<{ left: number; top: number } | null>(null)
 
 const { can } = usePermissions()
 const canCreate = can('risk.create')
-const canAudit = can('audit.read')
-const { auditDrawer, openRecordAuditLogs, closeAuditLogs } =
-  useAuditLogDrawer('RISK')
 const functionOptions = computed(() => formOptions.value?.functions ?? [])
-const studyOptions = computed(() => formOptions.value?.studies ?? [])
 const scoreRuleLines = computed(() => riskScoreRuleLines(formOptions.value?.scoringRule))
 
 type RiskSortKey = 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate'
@@ -57,7 +50,6 @@ const {
     functionCode: q.functionCode || undefined,
     status: q.status || undefined,
     level: q.level || undefined,
-    studyId: q.studyId,
     overdueOnly: q.overdueOnly || undefined,
     sortBy: sortKey.value,
     sortOrder: sortDirection.value,
@@ -134,14 +126,7 @@ onMounted(async () => {
       <div class="toolbar-filters">
         <label class="inline-search">
           <span class="sr-only">搜索风险</span>
-          <input v-model="filters.query" type="search" placeholder="搜索编号 / 描述 / Owner / Program">
-        </label>
-        <label>
-          <span class="sr-only">Study</span>
-          <select v-model="filters.studyId" @change="applyFilters">
-            <option :value="undefined">全部 Study</option>
-            <option v-for="item in studyOptions" :key="item.id" :value="item.id">{{ item.studyCode }}</option>
-          </select>
+          <input v-model="filters.query" type="search" placeholder="搜索编号 / Study / 描述 / Owner / Program / Project">
         </label>
         <label>
           <span class="sr-only">功能线</span>
@@ -207,7 +192,6 @@ onMounted(async () => {
               <th>措施</th>
               <th>Status</th>
               <th v-bind="sortHeader('updatedAt')">更新时间</th>
-              <th v-if="canAudit">操作日志</th>
             </tr>
           </thead>
           <tbody>
@@ -258,9 +242,6 @@ onMounted(async () => {
                 </span>
               </td>
               <td class="mono">{{ formatDateTime(risk.updatedAt) }}</td>
-              <td v-if="canAudit">
-                <button class="text-button" type="button" @click.stop="openRecordAuditLogs(`${risk.riskCode} 操作日志`, 'RISK', risk.riskId)">查看</button>
-              </td>
             </tr>
           </tbody>
         </table>
@@ -292,6 +273,5 @@ onMounted(async () => {
     </Teleport>
 
     <RiskEditorDrawer :open="drawerOpen" :risk-code="selectedRiskCode" @close="closeDrawer" @saved="saved" />
-    <AuditLogDrawer v-bind="auditDrawer" @close="closeAuditLogs" />
   </section>
 </template>

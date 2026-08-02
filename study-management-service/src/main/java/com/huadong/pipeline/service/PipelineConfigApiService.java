@@ -129,13 +129,32 @@ public class PipelineConfigApiService implements PipelineConfigApi {
   }
 
   @Override
+  public StudyDeletePreviewResponse getStudyDeletePreview(long id) {
+    var study = manager.getStudy(id);
+    var references = manager.getStudyDeletePreview(id);
+    return new StudyDeletePreviewResponse(
+        study.studyId(),
+        study.studyCode(),
+        references.milestone(),
+        references.risk(),
+        references.team(),
+        references.monthlyReport());
+  }
+
+  @Override
   @Transactional
   public void deleteStudy(long id, String username) {
     var before = toResponse(manager.getStudy(id));
-    manager.deleteStudy(id, username);
+    var references = manager.deleteStudy(id, username);
     audit.success("CONFIG", "STUDY", id, before.studyCode(), id,
         "STUDY_DELETE", "hd_plt_study", id, before,
-        java.util.Map.of("deleted", true), null, username);
+        java.util.Map.of(
+            "deleted", true,
+            "milestoneCount", references.milestone(),
+            "riskCount", references.risk(),
+            "teamCount", references.team(),
+            "monthlyReportCount", references.monthlyReport()),
+        null, username);
   }
 
   private static ProgramResponse toResponse(Program value) {

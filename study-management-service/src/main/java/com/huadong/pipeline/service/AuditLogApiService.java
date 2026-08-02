@@ -5,7 +5,10 @@ import com.huadong.pipeline.domain.audit.AuditLogRepository.AuditLogRecord;
 import com.huadong.pipeline.manager.AuditLogManager;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -95,7 +98,156 @@ public class AuditLogApiService implements AuditLogApi {
         row.errorCode(), row.operatorUserId(), row.operatorEmail(), row.operatorDisplayName(),
         row.requestId(), row.ipAddress(), row.requestMethod(), row.requestPath(),
         row.targetTable(), row.targetId(), row.payloadVersion(),
-        before == null && after == null, before, after, changes(before, after), row.occurredTime());
+        before == null && after == null, before, after,
+        resolveChanges(row.actionCode(), before, after), row.occurredTime());
+  }
+
+  private static List<FieldChangeResponse> resolveChanges(
+      String actionCode, Map<String, Object> before, Map<String, Object> after) {
+    if ("TEAM_ROLE_ASSIGN".equals(actionCode)) {
+      return teamAssignmentChanges(before, after);
+    }
+    return changes(before, after);
+  }
+
+  private static List<FieldChangeResponse> teamAssignmentChanges(
+      Map<String, Object> before, Map<String, Object> after) {
+    if (before != null && before.containsKey("memberUserIds")) {
+      return legacyMemberChanges(before, after);
+    }
+    Map<String, String> roleNames = roleNameIndex(before, after);
+    Map<String, Set<String>> beforeMembers = assignmentMembers(before);
+    Map<String, Set<String>> afterMembers = assignmentMembers(after);
+    var roleCodes = new TreeSet<String>();
+    roleCodes.addAll(beforeMembers.keySet());
+    roleCodes.addAll(afterMembers.keySet());
+    var changes = new ArrayList<FieldChangeResponse>();
+    for (String roleCode : roleCodes) {
+      Set<String> beforeSet = beforeMembers.getOrDefault(roleCode, Set.of());
+      Set<String> afterSet = afterMembers.getOrDefault(roleCode, Set.of());
+      if (beforeSet.equals(afterSet)) {
+        continue;
+      }
+      String roleLabel = formatRoleLabel(roleCode, roleNames.get(roleCode));
+      Set<String> added = new LinkedHashSet<>(afterSet);
+      added.removeAll(beforeSet);
+      Set<String> removed = new LinkedHashSet<>(beforeSet);
+      removed.removeAll(afterSet);
+      if (!added.isEmpty()) {
+        changes.add(new FieldChangeResponse(
+            "assignments." + roleCode + ".added",
+            "角色 " + roleLabel + " 增加了成员 " + String.join("、", added),
+            memberSummary(beforeSet),
+            memberSummary(afterSet)));
+      }
+      if (!removed.isEmpty()) {
+        changes.add(new FieldChangeResponse(
+            "assignments." + roleCode + ".removed",
+            "角色 " + roleLabel + " 移除了成员 " + String.join("、", removed),
+            memberSummary(beforeSet),
+            memberSummary(afterSet)));
+      }
+    }
+    return changes;
+  }
+
+  private static List<FieldChangeResponse> legacyMemberChanges(
+      Map<String, Object> before, Map<String, Object> after) {
+    return List.of(new FieldChangeResponse(
+        "memberUserIds",
+        "成员用户 ID",
+        stringifyIds(before == null ? null : before.get("memberUserIds")),
+        stringifyIds(after == null ? null : after.get("memberUserIds"))));
+  }
+
+  private static Map<String, String> roleNameIndex(
+      Map<String, Object> before, Map<String, Object> after) {
+    var names = new HashMap<String, String>();
+    indexRoleNames(names, before);
+    indexRoleNames(names, after);
+    return names;
+  }
+
+  @SuppressWarnings("unchecked")
+  private static void indexRoleNames(Map<String, String> names, Map<String, Object> snapshot) {
+    if (snapshot == null) {
+      return;
+    }
+    Object roles = snapshot.get("roles");
+    if (!(roles instanceof List<?> roleList)) {
+      return;
+    }
+    for (Object item : roleList) {
+      if (!(item instanceof Map<?, ?> role)) {
+        continue;
+      }
+      Object code = role.get("roleCode");
+      Object name = role.get("roleName");
+      if (code != null) {
+        names.put(String.valueOf(code), name == null ? null : String.valueOf(name));
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private static Map<String, Set<String>> assignmentMembers(Map<String, Object> snapshot) {
+    var membersByRole = new HashMap<String, Set<String>>();
+    if (snapshot == null) {
+      return membersByRole;
+    }
+    Object assignments = snapshot.get("assignments");
+    if (!(assignments instanceof List<?> assignmentList)) {
+      return membersByRole;
+    }
+    for (Object item : assignmentList) {
+      if (!(item instanceof Map<?, ?> assignment)) {
+        continue;
+      }
+      Object roleCode = assignment.get("roleCode");
+      if (roleCode == null) {
+        continue;
+      }
+      String code = String.valueOf(roleCode);
+      Set<String> members = membersByRole.computeIfAbsent(code, key -> new LinkedHashSet<>());
+      Object memberItems = assignment.get("members");
+      if (!(memberItems instanceof List<?> memberList)) {
+        continue;
+      }
+      for (Object memberItem : memberList) {
+        if (!(memberItem instanceof Map<?, ?> member)) {
+          continue;
+        }
+        Object displayName = member.get("displayName");
+        if (displayName != null && !String.valueOf(displayName).isBlank()) {
+          members.add(String.valueOf(displayName).trim());
+        }
+      }
+    }
+    return membersByRole;
+  }
+
+  private static String formatRoleLabel(String roleCode, String roleName) {
+    if (roleName == null || roleName.isBlank()) {
+      return roleCode;
+    }
+    return "%s（%s）".formatted(roleCode, roleName);
+  }
+
+  private static String memberSummary(Set<String> members) {
+    if (members == null || members.isEmpty()) {
+      return "—";
+    }
+    return String.join("、", members);
+  }
+
+  private static String stringifyIds(Object value) {
+    if (value == null) {
+      return "—";
+    }
+    if (value instanceof Collection<?> collection) {
+      return collection.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining("、"));
+    }
+    return String.valueOf(value);
   }
 
   private static List<FieldChangeResponse> changes(

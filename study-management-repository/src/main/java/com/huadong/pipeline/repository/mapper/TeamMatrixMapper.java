@@ -55,7 +55,7 @@ public interface TeamMatrixMapper {
           AND (LOWER(s.study_code) LIKE CONCAT('%', LOWER(#{studyQuery}), '%')
             OR LOWER(s.indication_description_snapshot) LIKE CONCAT('%', LOWER(#{studyQuery}), '%'))
         </if>
-      ORDER BY s.id
+      ORDER BY s.sys_update_time DESC, s.id DESC
       LIMIT #{pageSize} OFFSET #{offset}
       </script>
       """)
@@ -143,7 +143,7 @@ public interface TeamMatrixMapper {
             SELECT 1 FROM hd_plt_team_assignment ta
             WHERE ta.study_id = s.id AND ta.user_id = #{scopeUserId} AND ta.sys_deleted = 0)
         </if>
-      ORDER BY s.id
+      ORDER BY s.sys_update_time DESC, s.id DESC
       FOR UPDATE
       </script>
       """)

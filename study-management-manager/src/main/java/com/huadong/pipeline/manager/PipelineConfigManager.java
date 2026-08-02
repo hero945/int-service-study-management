@@ -10,6 +10,7 @@ import com.huadong.pipeline.domain.config.Program;
 import com.huadong.pipeline.domain.config.ProgramRepository;
 import com.huadong.pipeline.domain.config.Project;
 import com.huadong.pipeline.domain.config.ProjectRepository;
+import com.huadong.pipeline.domain.config.StudyReferenceCounts;
 import com.huadong.pipeline.domain.config.TherapeuticArea;
 import java.util.List;
 import java.util.Map;
@@ -178,19 +179,24 @@ public class PipelineConfigManager {
     return requireProject(id);
   }
 
-  @Transactional
-  public void deleteStudy(long id, String username) {
+  public StudyReferenceCounts getStudyDeletePreview(long id) {
     requireStudy(id);
+    return configuration.countStudyReferences(id);
+  }
+
+  @Transactional
+  public StudyReferenceCounts deleteStudy(long id, String username) {
+    var study = requireStudy(id);
     var references = configuration.countStudyReferences(id);
     if (references.total() > 0) {
-      throw new BusinessException("STUDY_IN_USE", "Study 仍有业务引用，不能删除", Map.of(
-          "teamCount", String.valueOf(references.team()),
-          "milestoneCount", String.valueOf(references.milestone()),
-          "monthlyReportCount", String.valueOf(references.monthlyReport()),
-          "riskCount", String.valueOf(references.risk())));
+      configuration.softDeleteStudyReferences(id, username);
     }
     configuration.softDeleteStudy(id, username);
-    log.info("配置删除 operator={} entity=Study id={}", username, id);
+    log.info(
+        "配置删除 operator={} entity=Study id={} code={} milestone={} risk={} team={} monthly={}",
+        username, id, study.studyCode(), references.milestone(), references.risk(),
+        references.team(), references.monthlyReport());
+    return references;
   }
 
   private Program requireProgram(long id) {

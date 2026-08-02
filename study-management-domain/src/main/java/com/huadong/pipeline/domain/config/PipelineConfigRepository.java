@@ -14,5 +14,6 @@ public interface PipelineConfigRepository {
   StudyReferenceCounts countStudyReferences(long studyId);
   void updateStudy(long studyId, long projectId, String phaseStatusCode,
       int expectedVersion, String username);
+  void softDeleteStudyReferences(long studyId, String username);
   void softDeleteStudy(long studyId, String username);
 }

@@ -104,6 +104,16 @@ public class MybatisPlusPipelineConfigRepository implements PipelineConfigReposi
   }
 
   @Override
+  public void softDeleteStudyReferences(long studyId, String username) {
+    mapper.softDeleteRiskActionsByStudy(studyId, username);
+    mapper.softDeleteRisksByStudy(studyId, username);
+    mapper.softDeleteMonthlyEntriesByStudy(studyId, username);
+    mapper.softDeleteMonthlyReportsByStudy(studyId, username);
+    mapper.softDeleteMilestonesByStudy(studyId, username);
+    mapper.softDeleteTeamAssignmentsByStudy(studyId, username);
+  }
+
+  @Override
   public void softDeleteStudy(long studyId, String username) {
     var entity = new StudyEntity();
     entity.setSysUpdateBy(username);

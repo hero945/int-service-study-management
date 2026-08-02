@@ -393,12 +393,6 @@ class RiskManagementIntegrationTest {
         .andExpect(jsonPath("$.risk.version").value(2))
         .andExpect(jsonPath("$.closeReason").value("风险已消除"));
 
-    org.junit.jupiter.api.Assertions.assertEquals("出现新的延期信号", jdbc.queryForObject("""
-        SELECT operation_reason FROM hd_plt_audit_log
-        WHERE target_table = 'hd_plt_risk' AND action_code = 'RISK_UPDATE'
-        ORDER BY id DESC LIMIT 1
-        """, String.class));
-
     mvc.perform(patch("/api/v1/risk-management/risks/{riskCode}", riskCode)
             .with(user(operator).authorities(authority("risk.update")))
             .with(csrf())

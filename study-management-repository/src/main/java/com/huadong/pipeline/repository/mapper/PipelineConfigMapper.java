@@ -3,6 +3,7 @@ package com.huadong.pipeline.repository.mapper;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 public interface PipelineConfigMapper {
   @Select("""
@@ -17,7 +18,7 @@ public interface PipelineConfigMapper {
       WHERE p.sys_deleted = 0
         AND (#{keyword} = '' OR LOWER(p.program_code) LIKE LOWER(CONCAT('%', #{keyword}, '%'))
           OR LOWER(p.product_name) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
-      ORDER BY p.sort_order, p.program_code
+      ORDER BY p.sys_update_time DESC, p.program_code
       LIMIT 500
       """)
   List<ProgramSummaryData> findPrograms(@Param("keyword") String keyword);
@@ -77,7 +78,7 @@ public interface PipelineConfigMapper {
       JOIN hd_plt_therapeutic_area ta
         ON ta.id = pr.therapeutic_area_id AND ta.sys_deleted = 0
       WHERE s.sys_deleted = 0
-      ORDER BY p.program_code, pr.project_code, s.study_code
+      ORDER BY s.sys_update_time DESC, s.id DESC
       """)
   List<PipelineConfigRowData> findRows();
 
@@ -101,9 +102,10 @@ public interface PipelineConfigMapper {
           OR LOWER(ta.area_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
           OR LOWER(ta.area_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
           OR LOWER(p.program_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(pr.project_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
         )
       </if>
-      ORDER BY p.program_code, pr.project_code, s.study_code
+      ORDER BY s.sys_update_time DESC, s.id DESC
       LIMIT #{limit} OFFSET #{offset}
       </script>
       """)
@@ -127,6 +129,7 @@ public interface PipelineConfigMapper {
           OR LOWER(ta.area_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
           OR LOWER(ta.area_name) LIKE CONCAT('%', LOWER(#{keyword}), '%')
           OR LOWER(p.program_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
+          OR LOWER(pr.project_code) LIKE CONCAT('%', LOWER(#{keyword}), '%')
         )
       </if>
       </script>
@@ -148,7 +151,7 @@ public interface PipelineConfigMapper {
       WHERE pr.sys_deleted = 0
         AND (#{programId} IS NULL OR pr.program_id = #{programId})
         AND (#{keyword} = '' OR LOWER(pr.project_code) LIKE LOWER(CONCAT('%', #{keyword}, '%')))
-      ORDER BY pr.sort_order, pr.project_code
+      ORDER BY pr.sys_update_time DESC, pr.project_code
       """)
   List<ProjectSummaryData> findProjects(
       @Param("programId") Long programId, @Param("keyword") String keyword);
@@ -214,4 +217,54 @@ public interface PipelineConfigMapper {
 
   @Select("SELECT COUNT(*) FROM hd_plt_risk WHERE study_id = #{id} AND sys_deleted = 0")
   long countRiskReferences(@Param("id") long studyId);
+
+  @Update("""
+      UPDATE hd_plt_risk_action
+      SET sys_deleted = 1, sys_update_by = #{operator}, sys_update_time = CURRENT_TIMESTAMP
+      WHERE sys_deleted = 0 AND risk_id IN (
+        SELECT id FROM hd_plt_risk WHERE study_id = #{studyId} AND sys_deleted = 0)
+      """)
+  void softDeleteRiskActionsByStudy(
+      @Param("studyId") long studyId, @Param("operator") String operator);
+
+  @Update("""
+      UPDATE hd_plt_risk
+      SET sys_deleted = 1, sys_update_by = #{operator}, sys_update_time = CURRENT_TIMESTAMP
+      WHERE study_id = #{studyId} AND sys_deleted = 0
+      """)
+  void softDeleteRisksByStudy(
+      @Param("studyId") long studyId, @Param("operator") String operator);
+
+  @Update("""
+      UPDATE hd_plt_monthly_report_entry
+      SET sys_deleted = 1, sys_update_by = #{operator}, sys_update_time = CURRENT_TIMESTAMP
+      WHERE sys_deleted = 0 AND monthly_report_id IN (
+        SELECT id FROM hd_plt_monthly_report WHERE study_id = #{studyId} AND sys_deleted = 0)
+      """)
+  void softDeleteMonthlyEntriesByStudy(
+      @Param("studyId") long studyId, @Param("operator") String operator);
+
+  @Update("""
+      UPDATE hd_plt_monthly_report
+      SET sys_deleted = 1, sys_update_by = #{operator}, sys_update_time = CURRENT_TIMESTAMP
+      WHERE study_id = #{studyId} AND sys_deleted = 0
+      """)
+  void softDeleteMonthlyReportsByStudy(
+      @Param("studyId") long studyId, @Param("operator") String operator);
+
+  @Update("""
+      UPDATE hd_plt_study_milestone
+      SET sys_deleted = 1, sys_update_by = #{operator}, sys_update_time = CURRENT_TIMESTAMP
+      WHERE study_id = #{studyId} AND sys_deleted = 0
+      """)
+  void softDeleteMilestonesByStudy(
+      @Param("studyId") long studyId, @Param("operator") String operator);
+
+  @Update("""
+      UPDATE hd_plt_team_assignment
+      SET sys_deleted = 1, sys_update_by = #{operator}, sys_update_time = CURRENT_TIMESTAMP
+      WHERE study_id = #{studyId} AND sys_deleted = 0
+      """)
+  void softDeleteTeamAssignmentsByStudy(
+      @Param("studyId") long studyId, @Param("operator") String operator);
 }

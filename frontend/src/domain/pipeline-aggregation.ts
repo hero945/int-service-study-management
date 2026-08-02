@@ -85,6 +85,7 @@ export interface CellStudy {
   plName?: string
   pmName?: string
   productName?: string
+  openRiskCount?: number
 }
 
 export interface ProjectCell {
@@ -100,6 +101,8 @@ export interface ProjectCell {
   tipStatus?: string
   tipUpdated?: string
   tipOwner?: string
+  /** 该单元格对应 Study 的未关闭风险数 */
+  openRiskCount?: number
 }
 
 /** 该 project 下阶段最靠后的 study（作为"当前阶段"基准）。
@@ -173,6 +176,8 @@ function withTip(
   study: CellStudy | undefined,
   explanation?: string,
 ): ProjectCell {
+  const openRiskCount =
+    status === '已完成' ? 0 : (study?.openRiskCount ?? 0)
   return {
     ...cell,
     tipStage: stage,
@@ -180,6 +185,7 @@ function withTip(
     tipUpdated: formatTipMonth(study?.updatedAt),
     tipOwner: formatTipOwner(study),
     explanation: explanation || (study ? tipRefLine(study) : undefined),
+    ...(openRiskCount > 0 ? { openRiskCount } : {}),
   }
 }
 

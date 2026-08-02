@@ -119,7 +119,7 @@ function milestoneStage(study: OverviewStudy) {
 }
 .project-studies-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--body);
   line-height: 1.25;
@@ -130,7 +130,7 @@ function milestoneStage(study: OverviewStudy) {
   font-size: 12px;
 }
 .project-studies-body {
-  padding: 16px 20px 24px;
+  padding: 18px 22px 24px;
   display: grid;
   gap: 10px;
   align-content: start;
@@ -139,7 +139,7 @@ function milestoneStage(study: OverviewStudy) {
   margin: 24px 0;
   text-align: center;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12.5px;
 }
 .project-study-card {
   display: flex;
