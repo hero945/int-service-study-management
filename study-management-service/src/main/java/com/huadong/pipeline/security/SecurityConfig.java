@@ -4,8 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huadong.pipeline.audit.AuditFailureRecorder;
+import com.huadong.pipeline.service.RoleSessionInvalidator;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -32,7 +34,10 @@ public class SecurityConfig {
 
   @Bean
   SecurityFilterChain securityFilterChain(
-      HttpSecurity http, ObjectMapper mapper, AuditFailureRecorder auditFailures) throws Exception {
+      HttpSecurity http,
+      ObjectMapper mapper,
+      AuditFailureRecorder auditFailures,
+      RoleSessionInvalidator sessions) throws Exception {
     http.authorizeHttpRequests(auth -> auth
             .requestMatchers(
                 "/",
@@ -64,6 +69,11 @@ public class SecurityConfig {
             .loginProcessingUrl("/api/v1/platform/auth/login")
             .successHandler((request, response, authentication) -> {
               log.info("登录成功 username={}", authentication.getName());
+              HttpSession httpSession = request.getSession(false);
+              if (httpSession != null) {
+                // 同一账号只保留当前登录 Session，后登录踢掉其他设备。
+                sessions.invalidateOthers(authentication.getName(), httpSession.getId());
+              }
               writeJson(
                   response,
                   mapper,

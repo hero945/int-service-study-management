@@ -5,6 +5,9 @@
 frontend/dist/
 out/
 /study-management-service/bin/
+/scripts
+/ops
+/docs
 
 # -----------------------------------------------------------------------------
 # Node.js dependencies, caches, and test reports
@@ -37,6 +40,7 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+ops/backup/backup.env
 *.pem
 *.key
 *.p12

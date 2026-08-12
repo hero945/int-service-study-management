@@ -256,7 +256,8 @@ test('mock development mode is configured in version-controlled Vite config', ()
   assert.match(viteConfig, /VITE_API_MODE/);
   assert.doesNotMatch(mockSource, /\?{3,}/);
   assert.match(mockSource, /displayName:\s*'陈研发'/);
-  assert.match(mockSource, /indication:\s*'晚期实体瘤'/);
+  assert.match(mockSource, /indication:\s*'2型糖尿病'/);
+  assert.match(mockSource, /code:\s*'HDM1005-T2DM-00'/);
   assert.match(mockSource, /\['milestone',\s*'milestone\.read',\s*'查看里程碑'/);
 });
 

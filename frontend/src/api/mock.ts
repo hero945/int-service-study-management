@@ -119,28 +119,38 @@ function expand(base: StudyBase, variants: StudyVariant[]): StudySeed[] {
   return variants.map((variant) => ({ ...base, ...variant }))
 }
 
-// 演示数据集：3 Program · 4 Project · 10 Study，覆盖肿瘤/自免/代谢三个 TA 与多阶段里程碑场景
+// 演示数据集：HDM1005 · 1 Program · 2 Project · 7 Study（覆盖全部 phase，公开叙事）
 const studySeeds: StudySeed[] = [
-  // HDM2020 · 肿瘤 ADC · 2 Project · 5 Study
-  ...expand({ indication: '晚期实体瘤', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-1', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2020-001', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-03-10', updatedAt: '2026-07-15T09:20:00' },
-    { code: 'HDM2020-002', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '张伟', startDate: '2025-09-01', updatedAt: '2026-07-10T14:05:00' },
-    { code: 'HDM2020-003', phase: 'PHASE_3_1', status: 'PLANNED', ownerName: '张伟', startDate: '2026-10-01', updatedAt: '2026-07-06T10:20:00' },
+  ...expand({
+    indication: '2型糖尿病',
+    therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR',
+    therapeuticAreaName: '代谢与心血管',
+    programCode: 'HDM1005',
+    projectCode: 'HDM1005-T2DM',
+    productName: 'HDM1005',
+    moa: 'Peptide',
+    sourceCode: 'SELF_DEVELOPED',
+    originCode: 'DOMESTIC',
+  }, [
+    { code: 'HDM1005-T2DM-00', phase: 'PRE_IND', status: 'PLANNED', ownerName: '张伟', startDate: '2023-10-01', updatedAt: '2026-07-15T09:20:00' },
+    { code: 'HDM1005-T2DM-01', phase: 'IND', status: 'ACTIVE', ownerName: '张伟', startDate: '2023-12-22', updatedAt: '2026-07-14T10:00:00' },
+    { code: 'HDM1005-T2DM-02', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '李静', startDate: '2024-04-15', updatedAt: '2025-01-31T16:00:00' },
+    { code: 'HDM1005-T2DM-03', phase: 'PHASE_2', status: 'COMPLETED', ownerName: '李静', startDate: '2025-03-01', updatedAt: '2026-02-28T16:00:00' },
   ]),
-  ...expand({ indication: '非小细胞肺癌', therapeuticAreaCode: 'ONCOLOGY', therapeuticAreaName: '肿瘤', programCode: 'HDM2020', projectCode: 'HDM2020-2', productName: 'HDM2020', moa: 'ADC', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2020-101', phase: 'PHASE_1', status: 'ACTIVE', ownerName: '李静', startDate: '2025-06-20', updatedAt: '2026-07-08T10:30:00' },
-    { code: 'HDM2020-102', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '李静', startDate: '2025-11-12', updatedAt: '2026-07-04T15:35:00' },
-  ]),
-  // HDM2015 · 自身免疫 · 1 Project · 3 Study
-  ...expand({ indication: '系统性红斑狼疮', therapeuticAreaCode: 'AUTOIMMUNE', therapeuticAreaName: '自身免疫', programCode: 'HDM2015', projectCode: 'HDM2015-1', productName: 'HDM2015', moa: 'Small Molecule', sourceCode: 'COOPERATION', originCode: 'DOMESTIC' }, [
-    { code: 'HDM2015-101', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-02-18', updatedAt: '2026-07-14T16:40:00' },
-    { code: 'HDM2015-102', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '王芳', startDate: '2023-08-01', updatedAt: '2025-12-20T10:00:00' },
-    { code: 'HDM2015-103', phase: 'IND', status: 'ACTIVE', ownerName: '王芳', startDate: '2025-10-10', updatedAt: '2026-07-09T15:20:00' },
-  ]),
-  // HDM1005 · 代谢与心血管 · 1 Project · 2 Study
-  ...expand({ indication: '2 型糖尿病', therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR', therapeuticAreaName: '代谢与心血管', programCode: 'HDM1005', projectCode: 'HDM1005-3', productName: 'HDM1005', moa: 'Peptide', sourceCode: 'SELF_DEVELOPED', originCode: 'DOMESTIC' }, [
-    { code: 'HDM1005-301', phase: 'PHASE_1', status: 'COMPLETED', ownerName: '李静', startDate: '2023-05-06', updatedAt: '2024-11-30T09:00:00' },
-    { code: 'HDM1005-302', phase: 'PHASE_2', status: 'ACTIVE', ownerName: '李静', startDate: '2025-01-15', updatedAt: '2026-07-12T13:10:00' },
+  ...expand({
+    indication: '超重或肥胖',
+    therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR',
+    therapeuticAreaName: '代谢与心血管',
+    programCode: 'HDM1005',
+    projectCode: 'HDM1005-OBE',
+    productName: 'HDM1005',
+    moa: 'Peptide',
+    sourceCode: 'SELF_DEVELOPED',
+    originCode: 'DOMESTIC',
+  }, [
+    { code: 'HDM1005-OBE-01', phase: 'PRE_3', status: 'PLANNED', ownerName: '王芳', startDate: '2026-06-01', updatedAt: '2026-07-12T11:00:00' },
+    { code: 'HDM1005-OBE-02', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2026-02-28', updatedAt: '2026-07-20T09:00:00' },
+    { code: 'HDM1005-OBE-03', phase: 'PHASE_3_2', status: 'ACTIVE', ownerName: '张伟', startDate: '2026-03-02', updatedAt: '2026-07-21T14:00:00' },
   ]),
 ]
 
@@ -152,22 +162,18 @@ export const demoStudies: Study[] = studySeeds.map((seed, index) => ({
 }))
 
 // 每个 study 的里程碑总览状态（演示用，模拟里程碑推导出的【主状态/子状态/当前阶段完成】）。
-// 主显示 = 子状态（节点名，如 "LPI"）；灰色副文本 = 主状态（stage 名，如 "Enrollment"）。
 const mockOverviewMilestoneView: Record<string, {
   mainStageLabel: string
   subStatusLabel: string
   currentPhaseCompleted: boolean
 }> = {
-  'HDM2020-001': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPI', currentPhaseCompleted: false },
-  'HDM2020-002': { mainStageLabel: 'IA', subStatusLabel: 'IA 数据冻结', currentPhaseCompleted: false },
-  'HDM2020-003': { mainStageLabel: 'NDA/BLA', subStatusLabel: 'NDA/BLA 递交', currentPhaseCompleted: false },
-  'HDM2020-101': { mainStageLabel: 'SSU', subStatusLabel: '所有中心启动', currentPhaseCompleted: false },
-  'HDM2020-102': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
-  'HDM2015-101': { mainStageLabel: 'Data & Report', subStatusLabel: 'CSR初稿', currentPhaseCompleted: false },
-  'HDM2015-102': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
-  'HDM2015-103': { mainStageLabel: 'IND', subStatusLabel: 'IND 获批', currentPhaseCompleted: false },
-  'HDM1005-301': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
-  'HDM1005-302': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR定稿', currentPhaseCompleted: false },
+  'HDM1005-T2DM-00': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-数统', currentPhaseCompleted: false },
+  'HDM1005-T2DM-01': { mainStageLabel: 'IND', subStatusLabel: 'IND 获批', currentPhaseCompleted: false },
+  'HDM1005-T2DM-02': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
+  'HDM1005-T2DM-03': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR定稿', currentPhaseCompleted: true },
+  'HDM1005-OBE-01': { mainStageLabel: 'Pre3', subStatusLabel: 'Pre3 反馈-临床医学', currentPhaseCompleted: false },
+  'HDM1005-OBE-02': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
+  'HDM1005-OBE-03': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
 }
 
 /** 全量里程碑 code 顺序（与 MilestoneDefinition 一致） */
@@ -186,16 +192,13 @@ const MILESTONE_CODE_ORDER = [
 
 /** 每个 Study 的里程碑 frontier（与 mockOverviewMilestoneView 对齐） */
 const STUDY_MILESTONE_FRONTIER: Record<string, { frontierCode: string; completed?: boolean }> = {
-  'HDM2020-001': { frontierCode: 'Enrollment-1' },           // LPI
-  'HDM2020-002': { frontierCode: 'IA-0' },                   // IA 数据冻结
-  'HDM2020-003': { frontierCode: 'NDA_BLA-0' },              // NDA/BLA 递交（计划中）
-  'HDM2020-101': { frontierCode: 'SSU-7' },                  // 所有中心启动
-  'HDM2020-102': { frontierCode: 'Enrollment-0' },           // FPI
-  'HDM2015-101': { frontierCode: 'Data_Report-5' },          // CSR初稿
-  'HDM2015-102': { frontierCode: 'Enrollment-2', completed: true }, // LPO · I 期完成
-  'HDM2015-103': { frontierCode: 'IND-4' },                  // IND 获批
-  'HDM1005-301': { frontierCode: 'Enrollment-2', completed: true }, // LPO · I 期完成
-  'HDM1005-302': { frontierCode: 'Data_Report-2' },          // TLR定稿
+  'HDM1005-T2DM-00': { frontierCode: 'PreIND-2' },
+  'HDM1005-T2DM-01': { frontierCode: 'IND-4' },
+  'HDM1005-T2DM-02': { frontierCode: 'Enrollment-2', completed: true },
+  'HDM1005-T2DM-03': { frontierCode: 'Data_Report-2', completed: true },
+  'HDM1005-OBE-01': { frontierCode: 'Pre3-3' },
+  'HDM1005-OBE-02': { frontierCode: 'Enrollment-0' },
+  'HDM1005-OBE-03': { frontierCode: 'Enrollment-0' },
 }
 
 const SOURCE_LABEL = SOURCE_LABELS
@@ -260,109 +263,96 @@ function syncRiskTracking(detail: RiskDetail) {
 const mockRisks: RiskDetail[] = [
   {
     risk: {
-      riskId: 1, riskCode: 'RSK-2026-000001', studyId: 10, studyCode: 'HDM1005-302',
-      programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'RA',
-      functionName: '注册', description: '监管沟通窗口可能影响 III 期关键节点',
-      ownerUserId: 2, ownerName: '张伟', score: 48, level: 'HIGH', status: 'OPEN',
+      riskId: 1, riskCode: 'RSK-2026-000006', studyId: 1, studyCode: 'HDM1005-T2DM-00',
+      programCode: 'HDM1005', projectCode: 'HDM1005-T2DM', functionCode: 'RA',
+      functionName: '注册', description: 'Pre-IND 沟通窗口可能推迟 IND 资料定稿与递交节奏',
+      ownerUserId: 2, ownerName: '张伟', score: 24, level: 'LOW', status: 'OPEN',
       actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-15',
       version: 0, updatedAt: '2026-07-22T09:00:00Z',
     },
     registeredDate: '2026-07-15', closeReason: '', closedTime: null,
-    assessments: [{ id: 1, number: 1, impact: 4, likelihood: 4, detectability: 3,
-      score: 48, level: 'HIGH', reason: '首次评估', assessedBy: '张伟',
+    assessments: [{ id: 1, number: 1, impact: 3, likelihood: 2, detectability: 4,
+      score: 24, level: 'LOW', reason: '首次评估', assessedBy: '张伟',
       assessedAt: '2026-07-15T09:00:00Z' }],
-    actions: [{ id: 1, description: '提前准备 Pre-NDA 沟通材料', ownerUserId: 2,
+    actions: [{ id: 1, description: '锁定 Pre-IND 问题清单与责任人周报', ownerUserId: 2,
       ownerName: '张伟', plannedDate: '2026-08-15', completedDate: null,
-      status: 'IN_PROGRESS', completionNote: '', version: 0, overdue: false }],
+      status: 'OPEN', completionNote: '', version: 0, overdue: false }],
     activities: [{
-      type: 'ASSESSMENT', title: '第 1 次评估 · 48 分 · HIGH',
-      detail: '4 × 4 × 3 · 首次评估', at: '2026-07-15T09:00:00Z', by: '张伟',
-    }, {
-      type: 'ACTION', title: '新增控制措施',
-      detail: '提前准备 Pre-NDA 沟通材料', at: '2026-07-15T09:05:00Z', by: '张伟',
+      type: 'ASSESSMENT', title: '第 1 次评估 · 24 分 · LOW',
+      detail: '3 × 2 × 4', at: '2026-07-15T09:00:00Z', by: '张伟',
     }],
   },
   {
     risk: {
-      riskId: 2, riskCode: 'RSK-2026-000002', studyId: 1, studyCode: 'HDM2020-001',
-      programCode: 'HDM2020', projectCode: 'HDM2020-1', functionCode: 'PM',
-      functionName: '项目管理', description: 'I 期入组进度滞后，可能推迟 LPI 计划',
-      ownerUserId: 2, ownerName: '张伟', score: 24, level: 'MEDIUM', status: 'OPEN',
+      riskId: 2, riskCode: 'RSK-2026-000007', studyId: 2, studyCode: 'HDM1005-T2DM-01',
+      programCode: 'HDM1005', projectCode: 'HDM1005-T2DM', functionCode: 'RA',
+      functionName: '注册', description: 'IND 获批后多适应症并行可能稀释注册资源（T2DM + 体重管理）',
+      ownerUserId: 2, ownerName: '张伟', score: 27, level: 'MEDIUM', status: 'OPEN',
       actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-01',
       version: 0, updatedAt: '2026-07-18T10:00:00Z',
     },
-    registeredDate: '2026-07-10', closeReason: '', closedTime: null,
-    assessments: [{ id: 2, number: 1, impact: 3, likelihood: 2, detectability: 4,
-      score: 24, level: 'MEDIUM', reason: '中心启动偏慢', assessedBy: '张伟',
-      assessedAt: '2026-07-10T09:00:00Z' }],
-    actions: [{ id: 2, description: '每周跟踪各中心入组周报', ownerUserId: 2,
+    registeredDate: '2026-07-15', closeReason: '', closedTime: null,
+    assessments: [{ id: 2, number: 1, impact: 3, likelihood: 3, detectability: 3,
+      score: 27, level: 'MEDIUM', reason: '首次评估', assessedBy: '张伟',
+      assessedAt: '2026-07-15T09:00:00Z' }],
+    actions: [{ id: 2, description: '按适应症拆分注册计划与文档责任矩阵', ownerUserId: 2,
       ownerName: '张伟', plannedDate: '2026-08-01', completedDate: null,
       status: 'OPEN', completionNote: '', version: 0, overdue: false }],
-    activities: [{
-      type: 'ASSESSMENT', title: '第 1 次评估 · 24 分 · MEDIUM',
-      detail: '3 × 2 × 2', at: '2026-07-10T09:00:00Z', by: '张伟',
-    }],
+    activities: [],
   },
   {
     risk: {
-      riskId: 3, riskCode: 'RSK-2026-000003', studyId: 4, studyCode: 'HDM2020-101',
-      programCode: 'HDM2020', projectCode: 'HDM2020-2', functionCode: 'CO',
-      functionName: '临床运营', description: 'CRO 交付 SSU 包可能晚于合同节点',
-      ownerUserId: 2, ownerName: '张伟', score: 36, level: 'MEDIUM', status: 'OPEN',
-      actionCount: 1, openActionCount: 1, overdueActionCount: 1, nextPlannedDate: '2026-07-20',
+      riskId: 3, riskCode: 'RSK-2026-000009', studyId: 4, studyCode: 'HDM1005-T2DM-03',
+      programCode: 'HDM1005', projectCode: 'HDM1005-T2DM', functionCode: 'CM',
+      functionName: '临床医学', description: 'II 期主要终点 HbA1c 解读与阳性对照（度拉糖肽）供应波动可能影响总结时间表',
+      ownerUserId: 2, ownerName: '张伟', score: 24, level: 'MEDIUM', status: 'OPEN',
+      actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-10',
       version: 0, updatedAt: '2026-07-20T08:00:00Z',
     },
-    registeredDate: '2026-07-01', closeReason: '', closedTime: null,
-    assessments: [{ id: 3, number: 1, impact: 4, likelihood: 3, detectability: 3,
-      score: 36, level: 'MEDIUM', reason: 'CRO 资源冲突', assessedBy: '张伟',
-      assessedAt: '2026-07-01T09:00:00Z' }],
-    actions: [{ id: 3, description: '与 CRO 召开专项协调会', ownerUserId: 2,
-      ownerName: '张伟', plannedDate: '2026-07-20', completedDate: null,
-      status: 'IN_PROGRESS', completionNote: '', version: 0, overdue: true }],
-    activities: [{
-      type: 'ASSESSMENT', title: '第 1 次评估 · 36 分 · MEDIUM',
-      detail: '4 × 3 × 3', at: '2026-07-01T09:00:00Z', by: '张伟',
-    }],
+    registeredDate: '2026-07-15', closeReason: '', closedTime: null,
+    assessments: [{ id: 3, number: 1, impact: 4, likelihood: 2, detectability: 3,
+      score: 24, level: 'MEDIUM', reason: '首次评估', assessedBy: '张伟',
+      assessedAt: '2026-07-15T09:00:00Z' }],
+    actions: [{ id: 3, description: '与供应与统计周会对齐对照药与分析锁定日期', ownerUserId: 2,
+      ownerName: '张伟', plannedDate: '2026-08-10', completedDate: null,
+      status: 'IN_PROGRESS', completionNote: '', version: 0, overdue: false }],
+    activities: [],
   },
   {
     risk: {
-      riskId: 4, riskCode: 'RSK-2026-000004', studyId: 6, studyCode: 'HDM2015-101',
-      programCode: 'HDM2015', projectCode: 'HDM2015-1', functionCode: 'RA',
-      functionName: '注册', description: 'II 期 CSR 递交前需补充稳定性数据说明',
-      ownerUserId: 1, ownerName: '陈研发', score: 20, level: 'MEDIUM', status: 'OPEN',
-      actionCount: 0, openActionCount: 0, overdueActionCount: 0, nextPlannedDate: null,
-      version: 0, updatedAt: '2026-07-12T14:00:00Z',
+      riskId: 4, riskCode: 'RSK-2026-000011', studyId: 6, studyCode: 'HDM1005-OBE-02',
+      programCode: 'HDM1005', projectCode: 'HDM1005-OBE', functionCode: 'PM',
+      functionName: '项目管理', description: 'III 期经治人群（2026-02-28 FPI）多中心并行下监察资源紧张',
+      ownerUserId: 2, ownerName: '张伟', score: 36, level: 'MEDIUM', status: 'OPEN',
+      actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-12',
+      version: 0, updatedAt: '2026-07-21T09:00:00Z',
     },
-    registeredDate: '2026-07-12', closeReason: '', closedTime: null,
-    assessments: [{ id: 4, number: 1, impact: 4, likelihood: 2, detectability: 3,
-      score: 20, level: 'MEDIUM', reason: '药学资料缺口', assessedBy: '陈研发',
-      assessedAt: '2026-07-12T14:00:00Z' }],
-    actions: [],
-    activities: [{
-      type: 'ASSESSMENT', title: '第 1 次评估 · 20 分 · MEDIUM',
-      detail: '4 × 2 × 3', at: '2026-07-12T14:00:00Z', by: '陈研发',
-    }],
+    registeredDate: '2026-07-15', closeReason: '', closedTime: null,
+    assessments: [{ id: 4, number: 1, impact: 4, likelihood: 3, detectability: 3,
+      score: 36, level: 'MEDIUM', reason: '首次评估', assessedBy: '张伟',
+      assessedAt: '2026-07-15T09:00:00Z' }],
+    actions: [{ id: 4, description: '按区域分派监察访视优先级与后备监察员', ownerUserId: 2,
+      ownerName: '张伟', plannedDate: '2026-08-12', completedDate: null,
+      status: 'OPEN', completionNote: '', version: 0, overdue: false }],
+    activities: [],
   },
   {
     risk: {
-      riskId: 5, riskCode: 'RSK-2026-000005', studyId: 9, studyCode: 'HDM1005-301',
-      programCode: 'HDM1005', projectCode: 'HDM1005-3', functionCode: 'PM',
-      functionName: '项目管理', description: 'I 期总结报告归档延迟（已关闭）',
-      ownerUserId: 2, ownerName: '张伟', score: 8, level: 'LOW', status: 'CLOSED',
-      actionCount: 1, openActionCount: 0, overdueActionCount: 0, nextPlannedDate: null,
-      version: 1, updatedAt: '2026-06-30T16:00:00Z',
+      riskId: 5, riskCode: 'RSK-2026-000012', studyId: 7, studyCode: 'HDM1005-OBE-03',
+      programCode: 'HDM1005', projectCode: 'HDM1005-OBE', functionCode: 'CM',
+      functionName: '临床医学', description: 'III 期初治人群（2026-03-02 FPI）筛查失败率偏高可能影响入组曲线',
+      ownerUserId: 2, ownerName: '张伟', score: 36, level: 'MEDIUM', status: 'OPEN',
+      actionCount: 1, openActionCount: 1, overdueActionCount: 0, nextPlannedDate: '2026-08-08',
+      version: 0, updatedAt: '2026-07-21T14:00:00Z',
     },
-    registeredDate: '2026-05-01', closeReason: '归档已完成，风险消除', closedTime: '2026-06-30T16:00:00Z',
-    assessments: [{ id: 5, number: 1, impact: 2, likelihood: 2, detectability: 4,
-      score: 8, level: 'LOW', reason: '文档流程延迟', assessedBy: '张伟',
-      assessedAt: '2026-05-01T09:00:00Z' }],
-    actions: [{ id: 4, description: '完成 TMF 归档检查清单', ownerUserId: 2,
-      ownerName: '张伟', plannedDate: '2026-06-15', completedDate: '2026-06-28',
-      status: 'COMPLETED', completionNote: '已全部归档', version: 1, overdue: false }],
-    activities: [{
-      type: 'STATUS', title: '状态 OPEN → CLOSED',
-      detail: '归档已完成，风险消除', at: '2026-06-30T16:00:00Z', by: '张伟',
-    }],
+    registeredDate: '2026-07-15', closeReason: '', closedTime: null,
+    assessments: [{ id: 5, number: 1, impact: 3, likelihood: 3, detectability: 4,
+      score: 36, level: 'MEDIUM', reason: '首次评估', assessedBy: '张伟',
+      assessedAt: '2026-07-15T09:00:00Z' }],
+    actions: [{ id: 5, description: '优化筛查教育材料并复核入排执行一致性', ownerUserId: 2,
+      ownerName: '张伟', plannedDate: '2026-08-08', completedDate: null,
+      status: 'OPEN', completionNote: '', version: 0, overdue: false }],
+    activities: [],
   },
 ]
 mockRisks.forEach((detail) => syncRiskTracking(detail))
@@ -662,35 +652,32 @@ function buildDemoMonthlyPage(studyId: number, month: string): MonthlyReportPage
   })
   const linesByStudy: Record<number, FunctionLineReport[]> = {
     1: [
-      line(101, 3, 'CM', '临床医学', true, [
-        [1, '06', '完成 PreIND 反馈临床问题回复并归档。', me, '09:30:00'],
-        [2, '18', '与 CDE 沟通临床开发计划，确认关键终点设置。', me, '10:00:00'],
+      line(101, 2, 'RA', '注册', true, [
+        [1, '12', 'Pre-IND 资料包定稿中：对齐 GLP-1R/GIPR 双靶点长效激动剂 HDM1005 申报路径。', me, '09:30:00'],
       ]),
-      line(102, 11, 'ST', '生物统计', true, [
-        [3, '10', '完成样本量估算初稿，待内部统计评审。', me, '14:00:00'],
-      ]),
-      line(103, 2, 'RA', '注册', false, [
-        [4, '15', 'PreIND 申请资料已递交，等待受理。', 'wangfang@eastchinapharm.com', '11:00:00'],
+      line(102, 3, 'CM', '临床医学', true, [
+        [2, '20', '确认首个临床适应症为饮食运动或二甲双胍治疗后血糖控制不佳的 T2DM 人群。', me, '10:00:00'],
       ]),
     ],
-    2: [
-      line(201, 2, 'RA', '注册', true, [
-        [5, '08', 'IND 形审补正资料准备中。', me, '09:00:00'],
-        [6, '21', '与监管确认核查时间表。', me, '16:00:00'],
-      ]),
-      line(202, 3, 'CM', '临床医学', false, [
-        [7, '12', '更新研究者手册临床章节。', 'lijing@eastchinapharm.com', '10:30:00'],
+    4: [
+      line(201, 3, 'CM', '临床医学', true, [
+        [3, '10', '中国 II 期 T2DM：220 例，20 周，安慰剂与度拉糖肽对照；主要终点 HbA1c。', me, '09:00:00'],
+        [4, '25', '公开披露显示降糖与减重疗效积极。', me, '16:00:00'],
       ]),
     ],
-    10: [
+    6: [
       line(301, 7, 'CO', '临床运营', false, [
-        [8, '09', 'FPI 后首例受试者随访完成。', 'lijing@eastchinapharm.com', '13:00:00'],
+        [5, '05', 'T2DM III 期经治人群：2026-02-28 完成首例入组。', 'lijing@eastchinapharm.com', '13:00:00'],
       ]),
-      line(302, 13, 'DM', '数据管理', false, []),
+      line(302, 3, 'CM', '临床医学', true, [
+        [6, '11', '确认筛选失败原因分类与 HbA1c 入排复核流程。', me, '10:30:00'],
+      ]),
     ],
   }
   const functionLines = linesByStudy[studyId]
-  if (!functionLines) return undefined
+  if (!functionLines) {
+    return { studyId, studyCode: study.code, month, functionLines: [] }
+  }
   return { studyId, studyCode: study.code, month, functionLines }
 }
 
@@ -712,10 +699,15 @@ function sortByUpdatedAtDesc<T extends { updatedAt?: string }>(items: T[]): T[] 
 export function createMockApiClient(): ApiClient {
   let currentUser: CurrentUser | undefined
   const teamVersions = new Map(demoStudies.map((study) => [study.id, 0]))
-  const teamAssignments = new Map<string, number[]>([
-    [`${demoStudies[0].id}|PL`, [2]],
-    [`${demoStudies[1].id}|PM`, [2]],
-  ])
+  const teamAssignments = new Map<string, number[]>(
+    demoStudies.flatMap((study) => [
+      [`${study.id}|PL`, [2]],
+      [`${study.id}|PM`, [2]],
+      [`${study.id}|RA_SPECIALIST`, [2]],
+      [`${study.id}|CM`, [2]],
+      [`${study.id}|CTM`, [2]],
+    ]),
+  )
   const permissions: PlatformPermission[] = [
     ['pipeline', 'pipeline.page.view', '查看管线总览', 'PAGE', 'view'],
     ['study', 'study.read', '查看 Study', 'ACTION', 'read'],
