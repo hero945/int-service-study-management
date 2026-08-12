@@ -74,14 +74,18 @@ test -> 需要验证的模块
 Dockerfile 会按 Node 构建前端、Maven 构建后端的顺序完成这两步。除非任务明确要求
 改变部署方式，不要新增第二个生产运行时或第二套前端源代码。
 
-### 产品、架构与运行文档
+### 产品、架构与运行文档（本地 `docs/`，不入库）
+
+`docs/` 整目录被 `.gitignore` 忽略，**不上传远程仓库**。本机维护；每次增删改
+`docs/` 下文件时，必须同步更新 [`docs/README.md`](docs/README.md) 索引。
 
 - `README.md`：项目入口和当前运行方式。
-- `docs/临床研发管线管理系统_PRD_v1.0.md`：产品需求源文件。
-- `docs/前后端拆分技术设计_v1.0.md`：部署形态和未来拆分边界。
-- `docs/云上安全运维方案_v1.0.md`：生产安全和运维约束。
-- `docs/MVP运行与API说明.md`：本地运行和 API 使用说明。
-- `docs/验证记录_v1.0.md`：已执行验证及证据。
+- `docs/README.md`：本地文档唯一入口索引。
+- `docs/product/临床研发管线管理系统_PRD_v1.0.md`：产品需求源文件。
+- `docs/architecture/前后端拆分技术设计_v1.0.md`：部署形态和未来拆分边界。
+- `docs/devops/云上安全运维方案_v1.0.md`：生产安全和运维约束。
+- `docs/devops/MVP运行与API说明.md`：本地运行和 API 使用说明。
+- `docs/devops/验证记录_v1.0.md`：已执行验证及证据。
 - `docs/decisions/ADR-001-采用模块化单体与页面读模型.md`：总体架构决策。
 - `docs/decisions/ADR-003-采用自建账号与服务端Session.md`：认证决策。
 - `docs/decisions/ADR-004-建设项目独立MySQL数据库.md`：数据库决策。
@@ -132,8 +136,10 @@ Dockerfile 会按 Node 构建前端、Maven 构建后端的顺序完成这两步
   Vite/TypeScript 配置，通过构建生成 `frontend/dist/`。
 - 新后端调用先扩展 `frontend/src/api/types.ts` 与 `frontend/src/api/client.ts`，
   再由页面消费；mock 实现放在 `frontend/src/api/mock.ts`，不得散落到视图组件。
-- PRD 先改 Markdown，再运行生成器；不要直接修生成的 HTML。
-- 图表先改 `docs/diagram-source.html`，再更新 PNG。
+- PRD 先改 `docs/product/` 下 Markdown，再运行 `node docs/tools/generate-prd-html.js`；
+  不要直接修 `docs/generated/` 中的 HTML。
+- 图表先改 `docs/tools/diagram-source.html`，再更新 `docs/assets/diagrams/` PNG。
+- 改动 `docs/` 后必须更新 `docs/README.md`；不要把 `docs/` 提交或推送到远程。
 - 不手工编辑 `support.js`。
 - 新依赖必须有明确用途，并优先复用仓库现有能力。
 - 与“华东”有关的文档先写入当前工作区；未经用户明确确认，不得复制、覆盖或移动到 `C:\Users\admin\Desktop\obsidian-workspace`。
@@ -155,8 +161,8 @@ mvn test
 # Maven 模块依赖边界
 node --test tests\backend-module-boundaries.test.js
 
-# PRD HTML 生成及链接、图片、脚本校验
-node docs\generate-prd-html.js
+# PRD HTML 生成及链接、图片、脚本校验（需本机 docs/）
+node docs\tools\generate-prd-html.js
 
 # 历史原型业务逻辑
 node ".\管线总览 Coverpage.test.js"

@@ -24,7 +24,7 @@ Spring Boot 应用。
 
 - 逻辑库：`study_management`
 - 表数量：25张，统一使用 `hd_plt_` 前缀
-- 设计规格：[完整PRD数据库设计规格](./docs/database/完整PRD数据库设计规格.md)
+- 设计规格：见本机 [`docs/database/完整PRD数据库设计规格.md`](./docs/database/完整PRD数据库设计规格.md)（`docs/` 不入库，索引见 [`docs/README.md`](./docs/README.md)）
 - Flyway/MySQL建表脚本：[V1__hd_plt_full_schema.sql](./study-management-service/src/main/resources/db/migration/mysql/V1__hd_plt_full_schema.sql)
 
 当前 Java 运行时、Repository、Spring Session 和 Flyway 已统一使用 `hd_plt_*` 模型。
@@ -170,7 +170,7 @@ study-management-test         跨模块集成测试
 Repository 实现；最终部署
 `study-management-service/target/study-management-service-*-exec.jar`。
 
-生产运维详见 [云上安全运维方案](./docs/云上安全运维方案_v1.0.md)，接口与架构设计详见 [前后端拆分技术设计](./docs/前后端拆分技术设计_v1.0.md)，目标数据库以[完整PRD数据库设计规格](./docs/database/完整PRD数据库设计规格.md)为准，本机实测证据详见 [MVP 验证记录](./docs/验证记录_v1.0.md)。
+生产运维、架构设计、验证记录等说明维护在本机 `docs/`（不上传远程；入口 [`docs/README.md`](./docs/README.md)）。目标库表以仓库内 Flyway 脚本为准，设计规格见本机 `docs/database/`。
 
 ## MVP 边界
 

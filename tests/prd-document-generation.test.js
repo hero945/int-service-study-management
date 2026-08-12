@@ -5,11 +5,16 @@ const { execFileSync } = require('node:child_process');
 const test = require('node:test');
 
 const root = path.resolve(__dirname, '..');
-const sourcePath = path.join(root, 'docs', '临床研发管线管理系统_PRD_v1.0.md');
-const outputPath = path.join(root, 'docs', '临床研发管线管理系统_PRD_v1.0.html');
-const generatorPath = path.join(root, 'docs', 'generate-prd-html.js');
+const sourcePath = path.join(root, 'docs', 'product', '临床研发管线管理系统_PRD_v1.0.md');
+const outputPath = path.join(root, 'docs', 'generated', '临床研发管线管理系统_PRD_v1.0.html');
+const generatorPath = path.join(root, 'docs', 'tools', 'generate-prd-html.js');
 
-test('generated PRD uses source metadata and preserves the historical prototype link', () => {
+test('generated PRD uses source metadata and preserves the historical prototype link', (t) => {
+  if (!fs.existsSync(generatorPath) || !fs.existsSync(sourcePath)) {
+    t.skip('local docs/ is absent (docs are gitignored and not shipped to remote)');
+    return;
+  }
+
   execFileSync(process.execPath, [generatorPath], { cwd: root, stdio: 'pipe' });
 
   const markdown = fs.readFileSync(sourcePath, 'utf8');
@@ -22,7 +27,7 @@ test('generated PRD uses source metadata and preserves the historical prototype 
     `generated PRD must display source version ${version}`,
   );
   assert.ok(
-    html.includes('href="../管线总览%20Coverpage.dc%282%29.html"'),
+    html.includes('href="../../管线总览%20Coverpage.dc%282%29.html"'),
     'historical prototype link must keep its complete filename',
   );
   assert.match(
