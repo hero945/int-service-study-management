@@ -20,15 +20,14 @@ describe('PIPELINE_PHASE_STATUS_OPTIONS', () => {
     expect(PIPELINE_PHASE_STATUS_OPTIONS.map((o) => o.label)).toEqual([
       'Pre-IND',
       'IND',
-      'I期临床',
-      'II期临床',
+      'Ph1',
+      'Ph2',
       'Pre-III',
-      'III期临床（A）',
-      'III期临床（B）',
+      'Ph3',
       'PreNDA/BLA',
       'NDA/BLA',
     ])
-    expect(PIPELINE_PHASE_STATUS_OPTIONS.find((o) => o.code === 'PHASE_1')?.label).toBe('I期临床')
+    expect(PIPELINE_PHASE_STATUS_OPTIONS.find((o) => o.code === 'PHASE_1')?.label).toBe('Ph1')
   })
 })
 
@@ -52,5 +51,7 @@ describe('pipelineStatusOptions', () => {
     expect(opts.length).toBeGreaterThan(20)
     expect(opts).toContain('FPI')
     expect(opts).toContain('方案摘要定稿')
+    expect(pipelineStatusOptions('PHASE_3')[0]).toBe('已完成')
+    expect(pipelineStatusOptions('PHASE_3')).toContain('DBL')
   })
 })

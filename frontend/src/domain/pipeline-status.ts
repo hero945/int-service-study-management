@@ -11,8 +11,7 @@ export const CLINICAL_PHASE_CODES = [
   'PHASE_1',
   'PHASE_2',
   'PRE_3',
-  'PHASE_3_1',
-  'PHASE_3_2',
+  'PHASE_3',
   'PRE_NDA',
   'NDA',
 ] as const
@@ -24,11 +23,10 @@ export type PipelineTone = 'blue' | 'green' | 'orange' | 'red' | 'empty'
 export const PHASE_LABELS: Record<PipelinePhase, string> = {
   PRE_IND: 'Pre-IND',
   IND: 'IND',
-  PHASE_1: 'I期临床',
-  PHASE_2: 'II期临床',
+  PHASE_1: 'Ph1',
+  PHASE_2: 'Ph2',
   PRE_3: 'Pre-III',
-  PHASE_3_1: 'III期临床（A）',
-  PHASE_3_2: 'III期临床（B）',
+  PHASE_3: 'Ph3',
   PRE_NDA: 'PreNDA/BLA',
   NDA: 'NDA/BLA',
 }

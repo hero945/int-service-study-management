@@ -65,7 +65,7 @@ describe('groupByProject', () => {
 describe('getProjectCell', () => {
   it('does not backfill earlier columns from a later phase study', () => {
     const studies = [ms({
-      phase: 'PHASE_3_1',
+      phase: 'PHASE_3',
       code: 'HDM2001-301',
       plName: '张伟',
       pmName: '李静',
@@ -88,8 +88,8 @@ describe('getProjectCell', () => {
   it('marks phases without a matching study as — (empty/gray)', () => {
     const studies = [ms({ phase: 'PHASE_2', statusLabel: '进行中' })]
     expect(getProjectCell(studies, undefined, 'PRE_3')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, undefined, 'PHASE_3_1')).toMatchObject({ label: '—', tone: 'empty' })
-    expect(getProjectCell(studies, undefined, 'PHASE_3_2')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, undefined, 'PHASE_3')).toMatchObject({ label: '—', tone: 'empty' })
+    expect(getProjectCell(studies, undefined, 'PHASE_3')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
   it('own-phase column shows full sub-status matching filter options', () => {
@@ -155,7 +155,7 @@ describe('getProjectCell', () => {
     expect(getProjectCell(studies, reg, 'PHASE_1')).toMatchObject({ label: '—', tone: 'empty' })
   })
 
-  it('each ordinary column follows its own study milestone; later phases do not force earlier 已完成', () => {
+  it('each ordinary column follows its own study milestone; multiple studies at the same phase are shown together', () => {
     const phase1 = ms({
       id: 11,
       code: 'PH1-001',
@@ -167,7 +167,7 @@ describe('getProjectCell', () => {
     const phase31 = ms({
       id: 31,
       code: 'PH3A-001',
-      phase: 'PHASE_3_1',
+      phase: 'PHASE_3',
       mainStageCode: 'Data_Report',
       mainStageLabel: 'Data & Report',
       subStatusLabel: 'DBL',
@@ -175,7 +175,7 @@ describe('getProjectCell', () => {
     const phase32 = ms({
       id: 32,
       code: 'PH3B-001',
-      phase: 'PHASE_3_2',
+      phase: 'PHASE_3',
       mainStageLabel: 'NDA/BLA',
       subStatusLabel: 'NDA/BLA 递交',
     })
@@ -206,16 +206,18 @@ describe('getProjectCell', () => {
     expect(getProjectCell(studies, reg, 'NDA')).toMatchObject({
       label: '已完成', tone: 'green', clickable: false,
     })
-    // 普通列：Phase 3-1 仍进行中（DBL），不因存在 Phase 3-2 而变「已完成」
-    expect(getProjectCell(studies, reg, 'PHASE_3_1')).toMatchObject({
-      label: 'DBL', tone: 'blue', subText: 'PH3A-001', studyId: 31,
-    })
+    // 普通列：各自阶段的 Study 独立显示；Ph3 列同时列出两条 Study
     expect(getProjectCell(studies, reg, 'PHASE_1')).toMatchObject({
       label: 'LPI', tone: 'blue', subText: 'PH1-001', studyId: 11,
     })
     expect(getProjectCell(studies, reg, 'PHASE_2')).toMatchObject({ label: '—', tone: 'empty' })
-    const cell = getProjectCell(studies, reg, 'PHASE_3_2')
-    expect(cell).toMatchObject({ label: 'NDA/BLA 递交', subText: 'PH3B-001', tone: 'blue' })
+    expect(getProjectCell(studies, reg, 'PHASE_3')).toMatchObject({
+      label: 'DBL', tone: 'blue', subText: 'PH3A-001', studyId: 31,
+    })
+    const phase3Cells = getProjectPhaseCells(studies, reg, 'PHASE_3')
+    expect(phase3Cells).toHaveLength(2)
+    expect(phase3Cells[0]).toMatchObject({ label: 'DBL', subText: 'PH3A-001', studyId: 31, tone: 'blue' })
+    expect(phase3Cells[1]).toMatchObject({ label: 'NDA/BLA 递交', subText: 'PH3B-001', studyId: 32, tone: 'blue' })
   })
 
   it('returns all studies at the phase sorted by code', () => {
@@ -238,8 +240,8 @@ describe('getProjectCell', () => {
     ]
     expect(getProjectPhaseCells(studies, undefined, 'PHASE_1')).toHaveLength(2)
     expect(getProjectPhaseCells(studies, undefined, 'PHASE_2')).toHaveLength(0)
-    expect(getProjectPhaseCells(studies, undefined, 'PHASE_3_1')).toHaveLength(0)
-    expect(getProjectPhaseCells(studies, undefined, 'PHASE_3_2')).toHaveLength(0)
+    expect(getProjectPhaseCells(studies, undefined, 'PHASE_3')).toHaveLength(0)
+    expect(getProjectPhaseCells(studies, undefined, 'PHASE_3')).toHaveLength(0)
     expect(getProjectCell(studies, undefined, 'PRE_IND')).toMatchObject({ label: '—', tone: 'empty' })
     expect(getProjectCell(studies, undefined, 'IND')).toMatchObject({ label: '—', tone: 'empty' })
   })
@@ -327,7 +329,7 @@ describe('getProjectCell', () => {
       }),
       ms({
         id: 77,
-        phase: 'PHASE_3_1',
+        phase: 'PHASE_3',
         mainStageCode: 'Pre3',
         mainStageLabel: 'Pre3',
         subStatusLabel: 'Pre3 反馈-数统',
@@ -377,7 +379,7 @@ describe('getProjectCell', () => {
     })
     const phase31 = ms({
       id: 9,
-      phase: 'PHASE_3_1',
+      phase: 'PHASE_3',
       mainStageCode: 'Protocol',
       mainStageLabel: 'Protocol',
       subStatusLabel: '方案定稿',
@@ -392,8 +394,8 @@ describe('furthestPhaseOf', () => {
   it('returns the most advanced phase of the project', () => {
     const studies: CellStudy[] = [
       ms({ phase: 'PHASE_1' }),
-      ms({ phase: 'PHASE_3_1' }),
+      ms({ phase: 'PHASE_3' }),
     ]
-    expect(furthestPhaseOf(studies)).toBe('PHASE_3_1')
+    expect(furthestPhaseOf(studies)).toBe('PHASE_3')
   })
 })

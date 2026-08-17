@@ -257,7 +257,7 @@ function completedRegulatoryCell(
   }
 }
 
-const CLINICAL_PHASES: PipelinePhase[] = ['PHASE_1', 'PHASE_2', 'PHASE_3_1', 'PHASE_3_2']
+const CLINICAL_PHASES: PipelinePhase[] = ['PHASE_1', 'PHASE_2', 'PHASE_3']
 
 /**
  * PreIND / IND / PRE-3 / PRE-NDA / NDA 列：读取 project 维度的监管里程碑状态。
@@ -356,7 +356,7 @@ function studyToProjectCell(study: CellStudy, targetPhase: PipelinePhase): Proje
  * 返回某一列的全部单元格。
  *
  * 监管列（PRE_IND / IND / PRE_3 / PRE_NDA / NDA）返回 0/1 个 cell。
- * 临床列（PHASE_1 / 2 / 3_1 / 3_2）返回该阶段全部 Study 对应的 cell，按 study.code 升序排列。
+ * 临床列（PHASE_1 / 2 / 3）返回该阶段全部 Study 对应的 cell，按 study.code 升序排列。
  */
 export function getProjectPhaseCells(
   studies: CellStudy[],
@@ -382,7 +382,7 @@ export function getProjectPhaseCells(
  * 单元格取数与状态（兼容旧调用：返回该列第一个 cell）。
  *
  * PRE_IND / IND / PRE_3（监管列）：逻辑不变，见 getRegulatoryMilestoneCell。
- * 普通列（PHASE_1 / 2 / 3_1 / 3_2）：
+ * 普通列（PHASE_1 / 2 / 3）：
  *   只认本列对应 Phase 的 Study + 真实里程碑；
  *   不因「后面还有更大阶段」而把本列回填成「已完成」。
  *   - 无该 Phase 的 Study → "—"（灰）

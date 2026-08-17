@@ -10,7 +10,7 @@ import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import LabeledValue from '../components/LabeledValue.vue'
 import AuditLogDrawer from '../components/AuditLogDrawer.vue'
-import { PIPELINE_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
+import { PIPELINE_CONFIG_PHASE_STATUS_OPTIONS } from '../domain/milestone-filters'
 import { useClientSort } from '../composables/useClientSort'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
@@ -18,7 +18,7 @@ import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 import { useNotice } from '../composables/useNotice'
 import { useEscapeClose } from '../composables/useEscapeClose'
 
-const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
+const phaseStatusOptions = PIPELINE_CONFIG_PHASE_STATUS_OPTIONS
 
 type ViewMode = 'studies' | 'entities'
 type EntityKind = 'program' | 'project'
@@ -122,7 +122,7 @@ const programForm = reactive<ProgramInput>({
 const projectForm = reactive<ProjectInput>({
   code: '', programId: 0, indication: '', therapeuticAreaCode: '',
 })
-const studyForm = reactive({ code: '', programId: 0, projectId: 0, phaseStatusCode: 'PRE_IND' })
+const studyForm = reactive({ code: '', programId: 0, projectId: 0, phaseStatusCode: 'PHASE_1' })
 
 async function loadAll() {
   loading.value = true
@@ -274,7 +274,7 @@ function openStudy(row?: PipelineConfigRow) {
   Object.assign(studyForm, row ? {
     code: row.studyCode, programId: row.programId,
     projectId: row.projectId, phaseStatusCode: row.phaseStatusCode,
-  } : { code: '', programId: programs.value[0]?.id ?? 0, projectId: 0, phaseStatusCode: 'PRE_IND' })
+  } : { code: '', programId: programs.value[0]?.id ?? 0, projectId: 0, phaseStatusCode: 'PHASE_1' })
   studyDialog.value = true
 }
 

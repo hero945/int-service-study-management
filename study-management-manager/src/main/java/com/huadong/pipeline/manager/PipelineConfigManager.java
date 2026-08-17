@@ -25,8 +25,7 @@ public class PipelineConfigManager {
   private static final Set<String> SOURCES =
       Set.of("SELF_DEVELOPED", "IN_LICENSE", "COOPERATION");
   private static final Set<String> ORIGINS = Set.of("DOMESTIC", "IMPORTED");
-  private static final Set<String> PHASES = Set.of(
-      "PRE_IND", "IND", "PHASE_1", "PHASE_2", "PRE_3", "PHASE_3_1", "PHASE_3_2");
+  private static final Set<String> PHASES = Set.of("PHASE_1", "PHASE_2", "PHASE_3");
 
   @Autowired
   private ProgramRepository programs;

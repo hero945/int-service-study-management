@@ -77,7 +77,7 @@ export interface Study {
   id: number
   code: string
   indication: string
-  /** 临床试验阶段编码（PRE_IND/IND/PHASE_1/PHASE_2/PRE_3/PHASE_3_1/PHASE_3_2），与后端 hd_plt_study.phase_status_code 一致 */
+  /** 临床试验阶段编码（PRE_IND/IND/PHASE_1/PHASE_2/PRE_3/PHASE_3/PRE_NDA/NDA），与后端 hd_plt_study.phase_status_code 一致 */
   phase: string
   status: string
   statusLabel: string

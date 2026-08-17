@@ -9,15 +9,14 @@ import {
 } from './pipeline-status'
 
 describe('pipeline phase dictionary', () => {
-  it('keeps the nine clinical phase codes in DB order', () => {
+  it('keeps the eight clinical phase codes in DB order', () => {
     expect(CLINICAL_PHASE_CODES).toEqual([
       'PRE_IND',
       'IND',
       'PHASE_1',
       'PHASE_2',
       'PRE_3',
-      'PHASE_3_1',
-      'PHASE_3_2',
+      'PHASE_3',
       'PRE_NDA',
       'NDA',
     ])
@@ -29,8 +28,7 @@ describe('pipeline phase dictionary', () => {
     expect(normalizePhase('PHASE_1')).toBe('PHASE_1')
     expect(normalizePhase('PHASE_2')).toBe('PHASE_2')
     expect(normalizePhase('PRE_3')).toBe('PRE_3')
-    expect(normalizePhase('PHASE_3_1')).toBe('PHASE_3_1')
-    expect(normalizePhase('PHASE_3_2')).toBe('PHASE_3_2')
+    expect(normalizePhase('PHASE_3')).toBe('PHASE_3')
     expect(normalizePhase('PRE_NDA')).toBe('PRE_NDA')
     expect(normalizePhase('NDA')).toBe('NDA')
   })
@@ -62,11 +60,10 @@ describe('pipeline phase dictionary', () => {
   it('maps clinical phase codes to human-readable labels', () => {
     expect(phaseLabel('PRE_IND')).toBe('Pre-IND')
     expect(phaseLabel('IND')).toBe('IND')
-    expect(phaseLabel('PHASE_1')).toBe('I期临床')
-    expect(phaseLabel('PHASE_2')).toBe('II期临床')
+    expect(phaseLabel('PHASE_1')).toBe('Ph1')
+    expect(phaseLabel('PHASE_2')).toBe('Ph2')
     expect(phaseLabel('PRE_3')).toBe('Pre-III')
-    expect(phaseLabel('PHASE_3_1')).toBe('III期临床（A）')
-    expect(phaseLabel('PHASE_3_2')).toBe('III期临床（B）')
+    expect(phaseLabel('PHASE_3')).toBe('Ph3')
     expect(phaseLabel('PRE_NDA')).toBe('PreNDA/BLA')
     expect(phaseLabel('NDA')).toBe('NDA/BLA')
     expect(phaseLabel('UNKNOWN')).toBe('UNKNOWN')

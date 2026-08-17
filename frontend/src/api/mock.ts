@@ -152,8 +152,8 @@ const studySeeds: StudySeed[] = [
     originCode: 'DOMESTIC',
   }, [
     { code: 'HDM1005-OBE-01', phase: 'PRE_3', status: 'PLANNED', ownerName: '王芳', startDate: '2026-06-01', updatedAt: '2026-07-12T11:00:00' },
-    { code: 'HDM1005-OBE-02', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2026-02-28', updatedAt: '2026-07-20T09:00:00' },
-    { code: 'HDM1005-OBE-03', phase: 'PHASE_3_2', status: 'ACTIVE', ownerName: '张伟', startDate: '2026-03-02', updatedAt: '2026-07-21T14:00:00' },
+    { code: 'HDM1005-OBE-02', phase: 'PHASE_3', status: 'ACTIVE', ownerName: '王芳', startDate: '2026-02-28', updatedAt: '2026-07-20T09:00:00' },
+    { code: 'HDM1005-OBE-03', phase: 'PHASE_3', status: 'ACTIVE', ownerName: '张伟', startDate: '2026-03-02', updatedAt: '2026-07-21T14:00:00' },
   ]),
   // 追加在同 Project 的 I 期第二条 Study，演示临床列多 Study 纵向列表
   {

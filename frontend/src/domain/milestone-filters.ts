@@ -70,6 +70,16 @@ export const STUDY_MILESTONE_PHASE_OPTIONS = Object.keys(MILESTONE_STATUS_BY_STA
 export const ALL_MILESTONE_SUB_STATUSES = Object.values(MILESTONE_STATUS_BY_STAGE).flat()
 
 /**
+ * 管线配置页 Study 的 Phase Status 下拉：仅保留临床阶段 Ph1/Ph2/Ph3。
+ */
+export const PIPELINE_CONFIG_PHASE_STATUS_OPTIONS = ['PHASE_1', 'PHASE_2', 'PHASE_3'].map(
+  (code) => ({
+    code,
+    label: phaseLabel(code),
+  }),
+)
+
+/**
  * 管线总览临床 phase 枚举：用来选定表格列（不做行过滤）。
  * value 为 DB code，与 CLINICAL_PHASE_CODES 一致；label 为人类可读标签。
  */
