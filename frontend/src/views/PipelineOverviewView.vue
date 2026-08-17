@@ -305,6 +305,7 @@ onMounted(loadOverview)
                 {{ phaseLabel(phase) }}
                 <span class="col-resizer" @pointerdown="pipelineCols.startResize(phase, $event)" @click.stop></span>
               </th>
+              <th class="pipeline-col-fill" aria-hidden="true"></th>
             </tr>
           </thead>
           <tbody v-for="area in areaGroups" :key="area.therapeuticAreaName">
@@ -317,6 +318,7 @@ onMounted(loadOverview)
                 </span>
               </td>
               <td v-for="phase in phases" :key="`area-${phase}`" class="area-row-fill"></td>
+              <td class="area-row-fill pipeline-col-fill" aria-hidden="true"></td>
             </tr>
             <tr v-for="project in area.projects" :key="project.code">
               <td
@@ -388,6 +390,7 @@ onMounted(loadOverview)
                   class="status-chip status-chip--empty"
                 >—</span>
               </td>
+              <td class="pipeline-col-fill" aria-hidden="true"></td>
             </tr>
           </tbody>
         </table>

@@ -13,13 +13,14 @@ describe('useResizableColumns', () => {
     expect(widths.a).toBe(200)
   })
 
-  it('locks table width to the sum of column widths so extra space does not restack cells', () => {
-    const { tableStyle } = useResizableColumns('sum', { a: 120, b: 80 })
+  it('fills the container while keeping a min width equal to the column sum', () => {
+    const { tableStyle, fluidColStyle } = useResizableColumns('sum', { a: 120, b: 80 })
     expect(tableStyle()).toMatchObject({
-      width: '200px',
+      width: '100%',
       minWidth: '200px',
       '--col-a': '120px',
       '--col-b': '80px',
     })
+    expect(fluidColStyle('b')).toEqual({ minWidth: '80px' })
   })
 })

@@ -541,7 +541,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .pipeline-table th:nth-child(1) { width: var(--col-product); min-width: var(--col-product); max-width: var(--col-product); }
 .pipeline-table th:nth-child(2) { width: var(--col-program); min-width: var(--col-program); max-width: var(--col-program); }
 .pipeline-table th:nth-child(3) { width: var(--col-project); min-width: var(--col-project); max-width: var(--col-project); }
-.pipeline-table th:nth-child(n+4) { width: 140px; min-width: 140px; max-width: 140px; }
+.pipeline-table th:nth-child(n+4):not(:last-child) { width: 140px; min-width: 140px; max-width: 140px; }
+.pipeline-table .pipeline-col-fill {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  padding: 0;
+  border-left: 0;
+}
 .pipeline-table th:nth-child(1),
 .pipeline-table th:nth-child(2),
 .pipeline-table th:nth-child(3) {

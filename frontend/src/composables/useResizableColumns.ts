@@ -87,12 +87,18 @@ export function useResizableColumns(tableId: string, defaults: Record<string, nu
     const total = totalWidth()
     return {
       ...cssVars(prefix),
-      width: `${total}px`,
+      width: '100%',
       minWidth: `${total}px`,
     }
   }
 
+  /** 末列只保底、不锁 maxWidth，用来吃掉容器比列宽之和多出来的空间。 */
+  function fluidColStyle(key: string) {
+    const width = columnWidth(key)
+    return width ? { minWidth: `${width}px` } : undefined
+  }
+
   onUnmounted(() => persist())
 
-  return { widths, startResize, colStyle, cssVars, tableStyle, totalWidth }
+  return { widths, startResize, colStyle, cssVars, tableStyle, fluidColStyle, totalWidth }
 }

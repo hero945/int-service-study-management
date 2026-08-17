@@ -131,7 +131,7 @@ onMounted(load)
             <th v-bind="studySortHeader('indication')" :style="studyCols.colStyle('indication')">适应症<span class="col-resizer" @pointerdown="studyCols.startResize('indication', $event)" @click.stop></span></th>
             <th v-bind="studySortHeader('plPm')" :style="studyCols.colStyle('plPm')">PL/PM<span class="col-resizer" @pointerdown="studyCols.startResize('plPm', $event)" @click.stop></span></th>
             <th v-bind="studySortHeader('updatedAt')" :style="studyCols.colStyle('updatedAt')">更新时间<span class="col-resizer" @pointerdown="studyCols.startResize('updatedAt', $event)" @click.stop></span></th>
-            <th :style="{ minWidth: `${studyCols.widths.actions}px` }">操作</th>
+            <th :style="studyCols.fluidColStyle('actions')">操作</th>
           </tr></thead>
           <tbody>
             <tr v-for="study in sortedStudies" :key="study.id" class="study-row--clickable" @click="openDrawer(study)">
