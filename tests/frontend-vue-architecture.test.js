@@ -140,7 +140,7 @@ test('pipeline entity forms use the reduced fields and database-backed therapeut
   assert.doesNotMatch(types, /(?:studyName|programName|projectName|phaseStatusLabel)/);
   const columns = ['Source', 'Origin', 'Product', 'Program', 'MOA', 'Project', 'TA', 'Indication', 'Study No.', 'Phase Status'];
   const headerPositions = columns.map((column) =>
-    configView.search(new RegExp(`<th[^>]*>${column.replace('.', '\\.')}</th>`)),
+    configView.search(new RegExp(`<th[^>]*>${column.replace('.', '\\.')}`)),
   );
   assert.ok(headerPositions.every((position) => position >= 0));
   for (let index = 1; index < columns.length; index += 1) {
@@ -157,7 +157,7 @@ test('pipeline entity forms use the reduced fields and database-backed therapeut
   assert.match(configView, /ref="studyProgramDetails"/);
   assert.match(configView, /ref="studyProjectDetails"/);
   assert.match(configView, /onDocumentPointerDown/);
-  assert.match(configView, /placeholder="搜索 Study \/ TA \/ Program"/);
+  assert.match(configView, /placeholder="搜索 Study \/ TA \/ Program \/ Project"/);
   assert.match(configView, /rows/);
   assert.match(configView, /ListPagination/);
   assert.match(read('frontend/src/components/ListPagination.vue'), /study-pagination/);
@@ -190,34 +190,30 @@ test('audit log entry points are record or group scoped without module-wide butt
     assert.doesNotMatch(source, />全部操作日志</);
   }
 
-  for (const source of [accountView, roleView, configView, riskView]) {
+  for (const source of [accountView, roleView, configView, milestoneView]) {
     assert.match(source, />操作日志</);
     assert.match(source, />查看</);
   }
 
   assert.match(
     accountView,
-    /<th class="account-actions-col">操作<\/th>\s*<th v-if="canAudit">操作日志<\/th>/,
+    /<th class="account-actions-col"[^>]*>操作[\s\S]*?<\/th>\s*<th v-if="canAudit"[^>]*>操作日志/,
   );
   assert.match(
     roleView,
-    /<th>操作<\/th>\s*<th v-if="canAudit">操作日志<\/th>/,
+    /<th[^>]*>操作[\s\S]*?<\/th>\s*<th v-if="canAudit"[^>]*>操作日志/,
   );
   assert.match(
     roleView,
     /<button class="text-button" type="button" @click="openRecordAuditLogs\([^>]+>查看<\/button>/,
   );
   assert.match(
-    riskView,
-    /<th v-if="canAudit">操作日志<\/th>\s*<\/tr>/,
-  );
-  assert.match(
     milestoneView,
-    /<th v-if="canAudit" class="milestone-col-action">操作日志<\/th>\s*<\/tr>/,
+    /<th v-if="canAudit"[^>]*class="milestone-col-action"[^>]*>操作日志/,
   );
   assert.equal(
     (configView.match(
-      /<th>操作<\/th>\s*<th v-if="canAudit">操作日志<\/th>/g,
+      /<th[^>]*>操作[\s\S]*?<\/th>\s*<th v-if="canAudit"[^>]*>操作日志/g,
     ) ?? []).length,
     3,
   );
@@ -321,10 +317,10 @@ test('pipeline overview keeps sticky id columns and stacked project/study drawer
   assert.match(mainCss, /\.study-row--clickable\s*\{[^}]*cursor:\s*pointer/s);
   assert.match(mainCss, /\.pipeline-table[^{]*th:nth-child\(1\)[\s\S]*?position:\s*sticky/s);
   assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(1\)[\s\S]*?left:\s*0/s);
-  assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(2\)[\s\S]*?left:\s*130px/s);
-  assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(3\)[\s\S]*?left:\s*290px/s);
+  assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(2\)[\s\S]*?left:\s*var\(--col-product\)/s);
+  assert.match(mainCss, /\.pipeline-table[^{]*td:nth-child\(3\)[\s\S]*?left:\s*calc\(var\(--col-product\) \+ var\(--col-program\)\)/s);
   assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*position:\s*sticky[^}]*left:\s*0/s);
-  assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*min-width:\s*510px/s);
+  assert.match(mainCss, /\.area-row-sticky\s*\{[^}]*min-width:\s*calc\(var\(--col-product\) \+ var\(--col-program\) \+ var\(--col-project\)\)/s);
   assert.match(mainCss, /\.pipeline-table[^{]*th:nth-child\(3\)[\s\S]*?border-right:\s*1px/s);
   assert.match(mainCss, /\.status-chip\s*\{[^}]*width:\s*128px/s);
   assert.match(mainCss, /--green-bg:\s*#e5f4eb/);

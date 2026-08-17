@@ -62,7 +62,7 @@ describe('pipeline phase dictionary', () => {
     expect(phaseLabel('IND')).toBe('IND')
     expect(phaseLabel('PHASE_1')).toBe('Ph1')
     expect(phaseLabel('PHASE_2')).toBe('Ph2')
-    expect(phaseLabel('PRE_3')).toBe('Pre-III')
+    expect(phaseLabel('PRE_3')).toBe('Pre-3')
     expect(phaseLabel('PHASE_3')).toBe('Ph3')
     expect(phaseLabel('PRE_NDA')).toBe('PreNDA/BLA')
     expect(phaseLabel('NDA')).toBe('NDA/BLA')

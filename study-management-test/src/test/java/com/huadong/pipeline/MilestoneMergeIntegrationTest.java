@@ -94,12 +94,12 @@ class MilestoneMergeIntegrationTest {
                 """))
         .andExpect(status().isOk());
 
-    // Stage projection should see PreIND-1 as current because PreIND-0 is completed
+    // Stage projection uses frontier: PreIND-0 is the last node with actual dates
     mvc.perform(get("/api/v1/studies/{id}/stage-projection", studyId)
             .with(user("admin@example.com").authorities(authority("milestone.read"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.currentStageCode").value("PreIND"))
-        .andExpect(jsonPath("$.currentMilestoneCode").value("PreIND-1"))
+        .andExpect(jsonPath("$.currentMilestoneCode").value("PreIND-0"))
         .andExpect(jsonPath("$.statusText").value("进行中"));
   }
 

@@ -47,6 +47,11 @@ export interface RegulatoryStatus {
   pre3Completed: boolean
   prendaCompleted: boolean
   ndaCompleted: boolean
+  preindSubStatusLabel?: string | null
+  indSubStatusLabel?: string | null
+  pre3SubStatusLabel?: string | null
+  prendaSubStatusLabel?: string | null
+  ndaSubStatusLabel?: string | null
 }
 
 export interface OverviewProject {

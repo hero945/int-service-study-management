@@ -17,6 +17,8 @@ import {
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
 import { useServerSort } from '../composables/useServerSort'
+import { useResizableColumns } from '../composables/useResizableColumns'
+import ColResizer from '../components/ColResizer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,6 +36,10 @@ const scoreTip = ref<{ left: number; top: number } | null>(null)
 
 const { can } = usePermissions()
 const canCreate = can('risk.create')
+const riskCols = useResizableColumns('risk-list', {
+  riskCode: 120, studyCode: 140, program: 160, function: 100, description: 220,
+  owner: 100, score: 80, level: 80, action: 120, status: 90, updatedAt: 120,
+})
 const functionOptions = computed(() => formOptions.value?.functions ?? [])
 const scoreRuleLines = computed(() => riskScoreRuleLines(formOptions.value?.scoringRule))
 
@@ -181,17 +187,17 @@ onMounted(async () => {
         <table class="data-table risk-table">
           <thead>
             <tr>
-              <th v-bind="sortHeader('riskCode')">Risk ID</th>
-              <th v-bind="sortHeader('studyCode')">Study No.</th>
-              <th>Program / Project</th>
-              <th>功能线</th>
-              <th>风险描述</th>
-              <th>Owner</th>
-              <th v-bind="sortHeader('score')">评分</th>
-              <th v-bind="sortHeader('level')">等级</th>
-              <th>措施</th>
-              <th>Status</th>
-              <th v-bind="sortHeader('updatedAt')">更新时间</th>
+              <th v-bind="sortHeader('riskCode')" :style="riskCols.colStyle('riskCode')">Risk ID<ColResizer col-key="riskCode" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('studyCode')" :style="riskCols.colStyle('studyCode')">Study No.<ColResizer col-key="studyCode" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.colStyle('program')">Program / Project<ColResizer col-key="program" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.colStyle('function')">功能线<ColResizer col-key="function" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.colStyle('description')">风险描述<ColResizer col-key="description" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.colStyle('owner')">Owner<ColResizer col-key="owner" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('score')" :style="riskCols.colStyle('score')">评分<ColResizer col-key="score" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('level')" :style="riskCols.colStyle('level')">等级<ColResizer col-key="level" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.colStyle('action')">措施<ColResizer col-key="action" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.colStyle('status')">Status<ColResizer col-key="status" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('updatedAt')" :style="riskCols.colStyle('updatedAt')">更新时间<ColResizer col-key="updatedAt" :start-resize="riskCols.startResize" /></th>
             </tr>
           </thead>
           <tbody>

@@ -95,7 +95,12 @@ public class StudyApiService implements StudyApi {
         status.indCompleted(),
         status.pre3Completed(),
         status.prendaCompleted(),
-        status.ndaCompleted());
+        status.ndaCompleted(),
+        status.preindSubStatusLabel(),
+        status.indSubStatusLabel(),
+        status.pre3SubStatusLabel(),
+        status.prendaSubStatusLabel(),
+        status.ndaSubStatusLabel());
   }
 
   private StudyResponse toResponse(StudyManager.StudyView study) {

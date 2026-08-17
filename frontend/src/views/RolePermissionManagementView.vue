@@ -17,6 +17,8 @@ import { useNotice } from '../composables/useNotice'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
+import { useResizableColumns } from '../composables/useResizableColumns'
+import ColResizer from '../components/ColResizer.vue'
 
 const permissions = ref<PlatformPermission[]>([])
 const saving = ref(false)
@@ -42,6 +44,9 @@ const MODULE_LABELS: Record<string, string> = {
 }
 
 const { can } = usePermissions()
+const roleCols = useResizableColumns('role-list', {
+  roleCode: 200, dataScope: 120, permissions: 80, assignedUsers: 100, status: 80, actions: 140, audit: 100,
+})
 const canCreate = can('role.create')
 const canUpdate = can('role.update')
 const canDelete = can('role.delete')
@@ -259,13 +264,13 @@ onMounted(loadWithPermissions)
       <div class="data-card role-table-card">
         <table class="data-table role-table">
           <thead><tr>
-            <th v-bind="roleSortHeader('roleCode')">角色</th>
-            <th v-bind="roleSortHeader('dataScope')">数据范围</th>
-            <th v-bind="roleSortHeader('permissions')">权限</th>
-            <th v-bind="roleSortHeader('assignedUsers')">关联账号</th>
-            <th v-bind="roleSortHeader('status')">状态</th>
-            <th>操作</th>
-            <th v-if="canAudit">操作日志</th>
+            <th v-bind="roleSortHeader('roleCode')" :style="roleCols.colStyle('roleCode')">角色<ColResizer col-key="roleCode" :start-resize="roleCols.startResize" /></th>
+            <th v-bind="roleSortHeader('dataScope')" :style="roleCols.colStyle('dataScope')">数据范围<ColResizer col-key="dataScope" :start-resize="roleCols.startResize" /></th>
+            <th v-bind="roleSortHeader('permissions')" :style="roleCols.colStyle('permissions')">权限<ColResizer col-key="permissions" :start-resize="roleCols.startResize" /></th>
+            <th v-bind="roleSortHeader('assignedUsers')" :style="roleCols.colStyle('assignedUsers')">关联账号<ColResizer col-key="assignedUsers" :start-resize="roleCols.startResize" /></th>
+            <th v-bind="roleSortHeader('status')" :style="roleCols.colStyle('status')">状态<ColResizer col-key="status" :start-resize="roleCols.startResize" /></th>
+            <th :style="roleCols.colStyle('actions')">操作<ColResizer col-key="actions" :start-resize="roleCols.startResize" /></th>
+            <th v-if="canAudit" :style="roleCols.colStyle('audit')">操作日志<ColResizer col-key="audit" :start-resize="roleCols.startResize" /></th>
           </tr></thead>
           <tbody>
             <tr v-for="role in sortedRoles" :key="role.id">

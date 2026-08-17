@@ -14,6 +14,8 @@ import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 import { useNotice } from '../composables/useNotice'
 import { session } from '../session'
+import { useResizableColumns } from '../composables/useResizableColumns'
+import ColResizer from '../components/ColResizer.vue'
 
 const users = ref<PlatformUser[]>([])
 const saving = ref(false)
@@ -25,6 +27,7 @@ const pickerKeyword = ref('')
 const drafts = ref(new Map<string, TeamMatrixMember[]>())
 
 const { can } = usePermissions()
+const matrixCols = useResizableColumns('team-matrix', { role: 190 })
 const canEditMode = can('team.edit_mode')
 const canUpdateTeam = can('team.update')
 const canEdit = computed(() => canEditMode.value && canUpdateTeam.value)
@@ -251,12 +254,13 @@ onMounted(load)
           <table class="team-matrix-table">
             <thead>
               <tr>
-                <th scope="col">角色 / Study</th>
-                <th v-for="study in matrix?.studies" :key="study.studyId" scope="col">
+                <th scope="col" :style="matrixCols.colStyle('role')">角色 / Study<ColResizer col-key="role" :start-resize="matrixCols.startResize" /></th>
+                <th v-for="study in matrix?.studies" :key="study.studyId" scope="col" :style="matrixCols.colStyle(`study-${study.studyId}`)">
                   <strong>{{ study.studyCode }}</strong>
                   <button v-if="canAudit" class="text-button" type="button" @click="openRecordAuditLogs(`${study.studyCode} 角色分配记录`, 'STUDY', study.studyId)">角色分配记录</button>
                   <span>{{ study.indication || '—' }}</span>
                   <small>{{ study.currentStatus || '—' }}</small>
+                  <ColResizer :col-key="`study-${study.studyId}`" :start-resize="matrixCols.startResize" />
                 </th>
               </tr>
             </thead>

@@ -74,10 +74,10 @@ class ProjectMilestoneApiIntegrationTest {
   }
 
   @Test
-  void getProjectStageProjectionReflectsFirstUnfinishedNode() throws Exception {
+  void getProjectStageProjectionReflectsReachedFrontierNode() throws Exception {
     long studyId = seedStudy("PM-PROJ-001");
 
-    // Finish PreIND-0, current node should become PreIND-1
+    // Finish PreIND-0; frontier stays on PreIND-0 rather than jumping to the next empty node
     mvc.perform(put("/api/v1/studies/{id}/project-milestones/{code}", studyId, "PreIND-0")
             .with(user("admin@example.com").authorities(authority("project.milestone.update")))
             .with(csrf())
@@ -93,7 +93,7 @@ class ProjectMilestoneApiIntegrationTest {
             .with(user("admin@example.com").authorities(authority("project.milestone.read"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.currentStageCode").value("PreIND"))
-        .andExpect(jsonPath("$.currentMilestoneCode").value("PreIND-1"))
+        .andExpect(jsonPath("$.currentMilestoneCode").value("PreIND-0"))
         .andExpect(jsonPath("$.statusText").value("进行中"));
   }
 

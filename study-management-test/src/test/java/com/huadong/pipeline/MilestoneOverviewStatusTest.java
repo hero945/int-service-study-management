@@ -134,4 +134,45 @@ class MilestoneOverviewStatusTest {
     assertThat(result.mainStageLabel()).isEqualTo("IND");
     assertThat(result.subStatusLabel()).isEqualTo("IND 受理");
   }
+
+  @Test
+  void regulatoryStatusUsesEachStageOwnFrontierWithoutBackfill() {
+    LocalDate s = LocalDate.of(2026, 1, 1);
+    LocalDate e = LocalDate.of(2026, 2, 1);
+    var rows = List.of(
+        pm("PreIND", "PreIND-0", s, e),
+        pm("Pre3", "Pre3-0", s, null));
+
+    var result = manager.deriveRegulatoryStatus(rows);
+    assertThat(result).isNotNull();
+    assertThat(result.preindCompleted()).isFalse();
+    assertThat(result.preindSubStatusLabel()).isEqualTo("PreIND 递交");
+    assertThat(result.indCompleted()).isFalse();
+    assertThat(result.indSubStatusLabel()).isNull();
+    assertThat(result.pre3Completed()).isFalse();
+    assertThat(result.pre3SubStatusLabel()).isEqualTo("Pre3 递交");
+  }
+
+  @Test
+  void projectionKeepsFrontierInsteadOfNextEmptyNode() {
+    var nodes = List.of(
+        node("PreIND", "PreIND-0", "PreIND 递交", LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 10)),
+        node("PreIND", "PreIND-1", "PreIND 反馈-临床医学", null, null));
+    var result = MilestoneManager.projectionFromNodes(nodes);
+    assertThat(result.currentMilestoneCode()).isEqualTo("PreIND-0");
+    assertThat(result.currentMilestoneName()).isEqualTo("PreIND 递交");
+    assertThat(result.statusText()).isEqualTo("进行中");
+  }
+
+  private com.huadong.pipeline.domain.milestone.ProjectMilestone pm(
+      String stage, String code, LocalDate start, LocalDate end) {
+    return new com.huadong.pipeline.domain.milestone.ProjectMilestone(
+        1L, 1L, stage, code, null, null, start, end, null, null);
+  }
+
+  private MilestoneManager.MilestoneNodeState node(
+      String stage, String code, String label, LocalDate start, LocalDate end) {
+    return new MilestoneManager.MilestoneNodeState(
+        1L, stage, stage, 0, code, label, 0, null, null, start, end, null, "PROJECT");
+  }
 }

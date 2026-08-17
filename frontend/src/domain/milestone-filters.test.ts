@@ -22,7 +22,7 @@ describe('PIPELINE_PHASE_STATUS_OPTIONS', () => {
       'IND',
       'Ph1',
       'Ph2',
-      'Pre-III',
+      'Pre-3',
       'Ph3',
       'PreNDA/BLA',
       'NDA/BLA',

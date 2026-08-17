@@ -37,7 +37,9 @@ import {
 } from '../domain/pipeline-status'
 import {
   EXPORT_STATUS,
+  isRegulatoryStageCode,
   deriveMilestoneExportStatus,
+  deriveMilestoneProjection,
   deriveOverviewCompletionFlags,
   flattenMilestoneNodes,
 } from '../domain/milestone-status'
@@ -447,6 +449,8 @@ const mockProjectRegulatoryStatus: Record<string, import('./types').RegulatorySt
     pre3Completed: false,
     prendaCompleted: false,
     ndaCompleted: false,
+    preindSubStatusLabel: 'PreIND 获批',
+    indSubStatusLabel: 'IND 获批',
   },
   'HDM1005-OBE': {
     mainStageCode: 'Pre3',
@@ -457,6 +461,9 @@ const mockProjectRegulatoryStatus: Record<string, import('./types').RegulatorySt
     pre3Completed: false,
     prendaCompleted: false,
     ndaCompleted: false,
+    preindSubStatusLabel: 'PreIND 获批',
+    indSubStatusLabel: 'IND 获批',
+    pre3SubStatusLabel: 'Pre3 反馈-临床医学',
   },
 }
 
@@ -553,6 +560,12 @@ function applyMilestoneFrontier(
     node.status = 'NOT_STARTED'
     node.deviationNote = null
   }
+}
+
+function projectionFromMilestonePage(page: {
+  groups: { stageCode: string; stageName: string; nodes: MilestoneNode[] }[]
+}): StageProjection {
+  return deriveMilestoneProjection(page.groups)
 }
 
 function buildBaseMilestones(studyCode: string): MilestonePage {
@@ -671,8 +684,6 @@ function buildStudyMilestones(studyId: number, studyCode: string): MilestonePage
   return page
 }
 
-const PROJECT_SOURCE_STAGE_CODES = ['PreIND', 'IND', 'Pre3', 'PreNDA_BLA', 'NDA_BLA']
-
 function mergeProjectMilestonesIntoStudy(studyPage: MilestonePage, study: Study | undefined): MilestonePage {
   if (!study || !study.projectCode) return studyPage
   let projectPage = mockProjectMilestones.get(study.projectCode)
@@ -684,7 +695,7 @@ function mergeProjectMilestonesIntoStudy(studyPage: MilestonePage, study: Study 
   return {
     ...studyPage,
     groups: studyPage.groups.map((group) => {
-      if (!PROJECT_SOURCE_STAGE_CODES.includes(group.stageCode)) return group
+      if (!isRegulatoryStageCode(group.stageCode)) return group
       const projectGroup = projectGroups.get(group.stageCode)
       if (!projectGroup) return group
       return {
@@ -1814,31 +1825,7 @@ export function createMockApiClient(): ApiClient {
       await delay(100)
       const page = mockMilestones.get(studyId)
       if (!page) throw new Error('Study 不存在')
-      for (const group of page.groups) {
-        for (const node of group.nodes) {
-          if (node.status === 'IN_PROGRESS') {
-            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
-              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
-              statusText: '进行中' }
-          }
-        }
-      }
-      // Check if all completed
-      const allCompleted = page.groups.every(g => g.nodes.every(n => n.status === 'COMPLETED'))
-      if (allCompleted) {
-        return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '已完成' }
-      }
-      // Find first not-started
-      for (const group of page.groups) {
-        for (const node of group.nodes) {
-          if (node.status === 'NOT_STARTED') {
-            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
-              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
-              statusText: '未开始' }
-          }
-        }
-      }
-      return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '' }
+      return projectionFromMilestonePage(page)
     },
     async getProjectMilestones(studyId) {
       await delay(200)
@@ -1872,29 +1859,7 @@ export function createMockApiClient(): ApiClient {
     async getProjectStageProjection(studyId) {
       await delay(100)
       const page = await this.getProjectMilestones(studyId)
-      for (const group of page.groups) {
-        for (const node of group.nodes) {
-          if (node.status === 'IN_PROGRESS') {
-            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
-              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
-              statusText: '进行中' }
-          }
-        }
-      }
-      const allCompleted = page.groups.every(g => g.nodes.every(n => n.status === 'COMPLETED'))
-      if (allCompleted) {
-        return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '已完成' }
-      }
-      for (const group of page.groups) {
-        for (const node of group.nodes) {
-          if (node.status === 'NOT_STARTED') {
-            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
-              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
-              statusText: '未开始' }
-          }
-        }
-      }
-      return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '' }
+      return projectionFromMilestonePage(page)
     },
   }
 }

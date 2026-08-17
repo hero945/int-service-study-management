@@ -16,6 +16,8 @@ import { useNotice } from '../composables/useNotice'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
+import { useResizableColumns } from '../composables/useResizableColumns'
+import ColResizer from '../components/ColResizer.vue'
 
 const saving = ref(false)
 const filters = reactive({ keyword: '', roleFilter: '' })
@@ -42,6 +44,9 @@ const form = ref({
 const DEFAULT_PASSWORD = 'Hd123456'
 
 const { can } = usePermissions()
+const accountCols = useResizableColumns('account-list', {
+  name: 120, username: 180, role: 160, scopeMode: 120, visibleScope: 160, status: 80, actions: 180, audit: 100,
+})
 const canCreate = can('account.create')
 const canUpdate = can('account.update')
 const canAssignRoles = can('account.assignRole')
@@ -291,14 +296,14 @@ onUnmounted(() => {
         <table class="data-table">
           <thead>
             <tr>
-              <th v-bind="userSortHeader('name')">姓名</th>
-              <th v-bind="userSortHeader('username')">登录邮箱</th>
-              <th v-bind="userSortHeader('role')">角色</th>
-              <th v-bind="userSortHeader('scopeMode')">范围模式</th>
-              <th v-bind="userSortHeader('visibleScope')">可见范围</th>
-              <th v-bind="userSortHeader('status')">状态</th>
-              <th class="account-actions-col">操作</th>
-              <th v-if="canAudit">操作日志</th>
+              <th v-bind="userSortHeader('name')" :style="accountCols.colStyle('name')">姓名<ColResizer col-key="name" :start-resize="accountCols.startResize" /></th>
+              <th v-bind="userSortHeader('username')" :style="accountCols.colStyle('username')">登录邮箱<ColResizer col-key="username" :start-resize="accountCols.startResize" /></th>
+              <th v-bind="userSortHeader('role')" :style="accountCols.colStyle('role')">角色<ColResizer col-key="role" :start-resize="accountCols.startResize" /></th>
+              <th v-bind="userSortHeader('scopeMode')" :style="accountCols.colStyle('scopeMode')">范围模式<ColResizer col-key="scopeMode" :start-resize="accountCols.startResize" /></th>
+              <th v-bind="userSortHeader('visibleScope')" :style="accountCols.colStyle('visibleScope')">可见范围<ColResizer col-key="visibleScope" :start-resize="accountCols.startResize" /></th>
+              <th v-bind="userSortHeader('status')" :style="accountCols.colStyle('status')">状态<ColResizer col-key="status" :start-resize="accountCols.startResize" /></th>
+              <th class="account-actions-col" :style="accountCols.colStyle('actions')">操作<ColResizer col-key="actions" :start-resize="accountCols.startResize" /></th>
+              <th v-if="canAudit" :style="accountCols.colStyle('audit')">操作日志<ColResizer col-key="audit" :start-resize="accountCols.startResize" /></th>
             </tr>
           </thead>
           <tbody>

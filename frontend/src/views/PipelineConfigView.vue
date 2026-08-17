@@ -17,6 +17,8 @@ import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
 import { useNotice } from '../composables/useNotice'
 import { useEscapeClose } from '../composables/useEscapeClose'
+import { useResizableColumns } from '../composables/useResizableColumns'
+import ColResizer from '../components/ColResizer.vue'
 
 const phaseStatusOptions = PIPELINE_CONFIG_PHASE_STATUS_OPTIONS
 
@@ -50,6 +52,15 @@ const studyDeleteSaving = ref(false)
 const filters = reactive({ keyword: '' })
 
 const { can } = usePermissions()
+const configStudyCols = useResizableColumns('pipeline-config-studies', {
+  source: 90, origin: 90, product: 110, program: 110, moa: 110, project: 120, ta: 90, indication: 140, studyNo: 140, phaseStatus: 110, actions: 120, audit: 90,
+})
+const configProgramCols = useResizableColumns('pipeline-config-programs', {
+  program: 140, source: 90, origin: 90, product: 120, moa: 140, actions: 160, audit: 90,
+})
+const configDrawerCols = useResizableColumns('pipeline-config-drawer-projects', {
+  project: 280, study: 80, actions: 140, audit: 90,
+})
 const canCreate = can('config.create')
 const canUpdate = can('config.update')
 const canDelete = can('config.delete')
@@ -471,18 +482,18 @@ onUnmounted(() => {
       </div>
       <PageState :loading :empty="!rows.length">
         <div class="data-card config-table-card"><table class="data-table config-table"><thead><tr>
-          <th v-bind="rowSortHeader('source')">Source</th>
-          <th v-bind="rowSortHeader('origin')">Origin</th>
-          <th v-bind="rowSortHeader('product')">Product</th>
-          <th v-bind="rowSortHeader('program')">Program</th>
-          <th v-bind="rowSortHeader('moa')">MOA</th>
-          <th v-bind="rowSortHeader('project')">Project</th>
-          <th v-bind="rowSortHeader('ta')">TA</th>
-          <th v-bind="rowSortHeader('indication')">Indication</th>
-          <th v-bind="rowSortHeader('studyNo')">Study No.</th>
-          <th v-bind="rowSortHeader('phaseStatus')">Phase Status</th>
-          <th>操作</th>
-          <th v-if="canAudit">操作日志</th>
+          <th v-bind="rowSortHeader('source')" :style="configStudyCols.colStyle('source')">Source<ColResizer col-key="source" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('origin')" :style="configStudyCols.colStyle('origin')">Origin<ColResizer col-key="origin" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('product')" :style="configStudyCols.colStyle('product')">Product<ColResizer col-key="product" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('program')" :style="configStudyCols.colStyle('program')">Program<ColResizer col-key="program" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('moa')" :style="configStudyCols.colStyle('moa')">MOA<ColResizer col-key="moa" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('project')" :style="configStudyCols.colStyle('project')">Project<ColResizer col-key="project" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('ta')" :style="configStudyCols.colStyle('ta')">TA<ColResizer col-key="ta" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('indication')" :style="configStudyCols.colStyle('indication')">Indication<ColResizer col-key="indication" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('studyNo')" :style="configStudyCols.colStyle('studyNo')">Study No.<ColResizer col-key="studyNo" :start-resize="configStudyCols.startResize" /></th>
+          <th v-bind="rowSortHeader('phaseStatus')" :style="configStudyCols.colStyle('phaseStatus')">Phase Status<ColResizer col-key="phaseStatus" :start-resize="configStudyCols.startResize" /></th>
+          <th :style="configStudyCols.colStyle('actions')">操作<ColResizer col-key="actions" :start-resize="configStudyCols.startResize" /></th>
+          <th v-if="canAudit" :style="configStudyCols.colStyle('audit')">操作日志<ColResizer col-key="audit" :start-resize="configStudyCols.startResize" /></th>
         </tr></thead><tbody><tr v-for="row in sortedRows" :key="row.studyId">
           <td>{{ row.sourceLabel }}</td><td>{{ row.originLabel }}</td><td>{{ row.productName }}</td><td class="mono">{{ row.programCode }}</td>
           <td>{{ row.moa || '—' }}</td><td class="mono">{{ row.projectCode }}</td><td>{{ row.therapeuticAreaName }}</td><td>{{ row.indication }}</td>
@@ -507,13 +518,13 @@ onUnmounted(() => {
       <div class="page-toolbar entity-toolbar"><div><strong>Program 管理</strong><span>点击 Program 行展开 Project 列表并直接编辑；新增 Project 在「管理」抽屉中维护。</span></div><button v-if="canCreate" class="primary-button" type="button" @click="openProgram()">＋ 新增 Program</button></div>
       <PageState :loading :empty="!programs.length">
         <div class="data-card"><table class="data-table entity-program-table"><thead><tr>
-          <th v-bind="programSortHeader('program')">Program</th>
-          <th v-bind="programSortHeader('source')">Source</th>
-          <th v-bind="programSortHeader('origin')">Origin</th>
-          <th v-bind="programSortHeader('product')">Product</th>
-          <th v-bind="programSortHeader('moa')">MOA</th>
-          <th>操作</th>
-          <th v-if="canAudit">操作日志</th>
+          <th v-bind="programSortHeader('program')" :style="configProgramCols.colStyle('program')">Program<ColResizer col-key="program" :start-resize="configProgramCols.startResize" /></th>
+          <th v-bind="programSortHeader('source')" :style="configProgramCols.colStyle('source')">Source<ColResizer col-key="source" :start-resize="configProgramCols.startResize" /></th>
+          <th v-bind="programSortHeader('origin')" :style="configProgramCols.colStyle('origin')">Origin<ColResizer col-key="origin" :start-resize="configProgramCols.startResize" /></th>
+          <th v-bind="programSortHeader('product')" :style="configProgramCols.colStyle('product')">Product<ColResizer col-key="product" :start-resize="configProgramCols.startResize" /></th>
+          <th v-bind="programSortHeader('moa')" :style="configProgramCols.colStyle('moa')">MOA<ColResizer col-key="moa" :start-resize="configProgramCols.startResize" /></th>
+          <th :style="configProgramCols.colStyle('actions')">操作<ColResizer col-key="actions" :start-resize="configProgramCols.startResize" /></th>
+          <th v-if="canAudit" :style="configProgramCols.colStyle('audit')">操作日志<ColResizer col-key="audit" :start-resize="configProgramCols.startResize" /></th>
         </tr></thead><tbody>
           <template v-for="program in sortedPrograms" :key="program.id">
             <tr class="program-row" @click="toggleProgramExpand(program)"><td class="mono strong"><span class="expand-caret" :class="{ open: expandedProgramIds.has(program.id) }">▸</span>{{ program.code }}</td><td>{{ program.sourceLabel }}</td><td>{{ program.originLabel }}</td><td>{{ program.productName }}</td><td>{{ program.moa || '—' }}</td><td class="row-actions"><button type="button" @click.stop="manageProgram(program)">管理</button><button v-if="canUpdate" type="button" @click.stop="openProgram(program)">编辑</button><button v-if="canDelete" class="danger-link" type="button" @click.stop="remove('program', program.id, program.code)">删除</button></td><td v-if="canAudit"><button class="text-button" type="button" @click.stop="openRecordAuditLogs(`${program.code} 操作日志`, 'PROGRAM', program.id)">查看</button></td></tr>
@@ -542,7 +553,12 @@ onUnmounted(() => {
         <div v-if="!selectedProjects.length" class="empty-inline">该 Program 尚无 Project</div>
         <div v-else class="drawer-project-list">
           <table class="data-table drawer-project-table">
-            <thead><tr><th>Project</th><th>Study</th><th>操作</th><th v-if="canAudit">操作日志</th></tr></thead>
+            <thead><tr>
+              <th :style="configDrawerCols.colStyle('project')">Project<ColResizer col-key="project" :start-resize="configDrawerCols.startResize" /></th>
+              <th :style="configDrawerCols.colStyle('study')">Study<ColResizer col-key="study" :start-resize="configDrawerCols.startResize" /></th>
+              <th :style="configDrawerCols.colStyle('actions')">操作<ColResizer col-key="actions" :start-resize="configDrawerCols.startResize" /></th>
+              <th v-if="canAudit" :style="configDrawerCols.colStyle('audit')">操作日志<ColResizer col-key="audit" :start-resize="configDrawerCols.startResize" /></th>
+            </tr></thead>
             <tbody><tr v-for="project in selectedProjects" :key="project.id">
               <td><strong class="mono"><LabeledValue label="Project:" :value="project.code" /></strong><p><LabeledValue label="Indication:" :value="project.indication" /></p><small><LabeledValue label="TA:" :value="project.therapeuticAreaName" /></small></td>
               <td><LabeledValue label="Study:" :value="project.studyCount" /></td>

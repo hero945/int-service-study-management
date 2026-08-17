@@ -10,6 +10,8 @@ import { milestoneNodeStatusClass, milestoneNodeStatusLabel } from '../domain/mi
 import { riskLevelLabel, riskLevelTone, riskStatusLabel } from '../domain/risk-labels'
 import { useEscapeClose } from '../composables/useEscapeClose'
 import { usePermissions } from '../composables/usePermissions'
+import { useResizableColumns } from '../composables/useResizableColumns'
+import ColResizer from './ColResizer.vue'
 
 const props = defineProps<{
   open: boolean
@@ -24,6 +26,9 @@ useEscapeClose(toRef(props, 'open'), () => emit('close'))
 type TabKey = 'milestone' | 'team' | 'risk'
 const activeTab = ref<TabKey>('milestone')
 const { can } = usePermissions()
+const drawerMsCols = useResizableColumns('study-drawer-milestones', {
+  name: 180, v1: 100, v2: 100, start: 110, end: 110, note: 160,
+})
 const canReadMilestone = can('milestone.read')
 const canReadStudy = can('study.read')
 const canReadRisk = can('risk.read')
@@ -182,7 +187,14 @@ const tabs = computed(() => {
                 <div v-for="group in milestoneData.groups" :key="group.stageCode" class="ms-group">
                   <div class="ms-group-title">{{ group.stageName }}</div>
                   <table class="data-table ms-table">
-                    <thead><tr><th>Milestone</th><th>Ver 1.0</th><th>Ver 2.0</th><th>Actual Start</th><th>Actual End</th><th>Note</th></tr></thead>
+                    <thead><tr>
+                      <th :style="drawerMsCols.colStyle('name')">Milestone<ColResizer col-key="name" :start-resize="drawerMsCols.startResize" /></th>
+                      <th :style="drawerMsCols.colStyle('v1')">Ver 1.0<ColResizer col-key="v1" :start-resize="drawerMsCols.startResize" /></th>
+                      <th :style="drawerMsCols.colStyle('v2')">Ver 2.0<ColResizer col-key="v2" :start-resize="drawerMsCols.startResize" /></th>
+                      <th :style="drawerMsCols.colStyle('start')">Actual Start<ColResizer col-key="start" :start-resize="drawerMsCols.startResize" /></th>
+                      <th :style="drawerMsCols.colStyle('end')">Actual End<ColResizer col-key="end" :start-resize="drawerMsCols.startResize" /></th>
+                      <th :style="drawerMsCols.colStyle('note')">Note<ColResizer col-key="note" :start-resize="drawerMsCols.startResize" /></th>
+                    </tr></thead>
                     <tbody>
                       <tr v-for="node in group.nodes" :key="node.milestoneCode">
                         <td class="ms-name">

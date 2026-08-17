@@ -48,6 +48,11 @@ const regulatory = (init: Partial<RegulatoryStatus>): RegulatoryStatus => ({
   pre3Completed: init.pre3Completed ?? false,
   prendaCompleted: init.prendaCompleted ?? false,
   ndaCompleted: init.ndaCompleted ?? false,
+  preindSubStatusLabel: init.preindSubStatusLabel ?? null,
+  indSubStatusLabel: init.indSubStatusLabel ?? null,
+  pre3SubStatusLabel: init.pre3SubStatusLabel ?? null,
+  prendaSubStatusLabel: init.prendaSubStatusLabel ?? null,
+  ndaSubStatusLabel: init.ndaSubStatusLabel ?? null,
 })
 
 describe('groupByProject', () => {
@@ -192,19 +197,19 @@ describe('getProjectCell', () => {
     })
     // 监管列：直接读取 project 维度状态
     expect(getProjectCell(studies, reg, 'PRE_IND')).toMatchObject({
-      label: '已完成', tone: 'green', subText: 'PRE_IND', clickable: false,
+      label: '已完成', tone: 'green', subText: 'PRE_IND', clickable: true, clickTarget: 'project-milestone',
     })
     expect(getProjectCell(studies, reg, 'IND')).toMatchObject({
-      label: '已完成', tone: 'green', clickable: false,
+      label: '已完成', tone: 'green', clickable: true, clickTarget: 'project-milestone',
     })
     expect(getProjectCell(studies, reg, 'PRE_3')).toMatchObject({
-      label: '已完成', tone: 'green', clickable: false,
+      label: '已完成', tone: 'green', clickable: true,
     })
     expect(getProjectCell(studies, reg, 'PRE_NDA')).toMatchObject({
-      label: '已完成', tone: 'green', clickable: false,
+      label: '已完成', tone: 'green', clickable: true,
     })
     expect(getProjectCell(studies, reg, 'NDA')).toMatchObject({
-      label: '已完成', tone: 'green', clickable: false,
+      label: '已完成', tone: 'green', clickable: true,
     })
     // 普通列：各自阶段的 Study 独立显示；Ph3 列同时列出两条 Study
     expect(getProjectCell(studies, reg, 'PHASE_1')).toMatchObject({
@@ -278,7 +283,7 @@ describe('getProjectCell', () => {
     expect(hasChipContent({ label: '进行中', tone: 'blue', clickable: true })).toBe(true)
   })
 
-  it('regulatory columns read from project-level status and do not link to a study', () => {
+  it('regulatory columns read from project-level status and open project milestones', () => {
     const reg = regulatory({
       mainStageCode: 'PreIND',
       mainStageLabel: 'PreIND',
@@ -305,7 +310,9 @@ describe('getProjectCell', () => {
       label: 'PreIND 反馈-药学',
       subText: 'PreIND',
       tone: 'blue',
-      clickable: false,
+      clickable: true,
+      clickTarget: 'project-milestone',
+      focusStage: 'PreIND',
     })
     expect(getProjectCell(studies, reg, 'IND')).toMatchObject({ label: '—', tone: 'empty' })
     expect(getProjectCell(studies, reg, 'PRE_3')).toMatchObject({ label: '—', tone: 'empty' })
@@ -339,7 +346,7 @@ describe('getProjectCell', () => {
       label: 'Pre3 反馈-数统',
       subText: 'Pre3',
       tone: 'blue',
-      clickable: false,
+      clickable: true,
     })
     expect(getProjectCell(studies, reg, 'PRE_IND')).toMatchObject({ label: '已完成', tone: 'green' })
     expect(getProjectCell(studies, reg, 'IND')).toMatchObject({ label: '已完成', tone: 'green' })
@@ -361,10 +368,10 @@ describe('getProjectCell', () => {
       subStatusLabel: 'LPI',
     })
     expect(getProjectCell([phase1], reg, 'PRE_IND')).toMatchObject({
-      label: '已完成', tone: 'green', clickable: false,
+      label: '已完成', tone: 'green', clickable: true,
     })
     expect(getProjectCell([phase1], reg, 'IND')).toMatchObject({
-      label: '已完成', tone: 'green', clickable: false,
+      label: '已完成', tone: 'green', clickable: true,
     })
     // PRE-3 尚未到达且未完成 → 空
     expect(getProjectCell([phase1], reg, 'PRE_3')).toMatchObject({ label: '—', tone: 'empty' })
@@ -385,8 +392,74 @@ describe('getProjectCell', () => {
       subStatusLabel: '方案定稿',
     })
     expect(getProjectCell([phase31], reg, 'PRE_3')).toMatchObject({
-      label: '已完成', tone: 'green', clickable: false,
+      label: '已完成', tone: 'green', clickable: true,
     })
+  })
+
+  it('does not mark earlier regulatory columns completed just because a later stage started', () => {
+    const reg = regulatory({
+      mainStageCode: 'Pre3',
+      mainStageLabel: 'Pre3',
+      subStatusLabel: 'Pre3 反馈-数统',
+      preindSubStatusLabel: 'PreIND 递交',
+      pre3SubStatusLabel: 'Pre3 反馈-数统',
+    })
+    expect(getProjectCell([], reg, 'PRE_IND')).toMatchObject({
+      label: 'PreIND 递交',
+      tone: 'blue',
+      clickable: true,
+      clickTarget: 'project-milestone',
+      focusStage: 'PreIND',
+    })
+    expect(getProjectCell([], reg, 'IND')).toMatchObject({ label: '—', tone: 'empty', clickable: true })
+    expect(getProjectCell([], reg, 'PRE_3')).toMatchObject({
+      label: 'Pre3 反馈-数统',
+      tone: 'blue',
+      clickable: true,
+    })
+  })
+
+  it('adds hover tip fields for regulatory cells including PreNDA and NDA', () => {
+    const studies = [ms({
+      phase: 'PHASE_1',
+      code: 'HDM-S01',
+      productName: 'HDM1005',
+      plName: '张伟',
+      pmName: '李静',
+      updatedAt: '2026-05-12T00:00:00',
+      openRiskCount: 3,
+    })]
+    const reg = regulatory({
+      mainStageCode: 'PreNDA_BLA',
+      mainStageLabel: 'PreNDA/BLA',
+      subStatusLabel: 'PreNDA 递交',
+      preindCompleted: true,
+      indCompleted: true,
+      pre3Completed: true,
+      prendaSubStatusLabel: 'PreNDA 递交',
+    })
+    expect(getProjectCell(studies, reg, 'PRE_IND')).toMatchObject({
+      label: '已完成',
+      tipStage: 'Pre-IND',
+      tipStatus: '已完成',
+      tipOwner: '张伟 / 李静',
+      tipUpdated: '2026-05',
+      explanation: 'HDM1005',
+    })
+    expect(getProjectCell(studies, reg, 'PRE_IND').openRiskCount).toBeUndefined()
+    expect(getProjectCell(studies, reg, 'PRE_NDA')).toMatchObject({
+      label: 'PreNDA 递交',
+      tone: 'blue',
+      tipStage: 'PreNDA/BLA',
+      tipStatus: 'PreNDA 递交',
+      tipOwner: '张伟 / 李静',
+      explanation: 'HDM1005',
+    })
+    expect(getProjectCell(studies, reg, 'NDA')).toMatchObject({
+      label: '—',
+      tone: 'empty',
+    })
+    expect(getProjectCell(studies, reg, 'NDA').tipStage).toBeUndefined()
   })
 })
 

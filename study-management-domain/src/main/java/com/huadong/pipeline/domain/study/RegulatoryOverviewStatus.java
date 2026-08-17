@@ -14,5 +14,10 @@ public record RegulatoryOverviewStatus(
     boolean pre3Completed,
     boolean prendaCompleted,
     boolean ndaCompleted,
+    String preindSubStatusLabel,
+    String indSubStatusLabel,
+    String pre3SubStatusLabel,
+    String prendaSubStatusLabel,
+    String ndaSubStatusLabel,
     LocalDateTime updatedAt) {
 }

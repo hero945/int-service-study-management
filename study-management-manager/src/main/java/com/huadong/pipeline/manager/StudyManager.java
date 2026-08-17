@@ -237,6 +237,11 @@ public class StudyManager {
         status.pre3Completed(),
         status.prendaCompleted(),
         status.ndaCompleted(),
+        status.preindSubStatusLabel(),
+        status.indSubStatusLabel(),
+        status.pre3SubStatusLabel(),
+        status.prendaSubStatusLabel(),
+        status.ndaSubStatusLabel(),
         null);
   }
 

@@ -1,6 +1,7 @@
 import {
   CLINICAL_PHASE_CODES,
   normalizePhase,
+  phaseLabel,
   type PipelinePhase,
   type PipelineTone,
   type Study,
@@ -96,8 +97,12 @@ export interface ProjectCell {
   explanation?: string
   clickable: boolean
   studyId?: number
-  /** 副文本：主状态（stage 名，灰色，仅在当前阶段列且未完成时显示） */
+  /** 副文本：Study 编号或监管阶段名 */
   subText?: string
+  /** study-milestone 进 Study 里程碑；project-milestone 进注册里程碑 */
+  clickTarget?: 'study-milestone' | 'project-milestone'
+  /** 打开里程碑页时定位的 stage code */
+  focusStage?: string
   tipStage?: string
   tipStatus?: string
   tipUpdated?: string
@@ -224,53 +229,67 @@ const REGULATORY_STAGE_BY_PHASE: Partial<Record<PipelinePhase, string>> = {
   NDA: 'NDA_BLA',
 }
 
-/** 将 mainStage code/label 归一到可比较的排序索引（与 MilestoneDefinition 一致） */
-function milestoneStageRank(codeOrLabel: string | null | undefined): number {
-  if (!codeOrLabel) return -1
-  const aliases: Record<string, number> = {
-    PreIND: 0,
-    IND: 1,
-    Pre3: 2,
-    Protocol: 3,
-    SSU: 4,
-    Enrollment: 5,
-    IA: 6,
-    Data_Report: 7,
-    'Data & Report': 7,
-    PreNDA_BLA: 8,
-    'PreNDA/BLA': 8,
-    NDA_BLA: 9,
-    'NDA/BLA': 9,
-  }
-  return aliases[codeOrLabel.trim()] ?? -1
+export function regulatoryStageByPhase(phase: PipelinePhase): string | undefined {
+  return REGULATORY_STAGE_BY_PHASE[phase]
+}
+
+export function isRegulatoryPhase(phase: PipelinePhase): boolean {
+  return Boolean(REGULATORY_STAGE_BY_PHASE[phase])
+}
+
+function firstTipStudy(studies: CellStudy[]): CellStudy | undefined {
+  return [...studies].sort((a, b) => (a.code ?? '').localeCompare(b.code ?? ''))[0]
+}
+
+function withRegulatoryTip(
+  cell: ProjectCell,
+  targetPhase: PipelinePhase,
+  status: string,
+  studies: CellStudy[],
+): ProjectCell {
+  const tipStudy = firstTipStudy(studies)
+  return withTip(
+    cell,
+    phaseLabel(targetPhase) || targetPhase,
+    status,
+    tipStudy ? { ...tipStudy, openRiskCount: 0 } : undefined,
+    tipStudy?.productName?.trim() || undefined,
+  )
 }
 
 function completedRegulatoryCell(
   targetPhase: PipelinePhase,
-  stageLabel: string,
 ): ProjectCell {
   return {
     label: '已完成',
     tone: 'green',
-    clickable: false,
+    clickable: true,
+    clickTarget: 'project-milestone',
+    focusStage: REGULATORY_STAGE_BY_PHASE[targetPhase],
     subText: targetPhase,
   }
 }
 
 const CLINICAL_PHASES: PipelinePhase[] = ['PHASE_1', 'PHASE_2', 'PHASE_3']
 
+const REGULATORY_SUBSTATUS_BY_PHASE: Partial<Record<PipelinePhase, keyof RegulatoryStatus>> = {
+  PRE_IND: 'preindSubStatusLabel',
+  IND: 'indSubStatusLabel',
+  PRE_3: 'pre3SubStatusLabel',
+  PRE_NDA: 'prendaSubStatusLabel',
+  NDA: 'ndaSubStatusLabel',
+}
+
 /**
- * PreIND / IND / PRE-3 / PRE-NDA / NDA 列：读取 project 维度的监管里程碑状态。
+ * PreIND / IND / PRE-3 / PRE-NDA / NDA 列：只看该阶段自己的子节点，不因后面阶段已开始而回填「已完成」。
  */
 function getRegulatoryMilestoneCell(
   regulatory: RegulatoryStatus | undefined,
   targetPhase: PipelinePhase,
+  studies: CellStudy[] = [],
 ): ProjectCell | null {
   const stageCode = REGULATORY_STAGE_BY_PHASE[targetPhase]
   if (!stageCode || !regulatory) return null
-
-  const targetRank = milestoneStageRank(stageCode)
-  const currentRank = milestoneStageRank(regulatory.mainStageCode)
 
   const completedMap: Partial<Record<PipelinePhase, keyof RegulatoryStatus>> = {
     PRE_IND: 'preindCompleted',
@@ -279,30 +298,42 @@ function getRegulatoryMilestoneCell(
     PRE_NDA: 'prendaCompleted',
     NDA: 'ndaCompleted',
   }
-  const completed = completedMap[targetPhase] ? regulatory[completedMap[targetPhase]!] : false
-
-  // 已完成：明确标记 或 当前阶段已越过目标阶段
-  if (completed || (targetRank >= 0 && currentRank > targetRank)) {
-    return completedRegulatoryCell(targetPhase, stageCode)
+  const completed = completedMap[targetPhase] ? Boolean(regulatory[completedMap[targetPhase]!]) : false
+  if (completed) {
+    return withRegulatoryTip(completedRegulatoryCell(targetPhase), targetPhase, '已完成', studies)
   }
 
-  // 尚未到达该阶段
-  if (currentRank < targetRank) {
-    return { label: '—', tone: 'empty', clickable: false }
-  }
-
-  // 正在该阶段：显示子节点
-  const subStatus = trimmedOrUndefined(regulatory.subStatusLabel)
+  const subKey = REGULATORY_SUBSTATUS_BY_PHASE[targetPhase]
+  const ownSubStatus = subKey ? trimmedOrUndefined(regulatory[subKey] as string | null) : undefined
+  const fallbackSub = stageCode === (regulatory.mainStageCode ?? '')
+    ? trimmedOrUndefined(regulatory.subStatusLabel)
+    : undefined
+  const subStatus = ownSubStatus ?? fallbackSub
   if (subStatus) {
-    return {
-      label: subStatus,
-      tone: 'blue',
-      clickable: false,
-      subText: trimmedOrUndefined(regulatory.mainStageLabel) ?? stageCode,
-    }
+    return withRegulatoryTip(
+      {
+        label: subStatus,
+        tone: 'blue',
+        clickable: true,
+        clickTarget: 'project-milestone',
+        focusStage: stageCode,
+        subText: trimmedOrUndefined(regulatory.mainStageLabel) && stageCode === (regulatory.mainStageCode ?? '')
+          ? (trimmedOrUndefined(regulatory.mainStageLabel) ?? stageCode)
+          : stageCode,
+      },
+      targetPhase,
+      subStatus,
+      studies,
+    )
   }
 
-  return { label: '—', tone: 'empty', clickable: false }
+  return {
+    label: '—',
+    tone: 'empty',
+    clickable: true,
+    clickTarget: 'project-milestone',
+    focusStage: stageCode,
+  }
 }
 
 function studyToProjectCell(study: CellStudy, targetPhase: PipelinePhase): ProjectCell {
@@ -312,6 +343,8 @@ function studyToProjectCell(study: CellStudy, targetPhase: PipelinePhase): Proje
         label: '已完成',
         tone: 'green',
         clickable: true,
+        clickTarget: 'study-milestone',
+        focusStage: trimmedOrUndefined(study.mainStageCode),
         studyId: study.id,
         subText: study.code,
       },
@@ -328,6 +361,8 @@ function studyToProjectCell(study: CellStudy, targetPhase: PipelinePhase): Proje
         label: subStatus,
         tone: 'blue',
         clickable: true,
+        clickTarget: 'study-milestone',
+        focusStage: trimmedOrUndefined(study.mainStageCode),
         studyId: study.id,
         subText: study.code,
       },
@@ -343,6 +378,8 @@ function studyToProjectCell(study: CellStudy, targetPhase: PipelinePhase): Proje
       label: fallback,
       tone: 'blue',
       clickable: true,
+      clickTarget: 'study-milestone',
+      focusStage: trimmedOrUndefined(study.mainStageCode),
       studyId: study.id,
       subText: study.code,
     },
@@ -363,9 +400,9 @@ export function getProjectPhaseCells(
   regulatory: RegulatoryStatus | undefined,
   targetPhase: PipelinePhase,
 ): ProjectCell[] {
-  const regulatoryCell = getRegulatoryMilestoneCell(regulatory, targetPhase)
+  const regulatoryCell = getRegulatoryMilestoneCell(regulatory, targetPhase, studies)
   if (regulatoryCell) {
-    return [ensureRenderableCell(regulatoryCell)]
+    return [hasChipContent(regulatoryCell) ? ensureRenderableCell(regulatoryCell) : regulatoryCell]
   }
 
   if (!CLINICAL_PHASES.includes(targetPhase)) {

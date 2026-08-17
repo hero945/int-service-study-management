@@ -79,6 +79,89 @@ export function flattenMilestoneNodes(
   )
 }
 
+/** 注册/监管阶段编码（Project 维度里程碑） */
+export const REGULATORY_STAGE_CODES = ['PreIND', 'IND', 'Pre3', 'PreNDA_BLA', 'NDA_BLA'] as const
+export type RegulatoryStageCode = (typeof REGULATORY_STAGE_CODES)[number]
+
+export function isRegulatoryStageCode(code: string): code is RegulatoryStageCode {
+  return (REGULATORY_STAGE_CODES as readonly string[]).includes(code)
+}
+
+/** 临床阶段编码（Study 维度里程碑） */
+export const CLINICAL_STAGE_CODES = ['Protocol', 'SSU', 'Enrollment', 'IA', 'Data_Report'] as const
+export type ClinicalStageCode = (typeof CLINICAL_STAGE_CODES)[number]
+
+export function isClinicalStageCode(code: string): code is ClinicalStageCode {
+  return (CLINICAL_STAGE_CODES as readonly string[]).includes(code)
+}
+
+export interface StageProjection {
+  currentStageCode: string
+  currentStageName: string
+  currentMilestoneCode: string
+  currentMilestoneName: string
+  statusText: string
+}
+
+export interface MilestoneNodeLike extends MilestoneNodeDates {
+  milestoneCode?: string
+  milestoneName?: string
+}
+
+/**
+ * 从阶段组推导当前投影状态（对齐后端 MilestoneManager.projectionFromNodes）。
+ * 按 groups 顺序遍历节点，最后一个有 actual start/end 的节点为 frontier。
+ * 最末节点有 actualEnd → 已完成；无 frontier → 未开始；否则 → 进行中。
+ */
+export function deriveMilestoneProjection(
+  groups: Array<{ stageCode: string; stageName: string; nodes: MilestoneNodeLike[] }>,
+): StageProjection {
+  let frontier: { stageCode: string; stageName: string; milestoneCode: string; milestoneName: string } | null = null
+  let lastNode: MilestoneNodeLike | null = null
+
+  for (const group of groups) {
+    for (const node of group.nodes) {
+      lastNode = node
+      if (node.actualStartDate != null || node.actualEndDate != null) {
+        frontier = {
+          stageCode: group.stageCode,
+          stageName: group.stageName,
+          milestoneCode: node.milestoneCode ?? '',
+          milestoneName: node.milestoneName ?? '',
+        }
+      }
+    }
+  }
+
+  if (lastNode && lastNode.actualEndDate != null) {
+    return {
+      currentStageCode: '',
+      currentStageName: '',
+      currentMilestoneCode: '',
+      currentMilestoneName: '',
+      statusText: '已完成',
+    }
+  }
+
+  if (frontier == null) {
+    return {
+      currentStageCode: '',
+      currentStageName: '',
+      currentMilestoneCode: '',
+      currentMilestoneName: '',
+      statusText: '未开始',
+    }
+  }
+
+  return {
+    currentStageCode: frontier.stageCode,
+    currentStageName: frontier.stageName,
+    currentMilestoneCode: frontier.milestoneCode,
+    currentMilestoneName: frontier.milestoneName,
+    statusText: '进行中',
+  }
+}
+
 /** 单个里程碑节点状态的中文标签（MilestoneView / StudyDetailDrawer 共用） */
 export function milestoneNodeStatusLabel(status: string): string {
   return { NOT_STARTED: '未开始', IN_PROGRESS: '进行中', COMPLETED: '已完成' }[status] ?? status

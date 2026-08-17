@@ -25,7 +25,7 @@ export const PHASE_LABELS: Record<PipelinePhase, string> = {
   IND: 'IND',
   PHASE_1: 'Ph1',
   PHASE_2: 'Ph2',
-  PRE_3: 'Pre-III',
+  PRE_3: 'Pre-3',
   PHASE_3: 'Ph3',
   PRE_NDA: 'PreNDA/BLA',
   NDA: 'NDA/BLA',

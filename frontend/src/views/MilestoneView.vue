@@ -1,21 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import { formatApiError } from '../api/errors'
-import type { MilestoneNode, MilestonePage, MilestoneUpdateInput, StageProjection } from '../api/types'
+import type { MilestoneNode, MilestonePage, MilestoneUpdateInput } from '../api/types'
 import PageState from '../components/PageState.vue'
 import AuditLogDrawer from '../components/AuditLogDrawer.vue'
-import { milestoneNodeStatusClass, milestoneNodeStatusLabel } from '../domain/milestone-status'
+import MilestoneStageNav from '../components/MilestoneStageNav.vue'
+import ColResizer from '../components/ColResizer.vue'
+import { milestoneNodeStatusClass, milestoneNodeStatusLabel, isRegulatoryStageCode, deriveMilestoneProjection } from '../domain/milestone-status'
 import { usePermissions } from '../composables/usePermissions'
 import { useAuditLogDrawer } from '../composables/useAuditLogDrawer'
+import { useMilestoneStageFocus } from '../composables/useMilestoneStageFocus'
+import { useResizableColumns } from '../composables/useResizableColumns'
 
 const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const page = ref<MilestonePage>()
-const projection = ref<StageProjection>()
 const editing = ref<Set<string>>(new Set())
 const saving = ref<Set<string>>(new Set())
 
@@ -24,13 +27,21 @@ const editForm = reactive<Record<string, MilestoneUpdateInput>>({})
 
 const { can } = usePermissions()
 const canEditMilestone = can('milestone.update')
-const canEditProjectMilestone = can('project.milestone.update')
 const canAudit = can('audit.read')
 const { auditDrawer, openGroupedAuditLogs, closeAuditLogs } =
   useAuditLogDrawer('MILESTONE')
+const displayGroups = computed(() =>
+  page.value?.groups.filter((g) => !isRegulatoryStageCode(g.stageCode)) ?? [])
+const stageItems = computed(() =>
+  displayGroups.value.map((group) => ({ code: group.stageCode, name: group.stageName })))
+const clinicalProjection = computed(() => deriveMilestoneProjection(displayGroups.value))
+const { activeStage, selectStage } = useMilestoneStageFocus(stageItems)
+const milestoneCols = useResizableColumns('study-milestone', {
+  name: 220, v1: 120, v2: 120, start: 130, end: 130, status: 100, note: 200, action: 120, audit: 100,
+})
 
-function canEditNode(node: MilestoneNode) {
-  return node.source === 'PROJECT' ? canEditProjectMilestone.value : canEditMilestone.value
+function canEditNode(_node: MilestoneNode) {
+  return canEditMilestone.value
 }
 
 async function load(showLoading = true) {
@@ -38,12 +49,7 @@ async function load(showLoading = true) {
   if (showLoading) loading.value = true
   error.value = ''
   try {
-    const [milestones, proj] = await Promise.all([
-      apiClient.getMilestones(studyId.value),
-      apiClient.getStageProjection(studyId.value).catch(() => undefined),
-    ])
-    page.value = milestones
-    projection.value = proj
+    page.value = await apiClient.getMilestones(studyId.value)
   } catch (reason) {
     error.value = formatApiError(reason, '里程碑数据加载失败')
   } finally { loading.value = false }
@@ -84,11 +90,7 @@ async function saveEdit(node: MilestoneNode) {
   const code = node.milestoneCode
   saving.value = new Set([...saving.value, code])
   try {
-    if (node.source === 'PROJECT') {
-      await apiClient.updateProjectMilestone(studyId.value, code, editForm[code] ?? {})
-    } else {
-      await apiClient.updateMilestone(studyId.value, code, editForm[code] ?? {})
-    }
+    await apiClient.updateMilestone(studyId.value, code, editForm[code] ?? {})
     cancelEdit(code)
     await load(false)
   } catch (reason) {
@@ -109,34 +111,41 @@ function goBack() { router.push('/studies') }
         <button class="text-button" type="button" @click="goBack">&larr; 返回 Study 列表</button>
         <h1 v-if="page" class="milestone-title">{{ page.studyCode }} · 里程碑跟踪</h1>
       </div>
-      <div v-if="projection" class="milestone-projection">
-        <span class="milestone-badge" :class="projection.statusText === '已完成' ? 'milestone-badge--green' : projection.statusText === '进行中' ? 'milestone-badge--blue' : ''">
-          {{ projection.statusText }}
+      <div v-if="page" class="milestone-projection">
+        <span class="milestone-badge" :class="clinicalProjection.statusText === '已完成' ? 'milestone-badge--green' : clinicalProjection.statusText === '进行中' ? 'milestone-badge--blue' : ''">
+          {{ clinicalProjection.statusText }}
         </span>
-        <span v-if="projection.currentMilestoneName" class="milestone-now">{{ projection.currentMilestoneName }}</span>
+        <span v-if="clinicalProjection.currentMilestoneName" class="milestone-now">{{ clinicalProjection.currentMilestoneName }}</span>
       </div>
     </div>
 
-    <PageState :loading :error retryable :empty="!page?.groups.length" empty-title="暂无里程碑数据" @retry="load">
+    <MilestoneStageNav
+      v-if="stageItems.length"
+      :stages="stageItems"
+      :active="activeStage()"
+      @select="selectStage"
+    />
+
+    <PageState :loading :error retryable :empty="!displayGroups.length" empty-title="暂无里程碑数据" @retry="load">
       <div class="data-card milestone-card" v-if="page">
         <div class="milestone-table-wrap">
           <table class="data-table milestone-table">
             <thead>
               <tr>
-                <th class="milestone-col-name">Milestone</th>
-                <th class="milestone-col-date">Ver 1.0</th>
-                <th class="milestone-col-date">Ver 2.0</th>
-                <th class="milestone-col-date">Actual Start</th>
-                <th class="milestone-col-date">Actual End</th>
-                <th class="milestone-col-status">状态</th>
-                <th class="milestone-col-note">偏差说明</th>
-                <th class="milestone-col-action">操作</th>
-                <th v-if="canAudit" class="milestone-col-action">操作日志</th>
+                <th class="milestone-col-name" :style="milestoneCols.colStyle('name')">Milestone<ColResizer col-key="name" :start-resize="milestoneCols.startResize" /></th>
+                <th class="milestone-col-date" :style="milestoneCols.colStyle('v1')">Ver 1.0<ColResizer col-key="v1" :start-resize="milestoneCols.startResize" /></th>
+                <th class="milestone-col-date" :style="milestoneCols.colStyle('v2')">Ver 2.0<ColResizer col-key="v2" :start-resize="milestoneCols.startResize" /></th>
+                <th class="milestone-col-date" :style="milestoneCols.colStyle('start')">Actual Start<ColResizer col-key="start" :start-resize="milestoneCols.startResize" /></th>
+                <th class="milestone-col-date" :style="milestoneCols.colStyle('end')">Actual End<ColResizer col-key="end" :start-resize="milestoneCols.startResize" /></th>
+                <th class="milestone-col-status" :style="milestoneCols.colStyle('status')">状态<ColResizer col-key="status" :start-resize="milestoneCols.startResize" /></th>
+                <th class="milestone-col-note" :style="milestoneCols.colStyle('note')">偏差说明<ColResizer col-key="note" :start-resize="milestoneCols.startResize" /></th>
+                <th class="milestone-col-action" :style="milestoneCols.colStyle('action')">操作<ColResizer col-key="action" :start-resize="milestoneCols.startResize" /></th>
+                <th v-if="canAudit" class="milestone-col-action" :style="milestoneCols.colStyle('audit')">操作日志<ColResizer col-key="audit" :start-resize="milestoneCols.startResize" /></th>
               </tr>
             </thead>
-            <template v-for="group in page.groups" :key="group.stageCode">
+            <template v-for="group in displayGroups" :key="group.stageCode">
               <tbody>
-                <tr class="milestone-stage-row">
+                <tr class="milestone-stage-row" :data-stage-code="group.stageCode">
                   <td colspan="8" class="milestone-stage-title">{{ group.stageName }}</td>
                   <td v-if="canAudit" class="milestone-cell-action">
                     <button

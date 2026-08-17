@@ -184,48 +184,40 @@ public class MilestoneManager {
   }
 
   public StageProjectionResult getProjectStageProjection(long studyId, String username) {
-    ProjectMilestoneResult result = getProjectMilestones(studyId, username);
-    List<MilestoneNodeState> nodes = result.nodes();
-    for (MilestoneNodeState node : nodes) {
-      if (node.actualStartDate() == null && node.actualEndDate() == null) {
-        return new StageProjectionResult(
-            node.stageCode(), node.stageLabel(),
-            node.milestoneCode(), node.milestoneLabel(), "进行中");
-      }
-      if (node.actualStartDate() != null && node.actualEndDate() == null) {
-        return new StageProjectionResult(
-            node.stageCode(), node.stageLabel(),
-            node.milestoneCode(), node.milestoneLabel(), "进行中");
-      }
-    }
-    return new StageProjectionResult("", "", "", "", "已完成");
+    return projectionFromNodes(getProjectMilestones(studyId, username).nodes());
   }
 
   // ──────────── stage projection (Section 7.2) ────────────
 
   public StageProjectionResult getStageProjection(long studyId, String username) {
-    MilestoneResult result = getMilestones(studyId, username);
-    List<MilestoneNodeState> nodes = result.nodes();
-    // Walk through nodes in order to find the active one
-    for (MilestoneNodeState node : nodes) {
-      if (node.actualStartDate() == null && node.actualEndDate() == null) {
-        // First node with neither start nor end → current stage starts here
-        return new StageProjectionResult(
-            node.stageCode(), node.stageLabel(),
-            node.milestoneCode(), node.milestoneLabel(),
-            "进行中");
-      }
-      if (node.actualStartDate() != null && node.actualEndDate() == null) {
-        // This node is in progress
-        return new StageProjectionResult(
-            node.stageCode(), node.stageLabel(),
-            node.milestoneCode(), node.milestoneLabel(),
-            "进行中");
-      }
-      // actualEnd exists → node is completed, continue to next
+    return projectionFromNodes(getMilestones(studyId, username).nodes());
+  }
+
+  /**
+   * 已到达口径：最后一个填了实际日期的节点。
+   * 全局最后节点已结束 → 已完成；全无日期 → 未开始；否则进行中并展示 frontier 节点名。
+   */
+  public static StageProjectionResult projectionFromNodes(List<MilestoneNodeState> nodes) {
+    if (nodes == null || nodes.isEmpty()) {
+      return new StageProjectionResult("", "", "", "", "未开始");
     }
-    // All nodes completed → "已完成"
-    return new StageProjectionResult("", "", "", "", "已完成");
+    MilestoneNodeState frontier = null;
+    for (MilestoneNodeState node : nodes) {
+      if (node.actualStartDate() != null || node.actualEndDate() != null) {
+        frontier = node;
+      }
+    }
+    MilestoneNodeState last = nodes.get(nodes.size() - 1);
+    if (last.actualEndDate() != null) {
+      return new StageProjectionResult("", "", "", "", "已完成");
+    }
+    if (frontier == null) {
+      return new StageProjectionResult("", "", "", "", "未开始");
+    }
+    return new StageProjectionResult(
+        frontier.stageCode(), frontier.stageLabel(),
+        frontier.milestoneCode(), frontier.milestoneLabel(),
+        "进行中");
   }
 
   // ──────────── status derivation (Section 7.2) ────────────
@@ -370,21 +362,46 @@ public class MilestoneManager {
     if (overview == null) {
       return null;
     }
+    List<MilestoneNodeState> nodes = buildNodeStates(persisted);
+    StageSnapshot preind = stageSnapshot(nodes, "PreIND");
+    StageSnapshot ind = stageSnapshot(nodes, "IND");
+    StageSnapshot pre3 = stageSnapshot(nodes, "Pre3");
+    StageSnapshot prenda = stageSnapshot(nodes, "PreNDA_BLA");
+    StageSnapshot nda = stageSnapshot(nodes, "NDA_BLA");
     return new RegulatoryMilestoneStatus(
         overview.mainStageCode(),
         overview.mainStageLabel(),
         overview.subStatusLabel(),
-        isStageLastNodeCompletedByRows(persisted, "PreIND"),
-        isStageLastNodeCompletedByRows(persisted, "IND"),
-        isStageLastNodeCompletedByRows(persisted, "Pre3"),
-        isStageLastNodeCompletedByRows(persisted, "PreNDA_BLA"),
-        isStageLastNodeCompletedByRows(persisted, "NDA_BLA"));
+        preind.completed(),
+        ind.completed(),
+        pre3.completed(),
+        prenda.completed(),
+        nda.completed(),
+        preind.subStatusLabel(),
+        ind.subStatusLabel(),
+        pre3.subStatusLabel(),
+        prenda.subStatusLabel(),
+        nda.subStatusLabel());
   }
 
-  private boolean isStageLastNodeCompletedByRows(List<PersistedMilestone> rows, String stageCode) {
-    List<MilestoneNodeState> nodes = buildNodeStates(rows);
-    return isStageLastNodeCompleted(nodes, stageCode);
+  private static StageSnapshot stageSnapshot(List<MilestoneNodeState> nodes, String stageCode) {
+    MilestoneNodeState last = null;
+    MilestoneNodeState frontier = null;
+    for (MilestoneNodeState node : nodes) {
+      if (!stageCode.equals(node.stageCode())) {
+        continue;
+      }
+      last = node;
+      if (node.actualStartDate() != null || node.actualEndDate() != null) {
+        frontier = node;
+      }
+    }
+    boolean completed = last != null && last.actualEndDate() != null;
+    String label = frontier == null ? null : frontier.milestoneLabel();
+    return new StageSnapshot(completed, label);
   }
+
+  private record StageSnapshot(boolean completed, String subStatusLabel) {}
 
   public record RegulatoryMilestoneStatus(
       String mainStageCode,
@@ -394,7 +411,12 @@ public class MilestoneManager {
       boolean indCompleted,
       boolean pre3Completed,
       boolean prendaCompleted,
-      boolean ndaCompleted) {
+      boolean ndaCompleted,
+      String preindSubStatusLabel,
+      String indSubStatusLabel,
+      String pre3SubStatusLabel,
+      String prendaSubStatusLabel,
+      String ndaSubStatusLabel) {
   }
 
   /** Check whether the last node of the given stage code has actual_end_date != null. */

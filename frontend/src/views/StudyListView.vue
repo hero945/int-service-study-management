@@ -6,22 +6,24 @@ import type { Study } from '../api/types'
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
-import { ALL_MILESTONE_SUB_STATUSES } from '../domain/milestone-filters'
 import { TA_OPTIONS, areaDotClass } from '../domain/therapeutic-areas'
 import { plPmLabel } from '../domain/study-labels'
 import { formatDate } from '../domain/date-format'
 import { useClientSort } from '../composables/useClientSort'
 import { usePagedList } from '../composables/usePagedList'
 import { usePermissions } from '../composables/usePermissions'
+import { useResizableColumns } from '../composables/useResizableColumns'
 
 const router = useRouter()
 const { can } = usePermissions()
+const studyCols = useResizableColumns('study-list', {
+  ta: 140, program: 120, product: 120, studyNo: 160, indication: 160, plPm: 140, updatedAt: 120, actions: 180,
+})
 const canReadMonthly = can('monthly.read')
 const canReadMilestone = can('milestone.read')
 const canRegister = can('project.milestone.read')
 
-const filters = reactive({ ta: '', program: '', product: '', studyCode: '', status: '' })
-const statusOptions = ALL_MILESTONE_SUB_STATUSES
+const filters = reactive({ ta: '', program: '', product: '', studyCode: '' })
 
 const {
   result, loading, error, page, pageSize,
@@ -34,7 +36,6 @@ const {
     program: q.program || undefined,
     product: q.product || undefined,
     studyCode: q.studyCode || undefined,
-    milestoneStatus: q.status || undefined,
     page: q.page,
     pageSize: q.pageSize,
   }),
@@ -58,8 +59,6 @@ registerStudySortColumns([
   { key: 'product', resolver: (s) => s.productName || s.product, type: 'string' },
   { key: 'studyNo', resolver: (s) => s.code, type: 'string' },
   { key: 'indication', resolver: (s) => s.indication, type: 'string' },
-  { key: 'phase', resolver: (s) => s.currentPhase, type: 'string' },
-  { key: 'status', resolver: (s) => s.currentStatus, type: 'string' },
   { key: 'plPm', resolver: (s) => plPmLabel(s), type: 'string' },
   { key: 'updatedAt', resolver: (s) => s.updatedAt, type: 'date' },
 ])
@@ -88,7 +87,7 @@ function goMonthlyReport(studyId: number) {
   router.push(`/studies/${studyId}/monthly-report`)
 }
 
-watch(() => [filters.ta, filters.status], applyFilters)
+watch(() => [filters.ta], applyFilters)
 
 onMounted(load)
 </script>
@@ -116,13 +115,6 @@ onMounted(load)
           <span class="filter-field__label">Study</span>
           <input v-model.trim="filters.studyCode" type="text" class="filter-input" placeholder="输入 Study 编号">
         </label>
-        <label class="filter-field">
-          <span class="filter-field__label">里程碑节点</span>
-          <select v-model="filters.status" class="filter-select filter-select--status">
-            <option value="">全部</option>
-            <option v-for="o in statusOptions" :key="o" :value="o">{{ o }}</option>
-          </select>
-        </label>
         <button class="secondary-button" type="submit">搜索</button>
       </div>
       <span class="filter-count">共 {{ total }} 个研究</span>
@@ -130,18 +122,16 @@ onMounted(load)
 
     <PageState :loading :error retryable :empty="!studies.length" @retry="load">
       <div class="data-card">
-        <table class="data-table">
+        <table class="data-table" :style="studyCols.tableStyle()">
           <thead><tr>
-            <th v-bind="studySortHeader('ta')">TA</th>
-            <th v-bind="studySortHeader('program')">Program</th>
-            <th v-bind="studySortHeader('product')">Product</th>
-            <th v-bind="studySortHeader('studyNo')">Study No.</th>
-            <th v-bind="studySortHeader('indication')">适应症</th>
-            <th v-bind="studySortHeader('phase')">里程碑阶段</th>
-            <th v-bind="studySortHeader('status')">里程碑节点</th>
-            <th v-bind="studySortHeader('plPm')">PL/PM</th>
-            <th v-bind="studySortHeader('updatedAt')">更新时间</th>
-            <th>操作</th>
+            <th v-bind="studySortHeader('ta')" :style="studyCols.colStyle('ta')">TA<span class="col-resizer" @pointerdown="studyCols.startResize('ta', $event)" @click.stop></span></th>
+            <th v-bind="studySortHeader('program')" :style="studyCols.colStyle('program')">Program<span class="col-resizer" @pointerdown="studyCols.startResize('program', $event)" @click.stop></span></th>
+            <th v-bind="studySortHeader('product')" :style="studyCols.colStyle('product')">Product<span class="col-resizer" @pointerdown="studyCols.startResize('product', $event)" @click.stop></span></th>
+            <th v-bind="studySortHeader('studyNo')" :style="studyCols.colStyle('studyNo')">Study No.<span class="col-resizer" @pointerdown="studyCols.startResize('studyNo', $event)" @click.stop></span></th>
+            <th v-bind="studySortHeader('indication')" :style="studyCols.colStyle('indication')">适应症<span class="col-resizer" @pointerdown="studyCols.startResize('indication', $event)" @click.stop></span></th>
+            <th v-bind="studySortHeader('plPm')" :style="studyCols.colStyle('plPm')">PL/PM<span class="col-resizer" @pointerdown="studyCols.startResize('plPm', $event)" @click.stop></span></th>
+            <th v-bind="studySortHeader('updatedAt')" :style="studyCols.colStyle('updatedAt')">更新时间<span class="col-resizer" @pointerdown="studyCols.startResize('updatedAt', $event)" @click.stop></span></th>
+            <th :style="{ minWidth: `${studyCols.widths.actions}px` }">操作</th>
           </tr></thead>
           <tbody>
             <tr v-for="study in sortedStudies" :key="study.id" class="study-row--clickable" @click="openDrawer(study)">
@@ -161,22 +151,22 @@ onMounted(load)
                 </span>
               </td>
               <td>{{ study.indication }}</td>
-              <td>{{ study.currentPhase || '—' }}</td>
-              <td>{{ study.currentStatus || '—' }}</td>
               <td>{{ plPmLabel(study) || '—' }}</td>
               <td>{{ formatDate(study.updatedAt) }}</td>
-              <td class="actions">
-                <button
-                  v-if="canReadMilestone"
-                  class="link-button"
-                  @click.stop="goMilestones(study.id)"
-                >里程碑</button>
-                <button v-if="canReadMonthly" class="link-button" @click.stop="goMonthlyReport(study.id)">月报</button>
-                <button
-                  v-if="canRegister"
-                  class="link-button"
-                  @click.stop="goProjectMilestones(study.id)"
-                >注册</button>
+              <td>
+                <div class="actions">
+                  <button
+                    v-if="canRegister"
+                    class="link-button"
+                    @click.stop="goProjectMilestones(study.id)"
+                  >注册</button>
+                  <button
+                    v-if="canReadMilestone"
+                    class="link-button"
+                    @click.stop="goMilestones(study.id)"
+                  >里程碑</button>
+                  <button v-if="canReadMonthly" class="link-button" @click.stop="goMonthlyReport(study.id)">月报</button>
+                </div>
               </td>
             </tr>
           </tbody>

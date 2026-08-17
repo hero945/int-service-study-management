@@ -100,7 +100,12 @@ public interface StudyApi {
       boolean indCompleted,
       boolean pre3Completed,
       boolean prendaCompleted,
-      boolean ndaCompleted) {
+      boolean ndaCompleted,
+      String preindSubStatusLabel,
+      String indSubStatusLabel,
+      String pre3SubStatusLabel,
+      String prendaSubStatusLabel,
+      String ndaSubStatusLabel) {
   }
 
   record OverviewProjectResponse(

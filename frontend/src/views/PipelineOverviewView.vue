@@ -11,17 +11,13 @@ import {
   sourceLabel,
   type PipelinePhase,
 } from '../domain/pipeline-status'
-import { getProjectCell, getProjectPhaseCells, hasChipContent, type ProjectCell } from '../domain/pipeline-aggregation'
-import {
-  PIPELINE_PHASE_STATUS_OPTIONS,
-  phaseCodeToColumn,
-  pipelineStatusOptions,
-} from '../domain/milestone-filters'
+import { getProjectPhaseCells, hasChipContent, isRegulatoryPhase, regulatoryStageByPhase, type ProjectCell } from '../domain/pipeline-aggregation'
 import PageState from '../components/PageState.vue'
 import ProjectStudiesDrawer from '../components/ProjectStudiesDrawer.vue'
 import StudyDetailDrawer from '../components/StudyDetailDrawer.vue'
 import { session } from '../session'
 import { areaDotClass, TA_OPTIONS } from '../domain/therapeutic-areas'
+import { useResizableColumns } from '../composables/useResizableColumns'
 
 // 后端已按 TA 聚合的 project，附带 TA 信息便于筛选
 interface ProjectRow extends OverviewProject {
@@ -42,12 +38,18 @@ interface HoverTip {
 
 const router = useRouter()
 const phases = CLINICAL_PHASE_CODES
+const pipelineCols = useResizableColumns('pipeline-overview', {
+  product: 130,
+  program: 160,
+  project: 220,
+  ...Object.fromEntries(CLINICAL_PHASE_CODES.map((phase) => [phase, 140])),
+})
 const overview = ref<PipelineOverview>()
 const loading = ref(true)
 const errorMessage = ref('')
 const hoverTip = ref<HoverTip | null>(null)
 
-const filters = reactive({ ta: '', program: '', phase: '', status: '' })
+const filters = reactive({ ta: '', program: '' })
 
 const projectDrawerOpen = ref(false)
 const selectedProject = ref<OverviewProject | null>(null)
@@ -63,18 +65,6 @@ const allProjects = computed<ProjectRow[]>(() =>
       therapeuticAreaName: area.therapeuticAreaName,
     }))))
 
-const phaseStatusOptions = PIPELINE_PHASE_STATUS_OPTIONS
-const statusOptions = computed(() => pipelineStatusOptions(filters.phase))
-const selectedColumn = computed(() => phaseCodeToColumn(filters.phase))
-
-function onPhaseChange() {
-  filters.status = ''
-}
-
-function cell(project: OverviewProject, phase: PipelinePhase): ProjectCell {
-  return cells(project, phase)[0] ?? { label: '—', tone: 'empty', clickable: false }
-}
-
 function cells(project: OverviewProject, phase: PipelinePhase): ProjectCell[] {
   return getProjectPhaseCells(
     project.studies.map((study) => ({
@@ -86,14 +76,10 @@ function cells(project: OverviewProject, phase: PipelinePhase): ProjectCell[] {
   )
 }
 
-// Phase 只定列；仅当选了状态时，按该列单元格文案过滤
 const filteredProjects = computed(() => allProjects.value.filter((project) => {
   if (filters.ta && project.therapeuticAreaName !== filters.ta) return false
   if (filters.program && !project.programCode.toLowerCase().includes(filters.program.toLowerCase())) {
     return false
-  }
-  if (filters.status && selectedColumn.value) {
-    return cells(project, selectedColumn.value).some((c) => c.label === filters.status)
   }
   return true
 }))
@@ -130,11 +116,55 @@ const tipStyle = computed(() => {
 const canReadMilestone = computed(() =>
   session.currentUser.value?.permissions.includes('milestone.read') ?? false,
 )
+const canReadProjectMilestone = computed(() =>
+  session.currentUser.value?.permissions.includes('project.milestone.read') ?? false,
+)
 
-function openStudy(studyId?: number) {
+function firstStudyId(project: OverviewProject): number | undefined {
+  return [...project.studies].sort((a, b) => a.code.localeCompare(b.code))[0]?.id
+}
+
+function isCellClickable(project: OverviewProject, item: ProjectCell, phase: PipelinePhase): boolean {
+  if (item.clickTarget === 'project-milestone' || isRegulatoryPhase(phase)) {
+    return canReadProjectMilestone.value && firstStudyId(project) != null
+  }
+  return canReadMilestone.value && Boolean(item.clickable && item.studyId)
+}
+
+function openCell(project: OverviewProject, phase: PipelinePhase, item: ProjectCell) {
+  if (!isCellClickable(project, item, phase)) return
+  const studyId = item.studyId ?? firstStudyId(project)
   if (studyId == null) return
-  if (!canReadMilestone.value) return
-  router.push(`/milestones/${studyId}`)
+  if (item.clickTarget === 'project-milestone' || isRegulatoryPhase(phase)) {
+    const stage = item.focusStage ?? regulatoryStageByPhase(phase)
+    router.push({
+      path: `/studies/${studyId}/project-milestones`,
+      query: stage ? { stage } : {},
+    })
+    return
+  }
+  router.push({
+    path: `/milestones/${studyId}`,
+    query: item.focusStage ? { stage: item.focusStage } : {},
+  })
+}
+
+function isEmptyRegulatoryClickable(project: OverviewProject, phase: PipelinePhase): boolean {
+  return isRegulatoryPhase(phase)
+    && !cells(project, phase).some(hasChipContent)
+    && canReadProjectMilestone.value
+    && firstStudyId(project) != null
+}
+
+function openEmptyRegulatory(project: OverviewProject, phase: PipelinePhase) {
+  if (!isEmptyRegulatoryClickable(project, phase)) return
+  openCell(project, phase, {
+    label: '—',
+    tone: 'empty',
+    clickable: true,
+    clickTarget: 'project-milestone',
+    focusStage: regulatoryStageByPhase(phase),
+  })
 }
 
 function showCellTip(event: MouseEvent, item: ProjectCell) {
@@ -242,20 +272,6 @@ onMounted(loadOverview)
           <span class="filter-field__label">Program</span>
           <input v-model.trim="filters.program" type="text" class="filter-input" placeholder="输入编号搜索">
         </label>
-        <label class="filter-field">
-          <span class="filter-field__label">Phase</span>
-          <select v-model="filters.phase" class="filter-select" @change="onPhaseChange">
-            <option value="">全部</option>
-            <option v-for="o in phaseStatusOptions" :key="o.code" :value="o.code">{{ o.label }}</option>
-          </select>
-        </label>
-        <label class="filter-field">
-          <span class="filter-field__label">状态</span>
-          <select v-model="filters.status" class="filter-select filter-select--status" :disabled="!filters.phase">
-            <option value="">全部</option>
-            <option v-for="o in statusOptions" :key="o" :value="o">{{ o }}</option>
-          </select>
-        </label>
       </div>
       <span class="filter-count">{{ resultCount }} 个项目</span>
     </div>
@@ -270,13 +286,25 @@ onMounted(loadOverview)
       @retry="loadOverview"
     >
       <div class="pipeline-table-wrap">
-        <table class="pipeline-table">
+        <table class="pipeline-table" :style="pipelineCols.tableStyle()">
           <thead>
             <tr>
-              <th>Product</th>
-              <th>Program (MOA)</th>
-              <th>Project (Indication)</th>
-              <th v-for="phase in phases" :key="phase">{{ phaseLabel(phase) }}</th>
+              <th :style="pipelineCols.colStyle('product')">
+                Product
+                <span class="col-resizer" @pointerdown="pipelineCols.startResize('product', $event)" @click.stop></span>
+              </th>
+              <th :style="pipelineCols.colStyle('program')">
+                Program (MOA)
+                <span class="col-resizer" @pointerdown="pipelineCols.startResize('program', $event)" @click.stop></span>
+              </th>
+              <th :style="pipelineCols.colStyle('project')">
+                Project (Indication)
+                <span class="col-resizer" @pointerdown="pipelineCols.startResize('project', $event)" @click.stop></span>
+              </th>
+              <th v-for="phase in phases" :key="phase" :style="pipelineCols.colStyle(phase)">
+                {{ phaseLabel(phase) }}
+                <span class="col-resizer" @pointerdown="pipelineCols.startResize(phase, $event)" @click.stop></span>
+              </th>
             </tr>
           </thead>
           <tbody v-for="area in areaGroups" :key="area.therapeuticAreaName">
@@ -316,6 +344,8 @@ onMounted(loadOverview)
                 v-for="phase in phases"
                 :key="phase"
                 class="pipeline-stage-td"
+                :class="{ 'cell-clickable': isEmptyRegulatoryClickable(project, phase) }"
+                @click="openEmptyRegulatory(project, phase)"
               >
                 <div
                   v-if="cells(project, phase).some(hasChipContent)"
@@ -325,8 +355,8 @@ onMounted(loadOverview)
                     v-for="item in cells(project, phase).filter(hasChipContent)"
                     :key="item.studyId ?? `${item.label}-${item.subText}`"
                     class="pipeline-stage-row"
-                    :class="{ 'cell-clickable': canReadMilestone && item.clickable }"
-                    @click="canReadMilestone && item.clickable && openStudy(item.studyId)"
+                    :class="{ 'cell-clickable': isCellClickable(project, item, phase) }"
+                    @click.stop="openCell(project, phase, item)"
                     @mouseenter="showCellTip($event, item)"
                     @mousemove="moveCellTip"
                     @mouseleave="hideCellTip"
@@ -336,7 +366,10 @@ onMounted(loadOverview)
                       class="cell-stage-caption cell-stage-caption--code"
                       :title="item.subText"
                     >{{ item.subText }}</span>
-                    <div class="pipeline-stage-chip-row">
+                    <div
+                      class="pipeline-stage-chip-row"
+                      :class="{ 'has-risk': item.openRiskCount }"
+                    >
                       <span
                         class="status-chip"
                         :class="`status-chip--${item.tone}`"
@@ -344,7 +377,7 @@ onMounted(loadOverview)
                       >{{ item.label }}</span>
                       <span
                         v-if="item.openRiskCount"
-                        class="study-risk-badge"
+                        class="study-risk-badge pipeline-stage-risk-badge"
                         title="Open 风险"
                       >{{ item.openRiskCount }}</span>
                     </div>
@@ -353,7 +386,7 @@ onMounted(loadOverview)
                 <span
                   v-else
                   class="status-chip status-chip--empty"
-                >{{ cell(project, phase).label }}</span>
+                >—</span>
               </td>
             </tr>
           </tbody>
@@ -398,6 +431,9 @@ onMounted(loadOverview)
 </template>
 
 <style scoped>
+.pipeline-stage-td {
+  overflow: hidden;
+}
 .pipeline-stage-stack {
   display: flex;
   flex-direction: column;
@@ -424,10 +460,25 @@ onMounted(loadOverview)
   cursor: pointer;
 }
 .pipeline-stage-chip-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  position: relative;
+  display: block;
+  width: 100%;
   max-width: 100%;
+}
+.pipeline-stage-td .status-chip {
+  width: 100%;
+  max-width: 100%;
+}
+.pipeline-stage-chip-row.has-risk .status-chip {
+  padding-right: 22px;
+}
+.pipeline-stage-risk-badge {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  z-index: 1;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 .cell-stage-caption {
   display: block;
