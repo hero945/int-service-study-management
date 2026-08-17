@@ -5,16 +5,18 @@ import com.huadong.pipeline.common.BusinessException;
 import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.study.OverviewArea;
 import com.huadong.pipeline.domain.study.OverviewProject;
+import com.huadong.pipeline.domain.study.OverviewStudy;
 import com.huadong.pipeline.domain.study.PipelineOverview;
 import com.huadong.pipeline.domain.study.PipelineOverviewRepository;
+import com.huadong.pipeline.domain.study.RegulatoryOverviewStatus;
 import com.huadong.pipeline.domain.study.Study;
+import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.study.StudyRepository;
 import com.huadong.pipeline.domain.study.StudyRepository.StudyListQuery;
 import com.huadong.pipeline.domain.study.StudyRepository.StudyPage;
-import com.huadong.pipeline.domain.study.StudyAccessScope;
-import com.huadong.pipeline.domain.study.OverviewStudy;
-import com.huadong.pipeline.domain.study.StudyAccessScope;
 import com.huadong.pipeline.domain.milestone.CurrentMilestoneStatus;
+import com.huadong.pipeline.domain.milestone.ProjectMilestone;
+import com.huadong.pipeline.domain.milestone.ProjectMilestonePort;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.PersistedMilestone;
 import com.huadong.pipeline.domain.risk.RiskRepository;
@@ -47,6 +49,8 @@ public class StudyManager {
   private PipelineOverviewRepository overviewProjects;
   @Autowired
   private StudyMilestonePort studyMilestones;
+  @Autowired
+  private ProjectMilestonePort projectMilestones;
   @Autowired
   private MilestoneManager milestoneManager;
   @Autowired
@@ -148,10 +152,18 @@ public class StudyManager {
     Map<Long, String> pmNames = team.findRoleMemberNames(studyIdSet, "PM");
     Map<Long, Integer> openRiskCounts = risks.countOpenByStudyIds(accessScope, studyIds);
 
+    // Batch-load regulatory milestones for every project (single IN query).
+    List<Long> projectIds = projects.stream().map(OverviewProject::id).toList();
+    Map<Long, List<ProjectMilestone>> regulatoryMilestonesByProject = canReadMilestone
+        ? projectMilestones.findByProjectIdsGrouped(projectIds)
+        : Map.of();
+
     // Override each study's status with its milestone-derived status where milestones exist.
     List<OverviewProject> enriched = projects.stream()
         .map(project -> enrichProject(
-            project, milestonesByStudy, plNames, pmNames, openRiskCounts, canReadMilestone))
+            project,
+            regulatoryMilestonesByProject.getOrDefault(project.id(), List.of()),
+            milestonesByStudy, plNames, pmNames, openRiskCounts, canReadMilestone))
         .toList();
 
     Map<String, List<OverviewProject>> projectsByArea = new LinkedHashMap<>();
@@ -169,6 +181,7 @@ public class StudyManager {
 
   private OverviewProject enrichProject(
       OverviewProject project,
+      List<ProjectMilestone> regulatoryMilestones,
       Map<Long, List<PersistedMilestone>> milestonesByStudy,
       Map<Long, String> plNames,
       Map<Long, String> pmNames,
@@ -200,10 +213,31 @@ public class StudyManager {
               derived.currentPhaseCompleted(), plName, pmName, openRiskCount);
         })
         .toList();
+    RegulatoryOverviewStatus regulatoryStatus = canReadMilestone
+        ? toRegulatoryOverviewStatus(milestoneManager.deriveRegulatoryStatus(regulatoryMilestones))
+        : null;
     return new OverviewProject(
         project.id(), project.code(), project.indication(), project.programCode(),
         project.productName(), project.moa(), project.sourceCode(), project.originCode(),
-        project.therapeuticAreaCode(), project.therapeuticAreaName(), enrichedStudies);
+        project.therapeuticAreaCode(), project.therapeuticAreaName(), enrichedStudies,
+        regulatoryStatus);
+  }
+
+  private static RegulatoryOverviewStatus toRegulatoryOverviewStatus(
+      MilestoneManager.RegulatoryMilestoneStatus status) {
+    if (status == null) {
+      return null;
+    }
+    return new RegulatoryOverviewStatus(
+        status.mainStageCode(),
+        status.mainStageLabel(),
+        status.subStatusLabel(),
+        status.preindCompleted(),
+        status.indCompleted(),
+        status.pre3Completed(),
+        status.prendaCompleted(),
+        status.ndaCompleted(),
+        null);
   }
 
   private static OverviewStudy withOwners(

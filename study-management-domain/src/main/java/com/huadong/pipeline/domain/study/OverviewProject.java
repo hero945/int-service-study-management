@@ -14,5 +14,6 @@ public record OverviewProject(
     String originCode,
     String therapeuticAreaCode,
     String therapeuticAreaName,
-    List<OverviewStudy> studies) {
+    List<OverviewStudy> studies,
+    RegulatoryOverviewStatus regulatoryStatus) {
 }

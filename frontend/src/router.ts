@@ -12,6 +12,7 @@ import MonthlyExportView from './views/MonthlyExportView.vue'
 import AccountManagementView from './views/AccountManagementView.vue'
 import RolePermissionManagementView from './views/RolePermissionManagementView.vue'
 import MilestoneView from './views/MilestoneView.vue'
+import ProjectMilestoneView from './views/ProjectMilestoneView.vue'
 import MonthlyReportFillView from './views/MonthlyReportFillView.vue'
 
 export const router = createRouter({
@@ -66,6 +67,16 @@ export const router = createRouter({
             title: '里程碑',
             subtitle: 'Study 里程碑跟踪',
             requiredPermission: 'milestone.read',
+          },
+        },
+        {
+          path: 'studies/:studyId/project-milestones',
+          name: 'project-milestones',
+          component: ProjectMilestoneView,
+          meta: {
+            title: '注册里程碑',
+            subtitle: 'Project 监管注册里程碑跟踪',
+            requiredPermission: 'project.milestone.read',
           },
         },
         {

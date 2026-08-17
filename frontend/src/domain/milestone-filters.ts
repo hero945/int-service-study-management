@@ -78,11 +78,13 @@ export const PIPELINE_PHASE_STATUS_OPTIONS = CLINICAL_PHASE_CODES.map((code) => 
   label: phaseLabel(code),
 }))
 
-/** PreIND / IND / PRE-3 对应的里程碑主阶段 key（状态下拉用） */
+/** PreIND / IND / PRE-3 / PRE-NDA / NDA 对应的里程碑主阶段 key（状态下拉用） */
 const MAIN_STAGE_BY_PHASE_CODE: Record<string, string> = {
   PRE_IND: 'PreIND',
   IND: 'IND',
   PRE_3: 'Pre3',
+  PRE_NDA: 'PreNDA/BLA',
+  NDA: 'NDA/BLA',
 }
 
 /** Phase 下拉 code → 总览表格列 tag */

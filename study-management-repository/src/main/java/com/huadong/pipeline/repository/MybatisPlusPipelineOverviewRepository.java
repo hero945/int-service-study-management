@@ -38,7 +38,8 @@ public class MybatisPlusPipelineOverviewRepository implements PipelineOverviewRe
             row.id(), row.code(), row.indication(), row.programCode(), row.productName(),
             row.moa(), row.sourceCode(), row.originCode(),
             row.therapeuticAreaCode(), row.therapeuticAreaName(),
-            studiesByProject.getOrDefault(row.id(), List.of())))
+            studiesByProject.getOrDefault(row.id(), List.of()),
+            null))
         .toList();
   }
 

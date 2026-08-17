@@ -6,6 +6,9 @@ import com.huadong.pipeline.common.StudyStatus;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition.MilestoneNode;
 import com.huadong.pipeline.domain.milestone.MilestoneDefinition.StageGroup;
+import com.huadong.pipeline.domain.milestone.ProjectMilestone;
+import com.huadong.pipeline.domain.milestone.ProjectMilestonePort;
+import com.huadong.pipeline.domain.milestone.ProjectMilestonePort.ProjectMilestoneCommand;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.MilestoneSaveCommand;
 import com.huadong.pipeline.domain.milestone.StudyMilestonePort.MilestoneUpdateCommand;
@@ -21,6 +24,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,7 +35,12 @@ public class MilestoneManager {
   @Autowired
   private StudyMilestonePort milestones;
   @Autowired
+  private ProjectMilestonePort projectMilestones;
+  @Autowired
   private UserAccountRepository users;
+
+  private static final Set<String> PROJECT_SOURCE_STAGE_CODES = Set.of(
+      "PreIND", "IND", "Pre3", "PreNDA_BLA", "NDA_BLA");
 
   // ──────────── query ────────────
 
@@ -46,16 +55,28 @@ public class MilestoneManager {
   private MilestoneResult loadMilestones(long studyId, UserAccount user) {
     requireStudyExists(studyId);
     StudyRef study = requireStudyInScope(studyId, user);
-    List<PersistedMilestone> rows = milestones.findByStudyId(studyId);
-    Map<String, PersistedMilestone> byCode = new LinkedHashMap<>();
-    for (PersistedMilestone row : rows) {
-      byCode.put(row.milestoneCode(), row);
+    List<PersistedMilestone> studyRows = milestones.findByStudyId(studyId);
+    Map<String, PersistedMilestone> studyByCode = new LinkedHashMap<>();
+    for (PersistedMilestone row : studyRows) {
+      studyByCode.put(row.milestoneCode(), row);
     }
+
+    List<ProjectMilestone> projectRows = projectMilestones.findByProjectId(study.projectId());
+    Map<String, PersistedMilestone> projectByCode = new LinkedHashMap<>();
+    for (ProjectMilestone row : projectRows) {
+      projectByCode.put(row.milestoneCode(), new PersistedMilestone(
+          row.id(), row.projectId(), row.stageCode(), row.milestoneCode(),
+          row.planV1Date(), row.planV2Date(), row.actualStartDate(), row.actualEndDate(),
+          row.deviationNote()));
+    }
+
     // Build full ordered list: definitions × persisted data
     List<MilestoneNodeState> nodes = new ArrayList<>();
     for (StageGroup group : MilestoneDefinition.ALL) {
+      boolean projectSource = PROJECT_SOURCE_STAGE_CODES.contains(group.code());
+      Map<String, PersistedMilestone> sourceByCode = projectSource ? projectByCode : studyByCode;
       for (MilestoneNode node : group.nodes()) {
-        PersistedMilestone persisted = byCode.get(node.code());
+        PersistedMilestone persisted = sourceByCode.get(node.code());
         nodes.add(new MilestoneNodeState(
             persisted == null ? null : persisted.id(),
             group.code(), group.label(), group.sortOrder(),
@@ -64,7 +85,8 @@ public class MilestoneManager {
             persisted == null ? null : persisted.planV2Date(),
             persisted == null ? null : persisted.actualStartDate(),
             persisted == null ? null : persisted.actualEndDate(),
-            persisted == null ? null : persisted.deviationNote()));
+            persisted == null ? null : persisted.deviationNote(),
+            projectSource ? "PROJECT" : "STUDY"));
       }
     }
     // Derive statuses (must be done after all nodes are assembled for sequential logic)
@@ -94,22 +116,8 @@ public class MilestoneManager {
       throw invalid("实际结束日期不能早于实际开始日期");
     }
 
-    // Sequential validation: for completed nodes, ensure subsequent nodes
-    // don't have actual dates earlier than the last completed node's actual end
     List<PersistedMilestone> rows = milestones.findByStudyId(studyId);
-    LocalDate lastEnd = null;
-    for (PersistedMilestone row : rows) {
-      if (row.milestoneCode().equals(milestoneCode)) break;
-      if (row.actualEndDate() != null) lastEnd = row.actualEndDate();
-    }
-    if (lastEnd != null && input.actualStartDate() != null
-        && input.actualStartDate().isBefore(lastEnd)) {
-      throw invalid("该节点实际开始日期不能早于前序已完成节点的实际结束日期 " + lastEnd);
-    }
-    if (lastEnd != null && input.actualEndDate() != null
-        && input.actualEndDate().isBefore(lastEnd)) {
-      throw invalid("该节点实际结束日期不能早于前序已完成节点的实际结束日期 " + lastEnd);
-    }
+    validateSequentialOrder(rows, milestoneCode, input);
 
     milestones.save(new MilestoneSaveCommand(
         studyId, stageCode, milestoneCode,
@@ -118,6 +126,79 @@ public class MilestoneManager {
         input.deviationNote(), user.username()));
 
     return loadMilestones(studyId, user);
+  }
+
+  // ──────────── project milestone query/mutation ────────────
+
+  public ProjectMilestoneResult getProjectMilestones(long studyId, String username) {
+    UserAccount user = currentUser(username);
+    if (!user.permissions().contains("project.milestone.read")) {
+      throw forbiddenProjectRead();
+    }
+    StudyRef study = requireStudyInScope(studyId, user);
+    List<ProjectMilestone> rows = projectMilestones.findByProjectId(study.projectId());
+    List<PersistedMilestone> persisted = rows.stream()
+        .map(m -> new PersistedMilestone(
+            m.id(), m.projectId(), m.stageCode(), m.milestoneCode(),
+            m.planV1Date(), m.planV2Date(), m.actualStartDate(), m.actualEndDate(),
+            m.deviationNote()))
+        .toList();
+    return new ProjectMilestoneResult(study.projectCode(), buildNodeStates(persisted));
+  }
+
+  @Transactional
+  public ProjectMilestoneResult updateProjectMilestone(long studyId, String milestoneCode,
+                                                       MilestoneUpdateCommand input, String username) {
+    UserAccount user = currentUser(username);
+    if (!user.permissions().contains("project.milestone.update")) {
+      throw forbiddenProject();
+    }
+    StudyRef study = requireStudyInScope(studyId, user);
+
+    String stageCode = stagePart(milestoneCode);
+    int nodeIndex = nodeIndex(milestoneCode);
+    MilestoneDefinition.node(stageCode, nodeIndex);
+
+    if (input.actualStartDate() != null && input.actualEndDate() != null
+        && input.actualEndDate().isBefore(input.actualStartDate())) {
+      throw invalid("实际结束日期不能早于实际开始日期");
+    }
+
+    List<ProjectMilestone> existing = projectMilestones.findByProjectId(study.projectId());
+    List<PersistedMilestone> persisted = existing.stream()
+        .map(m -> new PersistedMilestone(
+            m.id(), m.projectId(), m.stageCode(), m.milestoneCode(),
+            m.planV1Date(), m.planV2Date(), m.actualStartDate(), m.actualEndDate(),
+            m.deviationNote()))
+        .toList();
+
+    validateSequentialOrder(persisted, milestoneCode, input);
+
+    projectMilestones.save(new ProjectMilestoneCommand(
+        study.projectId(), stageCode, milestoneCode,
+        input.planV1Date(), input.planV2Date(),
+        input.actualStartDate(), input.actualEndDate(),
+        input.deviationNote(), user.username()));
+
+    return getProjectMilestones(studyId, username);
+  }
+
+  public StageProjectionResult getProjectStageProjection(long studyId, String username) {
+    ProjectMilestoneResult result = getProjectMilestones(studyId, username);
+    List<MilestoneNodeState> nodes = result.nodes();
+    for (MilestoneNodeState node : nodes) {
+      if (node.actualStartDate() == null && node.actualEndDate() == null) {
+        return new StageProjectionResult(
+            node.stageCode(), node.stageLabel(),
+            node.milestoneCode(), node.milestoneLabel(), "进行中");
+      }
+      if (node.actualStartDate() != null && node.actualEndDate() == null) {
+        return new StageProjectionResult(
+            node.stageCode(), node.stageLabel(),
+            node.milestoneCode(), node.milestoneLabel(), "进行中");
+      }
+    }
+    return new StageProjectionResult("", "", "", "", "已完成");
   }
 
   // ──────────── stage projection (Section 7.2) ────────────
@@ -269,6 +350,53 @@ public class MilestoneManager {
         preindCompleted, indCompleted, globallyCompleted, currentPhaseCompleted);
   }
 
+  /**
+   * Derive a project's regulatory milestone status for the pipeline overview.
+   * Converts project milestones to the same shape as study milestones and reuses
+   * {@link #computeOverviewStatus(List)}. Regulatory columns read from this status
+   * instead of looking at individual studies.
+   */
+  public RegulatoryMilestoneStatus deriveRegulatoryStatus(List<ProjectMilestone> milestones) {
+    if (milestones == null || milestones.isEmpty()) {
+      return null;
+    }
+    List<PersistedMilestone> persisted = milestones.stream()
+        .map(m -> new PersistedMilestone(
+            m.id(), m.projectId(), m.stageCode(), m.milestoneCode(),
+            m.planV1Date(), m.planV2Date(), m.actualStartDate(), m.actualEndDate(),
+            m.deviationNote()))
+        .toList();
+    MilestoneOverviewStatus overview = computeOverviewStatus(persisted);
+    if (overview == null) {
+      return null;
+    }
+    return new RegulatoryMilestoneStatus(
+        overview.mainStageCode(),
+        overview.mainStageLabel(),
+        overview.subStatusLabel(),
+        isStageLastNodeCompletedByRows(persisted, "PreIND"),
+        isStageLastNodeCompletedByRows(persisted, "IND"),
+        isStageLastNodeCompletedByRows(persisted, "Pre3"),
+        isStageLastNodeCompletedByRows(persisted, "PreNDA_BLA"),
+        isStageLastNodeCompletedByRows(persisted, "NDA_BLA"));
+  }
+
+  private boolean isStageLastNodeCompletedByRows(List<PersistedMilestone> rows, String stageCode) {
+    List<MilestoneNodeState> nodes = buildNodeStates(rows);
+    return isStageLastNodeCompleted(nodes, stageCode);
+  }
+
+  public record RegulatoryMilestoneStatus(
+      String mainStageCode,
+      String mainStageLabel,
+      String subStatusLabel,
+      boolean preindCompleted,
+      boolean indCompleted,
+      boolean pre3Completed,
+      boolean prendaCompleted,
+      boolean ndaCompleted) {
+  }
+
   /** Check whether the last node of the given stage code has actual_end_date != null. */
   private boolean isStageLastNodeCompleted(List<MilestoneNodeState> nodes, String stageCode) {
     int lastIndex = -1;
@@ -301,7 +429,8 @@ public class MilestoneManager {
             persisted == null ? null : persisted.planV2Date(),
             persisted == null ? null : persisted.actualStartDate(),
             persisted == null ? null : persisted.actualEndDate(),
-            persisted == null ? null : persisted.deviationNote()));
+            persisted == null ? null : persisted.deviationNote(),
+            "STUDY"));
       }
     }
     deriveStatuses(nodes);
@@ -387,6 +516,27 @@ public class MilestoneManager {
     return new BusinessException("INVALID_MILESTONE", message);
   }
 
+  private static void validateSequentialOrder(
+      List<PersistedMilestone> rows, String milestoneCode, MilestoneUpdateCommand input) {
+    LocalDate lastEnd = null;
+    for (PersistedMilestone row : rows) {
+      if (row.milestoneCode().equals(milestoneCode)) {
+        break;
+      }
+      if (row.actualEndDate() != null) {
+        lastEnd = row.actualEndDate();
+      }
+    }
+    if (lastEnd != null && input.actualStartDate() != null
+        && input.actualStartDate().isBefore(lastEnd)) {
+      throw invalid("该节点实际开始日期不能早于前序已完成节点的实际结束日期 " + lastEnd);
+    }
+    if (lastEnd != null && input.actualEndDate() != null
+        && input.actualEndDate().isBefore(lastEnd)) {
+      throw invalid("该节点实际结束日期不能早于前序已完成节点的实际结束日期 " + lastEnd);
+    }
+  }
+
   private static BusinessException forbidden() {
     return new BusinessException("MILESTONE_FORBIDDEN", "需要 milestone.update 权限");
   }
@@ -395,9 +545,19 @@ public class MilestoneManager {
     return new BusinessException("MILESTONE_FORBIDDEN", "需要 milestone.read 权限");
   }
 
+  private static BusinessException forbiddenProject() {
+    return new BusinessException("PROJECT_MILESTONE_FORBIDDEN", "需要 project.milestone.update 权限");
+  }
+
+  private static BusinessException forbiddenProjectRead() {
+    return new BusinessException("PROJECT_MILESTONE_FORBIDDEN", "需要 project.milestone.read 权限");
+  }
+
   // ──────────── result types ────────────
 
   public record MilestoneResult(String studyCode, List<MilestoneNodeState> nodes) {}
+
+  public record ProjectMilestoneResult(String projectCode, List<MilestoneNodeState> nodes) {}
 
   /**
    * Pipeline-overview status derived from a study's milestones.
@@ -424,24 +584,24 @@ public class MilestoneManager {
       String milestoneCode, String milestoneLabel, int nodeOrder,
       LocalDate planV1Date, LocalDate planV2Date,
       LocalDate actualStartDate, LocalDate actualEndDate,
-      String deviationNote, String status) {
+      String deviationNote, String status, String source) {
 
     public MilestoneNodeState(Long milestoneId, String stageCode, String stageLabel, int stageOrder,
         String milestoneCode, String milestoneLabel, int nodeOrder,
         LocalDate planV1Date, LocalDate planV2Date,
         LocalDate actualStartDate, LocalDate actualEndDate,
-        String deviationNote) {
+        String deviationNote, String source) {
       this(milestoneId, stageCode, stageLabel, stageOrder,
           milestoneCode, milestoneLabel, nodeOrder,
           planV1Date, planV2Date, actualStartDate, actualEndDate,
-          deviationNote, "NOT_STARTED");
+          deviationNote, "NOT_STARTED", source);
     }
 
     public MilestoneNodeState withStatus(String newStatus) {
       return new MilestoneNodeState(milestoneId, stageCode, stageLabel, stageOrder,
           milestoneCode, milestoneLabel, nodeOrder,
           planV1Date, planV2Date, actualStartDate, actualEndDate,
-          deviationNote, newStatus);
+          deviationNote, newStatus, source);
     }
   }
 

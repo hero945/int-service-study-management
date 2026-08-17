@@ -30,6 +30,7 @@ import type {
   MilestoneUpdateInput,
   MonthlyEntryCreateInput,
   MonthlyEntryUpdateInput,
+  ProjectMilestonePage,
   MonthlyReportPage,
   FunctionLineHistory,
   MonthlyExportFormat,
@@ -85,6 +86,9 @@ export interface ApiClient {
   getMilestones(studyId: number): Promise<MilestonePage>
   updateMilestone(studyId: number, milestoneCode: string, input: MilestoneUpdateInput): Promise<MilestonePage>
   getStageProjection(studyId: number): Promise<StageProjection>
+  getProjectMilestones(studyId: number): Promise<ProjectMilestonePage>
+  updateProjectMilestone(studyId: number, milestoneCode: string, input: MilestoneUpdateInput): Promise<ProjectMilestonePage>
+  getProjectStageProjection(studyId: number): Promise<StageProjection>
   getMonthlyReports(studyId: number, month: string): Promise<MonthlyReportPage>
   createMonthlyEntry(reportId: number, input: MonthlyEntryCreateInput): Promise<MonthlyReportPage>
   updateMonthlyEntry(entryId: number, input: MonthlyEntryUpdateInput): Promise<MonthlyReportPage>
@@ -309,6 +313,16 @@ export function createHttpApiClient(): ApiClient {
     },
     getStageProjection: (studyId) =>
       request<StageProjection>(`/api/v1/studies/${studyId}/stage-projection`),
+    getProjectMilestones: (studyId) =>
+      request<ProjectMilestonePage>(`/api/v1/studies/${studyId}/project-milestones`),
+    async updateProjectMilestone(studyId, milestoneCode, input) {
+      await refreshCsrf()
+      return request<ProjectMilestonePage>(`/api/v1/studies/${studyId}/project-milestones/${encodeURIComponent(milestoneCode)}`, {
+        method: 'PUT', body: JSON.stringify(input),
+      })
+    },
+    getProjectStageProjection: (studyId) =>
+      request<StageProjection>(`/api/v1/studies/${studyId}/project-milestones/stage-projection`),
     getMonthlyReports: (studyId, month) =>
       request<MonthlyReportPage>(
         `/api/v1/studies/${studyId}/monthly-reports?${toSearchParams({ month })}`,

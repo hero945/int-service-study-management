@@ -11,7 +11,7 @@ import {
   sourceLabel,
   type PipelinePhase,
 } from '../domain/pipeline-status'
-import { getProjectCell, hasChipContent, type ProjectCell } from '../domain/pipeline-aggregation'
+import { getProjectCell, getProjectPhaseCells, hasChipContent, type ProjectCell } from '../domain/pipeline-aggregation'
 import {
   PIPELINE_PHASE_STATUS_OPTIONS,
   phaseCodeToColumn,
@@ -72,11 +72,16 @@ function onPhaseChange() {
 }
 
 function cell(project: OverviewProject, phase: PipelinePhase): ProjectCell {
-  return getProjectCell(
+  return cells(project, phase)[0] ?? { label: '—', tone: 'empty', clickable: false }
+}
+
+function cells(project: OverviewProject, phase: PipelinePhase): ProjectCell[] {
+  return getProjectPhaseCells(
     project.studies.map((study) => ({
       ...study,
       productName: project.productName,
     })),
+    project.regulatoryStatus,
     phase,
   )
 }
@@ -88,7 +93,7 @@ const filteredProjects = computed(() => allProjects.value.filter((project) => {
     return false
   }
   if (filters.status && selectedColumn.value) {
-    return cell(project, selectedColumn.value).label === filters.status
+    return cells(project, selectedColumn.value).some((c) => c.label === filters.status)
   }
   return true
 }))
@@ -126,18 +131,13 @@ const canReadMilestone = computed(() =>
   session.currentUser.value?.permissions.includes('milestone.read') ?? false,
 )
 
-function isCellClickable(project: OverviewProject, phase: PipelinePhase): boolean {
-  return canReadMilestone.value && cell(project, phase).clickable
-}
-
 function openStudy(studyId?: number) {
   if (studyId == null) return
   if (!canReadMilestone.value) return
   router.push(`/milestones/${studyId}`)
 }
 
-function showCellTip(event: MouseEvent, project: OverviewProject, phase: PipelinePhase) {
-  const item = cell(project, phase)
+function showCellTip(event: MouseEvent, item: ProjectCell) {
   if (item.tone === 'empty' || !item.tipStage || !item.tipStatus) {
     hoverTip.value = null
     return
@@ -316,30 +316,38 @@ onMounted(loadOverview)
                 v-for="phase in phases"
                 :key="phase"
                 class="pipeline-stage-td"
-                :class="{ 'cell-clickable': isCellClickable(project, phase) }"
-                @click="isCellClickable(project, phase) && openStudy(cell(project, phase).studyId)"
-                @mouseenter="showCellTip($event, project, phase)"
-                @mousemove="moveCellTip"
-                @mouseleave="hideCellTip"
               >
                 <div
-                  v-if="hasChipContent(cell(project, phase))"
-                  class="pipeline-stage-wrap"
+                  v-if="cells(project, phase).some(hasChipContent)"
+                  class="pipeline-stage-stack"
                 >
-                  <span
-                    v-if="cell(project, phase).subText"
-                    class="cell-stage-caption"
-                  >{{ cell(project, phase).subText }}</span>
-                  <div class="pipeline-stage-chip-row">
+                  <div
+                    v-for="item in cells(project, phase).filter(hasChipContent)"
+                    :key="item.studyId ?? `${item.label}-${item.subText}`"
+                    class="pipeline-stage-row"
+                    :class="{ 'cell-clickable': canReadMilestone && item.clickable }"
+                    @click="canReadMilestone && item.clickable && openStudy(item.studyId)"
+                    @mouseenter="showCellTip($event, item)"
+                    @mousemove="moveCellTip"
+                    @mouseleave="hideCellTip"
+                  >
                     <span
-                      class="status-chip"
-                      :class="`status-chip--${cell(project, phase).tone}`"
-                    >{{ cell(project, phase).label }}</span>
-                    <span
-                      v-if="cell(project, phase).openRiskCount"
-                      class="study-risk-badge"
-                      title="Open 风险"
-                    >{{ cell(project, phase).openRiskCount }}</span>
+                      v-if="item.subText"
+                      class="cell-stage-caption cell-stage-caption--code"
+                      :title="item.subText"
+                    >{{ item.subText }}</span>
+                    <div class="pipeline-stage-chip-row">
+                      <span
+                        class="status-chip"
+                        :class="`status-chip--${item.tone}`"
+                        :title="item.label"
+                      >{{ item.label }}</span>
+                      <span
+                        v-if="item.openRiskCount"
+                        class="study-risk-badge"
+                        title="Open 风险"
+                      >{{ item.openRiskCount }}</span>
+                    </div>
                   </div>
                 </div>
                 <span
@@ -390,12 +398,30 @@ onMounted(loadOverview)
 </template>
 
 <style scoped>
-.pipeline-stage-wrap {
+.pipeline-stage-stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+.pipeline-stage-row {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
   gap: 2px;
+  width: 100%;
+  padding: 5px 0;
+}
+.pipeline-stage-row:first-child {
+  padding-top: 0;
+}
+.pipeline-stage-row:last-child {
+  padding-bottom: 0;
+}
+.pipeline-stage-row:not(:last-child) {
+  border-bottom: 1px dashed var(--line);
+}
+.pipeline-stage-row.cell-clickable {
+  cursor: pointer;
 }
 .pipeline-stage-chip-row {
   display: inline-flex;
@@ -412,6 +438,12 @@ onMounted(loadOverview)
   text-transform: uppercase;
   color: var(--caption);
   font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.cell-stage-caption--code {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 </style>

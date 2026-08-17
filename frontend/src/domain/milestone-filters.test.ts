@@ -25,6 +25,8 @@ describe('PIPELINE_PHASE_STATUS_OPTIONS', () => {
       'Pre-III',
       'III期临床（A）',
       'III期临床（B）',
+      'PreNDA/BLA',
+      'NDA/BLA',
     ])
     expect(PIPELINE_PHASE_STATUS_OPTIONS.find((o) => o.code === 'PHASE_1')?.label).toBe('I期临床')
   })
@@ -35,11 +37,13 @@ describe('pipelineStatusOptions', () => {
     expect(pipelineStatusOptions('')).toEqual([])
   })
 
-  it('returns main-stage nodes for PRE_IND / IND / PRE_3', () => {
+  it('returns main-stage nodes for PRE_IND / IND / PRE_3 / PRE_NDA / NDA', () => {
     expect(pipelineStatusOptions('PRE_IND')[0]).toBe('已完成')
     expect(pipelineStatusOptions('PRE_IND')).toContain('PreIND 递交')
     expect(pipelineStatusOptions('IND')).toContain('IND 获批')
     expect(pipelineStatusOptions('PRE_3')).toContain('Pre3 递交')
+    expect(pipelineStatusOptions('PRE_NDA')).toContain('PreNDA 递交')
+    expect(pipelineStatusOptions('NDA')).toContain('NDA/BLA 获批')
   })
 
   it('returns all sub-statuses for clinical Phase columns', () => {

@@ -54,7 +54,8 @@ public class StudyApiService implements StudyApi {
                             study.plName(),
                             study.pmName(),
                             study.openRiskCount()))
-                        .toList()))
+                        .toList(),
+                    toRegulatoryStatusResponse(project.regulatoryStatus())))
                 .toList()))
         .toList();
     return new PipelineOverviewResponse(overview.title(), areas);
@@ -79,6 +80,22 @@ public class StudyApiService implements StudyApi {
         result.page(),
         result.pageSize(),
         totalPages);
+  }
+
+  private static RegulatoryStatusResponse toRegulatoryStatusResponse(
+      com.huadong.pipeline.domain.study.RegulatoryOverviewStatus status) {
+    if (status == null) {
+      return null;
+    }
+    return new RegulatoryStatusResponse(
+        status.mainStageCode(),
+        status.mainStageLabel(),
+        status.subStatusLabel(),
+        status.preindCompleted(),
+        status.indCompleted(),
+        status.pre3Completed(),
+        status.prendaCompleted(),
+        status.ndaCompleted());
   }
 
   private StudyResponse toResponse(StudyManager.StudyView study) {

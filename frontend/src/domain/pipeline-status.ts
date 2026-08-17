@@ -13,6 +13,8 @@ export const CLINICAL_PHASE_CODES = [
   'PRE_3',
   'PHASE_3_1',
   'PHASE_3_2',
+  'PRE_NDA',
+  'NDA',
 ] as const
 
 export type PipelinePhase = (typeof CLINICAL_PHASE_CODES)[number]
@@ -27,6 +29,8 @@ export const PHASE_LABELS: Record<PipelinePhase, string> = {
   PRE_3: 'Pre-III',
   PHASE_3_1: 'III期临床（A）',
   PHASE_3_2: 'III期临床（B）',
+  PRE_NDA: 'PreNDA/BLA',
+  NDA: 'NDA/BLA',
 }
 
 /** 将 phase code 转为展示标签；未知或空值返回原值 */

@@ -5,6 +5,7 @@ import {
   type PipelineTone,
   type Study,
 } from './pipeline-status'
+import type { RegulatoryStatus } from '../api/types'
 
 /** 管线总览的一行：一个 project 聚合其下所有 study */
 export interface ProjectGroup {
@@ -215,17 +216,12 @@ function resolveDisplayLabel(study: CellStudy): string | undefined {
     ?? trimmedOrUndefined(study.statusLabel)
 }
 
-/**
- * 监管列 → 里程碑主阶段 + 取数 Study 的临床 phase code。
- * PRE_IND / IND ← PHASE_1 study 的 PreIND / IND 里程碑；
- * PRE_3 ← PHASE_3_1 study 的 Pre3 里程碑。
- */
-const REGULATORY_COLUMN_SOURCE: Partial<
-  Record<PipelinePhase, { stageCode: string; sourcePhase: PipelinePhase }>
-> = {
-  PRE_IND: { stageCode: 'PreIND', sourcePhase: 'PHASE_1' },
-  IND: { stageCode: 'IND', sourcePhase: 'PHASE_1' },
-  PRE_3: { stageCode: 'Pre3', sourcePhase: 'PHASE_3_1' },
+const REGULATORY_STAGE_BY_PHASE: Partial<Record<PipelinePhase, string>> = {
+  PRE_IND: 'PreIND',
+  IND: 'IND',
+  PRE_3: 'Pre3',
+  PRE_NDA: 'PreNDA_BLA',
+  NDA: 'NDA_BLA',
 }
 
 /** 将 mainStage code/label 归一到可比较的排序索引（与 MilestoneDefinition 一致） */
@@ -249,73 +245,45 @@ function milestoneStageRank(codeOrLabel: string | null | undefined): number {
   return aliases[codeOrLabel.trim()] ?? -1
 }
 
-function findStudyByPhase(
-  studies: CellStudy[],
-  phase: PipelinePhase,
-): CellStudy | undefined {
-  let best: CellStudy | undefined
-  let bestUpdated = ''
-  for (const s of studies) {
-    if (normalizePhase(s.phase) !== phase) continue
-    const updated = s.updatedAt ?? ''
-    if (!best || updated > bestUpdated) {
-      best = s
-      bestUpdated = updated
-    }
-  }
-  return best
-}
-
 function completedRegulatoryCell(
-  study: CellStudy,
   targetPhase: PipelinePhase,
   stageLabel: string,
 ): ProjectCell {
-  return withTip(
-    {
-      label: '已完成',
-      tone: 'green',
-      clickable: true,
-      studyId: study.id,
-      subText: targetPhase,
-    },
-    stageLabel,
-    '已完成',
-    study,
-  )
+  return {
+    label: '已完成',
+    tone: 'green',
+    clickable: false,
+    subText: targetPhase,
+  }
 }
 
+const CLINICAL_PHASES: PipelinePhase[] = ['PHASE_1', 'PHASE_2', 'PHASE_3_1', 'PHASE_3_2']
+
 /**
- * PreIND / IND / PRE-3 列：按约定 Phase 的 study 对应里程碑展示并链接该 study。
- * 无对应 study 时返回 null，由调用方回退到阶段相对规则。
+ * PreIND / IND / PRE-3 / PRE-NDA / NDA 列：读取 project 维度的监管里程碑状态。
  */
 function getRegulatoryMilestoneCell(
-  studies: CellStudy[],
+  regulatory: RegulatoryStatus | undefined,
   targetPhase: PipelinePhase,
 ): ProjectCell | null {
-  const cfg = REGULATORY_COLUMN_SOURCE[targetPhase]
-  if (!cfg) return null
-  const source = findStudyByPhase(studies, cfg.sourcePhase)
-  if (!source) return null
-  const { stageCode } = cfg
+  const stageCode = REGULATORY_STAGE_BY_PHASE[targetPhase]
+  if (!stageCode || !regulatory) return null
 
   const targetRank = milestoneStageRank(stageCode)
-  const currentRank = milestoneStageRank(source.mainStageCode ?? source.mainStageLabel)
+  const currentRank = milestoneStageRank(regulatory.mainStageCode)
 
-  // 无里程碑 frontier：仅信 PreIND/IND 完成标记，否则空
-  if (currentRank < 0) {
-    if (stageCode === 'PreIND' && source.preindCompleted) {
-      return completedRegulatoryCell(source, targetPhase, stageCode)
-    }
-    if (stageCode === 'IND' && source.indCompleted) {
-      return completedRegulatoryCell(source, targetPhase, stageCode)
-    }
-    return { label: '—', tone: 'empty', clickable: false }
+  const completedMap: Partial<Record<PipelinePhase, keyof RegulatoryStatus>> = {
+    PRE_IND: 'preindCompleted',
+    IND: 'indCompleted',
+    PRE_3: 'pre3Completed',
+    PRE_NDA: 'prendaCompleted',
+    NDA: 'ndaCompleted',
   }
+  const completed = completedMap[targetPhase] ? regulatory[completedMap[targetPhase]!] : false
 
-  // 已越过该监管阶段 → 已完成
-  if (currentRank > targetRank) {
-    return completedRegulatoryCell(source, targetPhase, stageCode)
+  // 已完成：明确标记 或 当前阶段已越过目标阶段
+  if (completed || (targetRank >= 0 && currentRank > targetRank)) {
+    return completedRegulatoryCell(targetPhase, stageCode)
   }
 
   // 尚未到达该阶段
@@ -323,66 +291,21 @@ function getRegulatoryMilestoneCell(
     return { label: '—', tone: 'empty', clickable: false }
   }
 
-  // 正在该阶段：完成标记 / 阶段末节点完成 → 已完成
-  const stageDone =
-    (stageCode === 'PreIND' && source.preindCompleted) ||
-    (stageCode === 'IND' && source.indCompleted) ||
-    source.currentPhaseCompleted ||
-    source.globallyCompleted
-  if (stageDone) {
-    return completedRegulatoryCell(source, targetPhase, stageCode)
-  }
-  const subStatus = trimmedOrUndefined(source.subStatusLabel)
+  // 正在该阶段：显示子节点
+  const subStatus = trimmedOrUndefined(regulatory.subStatusLabel)
   if (subStatus) {
-    const stage = trimmedOrUndefined(source.mainStageLabel) ?? stageCode
-    return withTip(
-      {
-        label: subStatus,
-        tone: 'blue',
-        clickable: true,
-        studyId: source.id,
-        subText: trimmedOrUndefined(source.mainStageLabel),
-      },
-      stage,
-      subStatus,
-      source,
-    )
-  }
-  const fallback = trimmedOrUndefined(source.mainStageLabel)
-    ?? trimmedOrUndefined(source.statusLabel)
-  if (!fallback) return emptyCell()
-  return withTip(
-    {
-      label: fallback,
+    return {
+      label: subStatus,
       tone: 'blue',
-      clickable: true,
-      studyId: source.id,
-    },
-    trimmedOrUndefined(source.mainStageLabel) ?? stageCode,
-    fallback,
-    source,
-  )
+      clickable: false,
+      subText: trimmedOrUndefined(regulatory.mainStageLabel) ?? stageCode,
+    }
+  }
+
+  return { label: '—', tone: 'empty', clickable: false }
 }
 
-/**
- * 单元格取数与状态。
- *
- * PRE_IND / IND / PRE_3（监管列）：逻辑不变，见 getRegulatoryMilestoneCell。
- * 普通列（PHASE_1 / 2 / 3_1 / 3_2，以及监管列无约定 Study 时的回退）：
- *   只认本列对应 Phase 的 Study + 真实里程碑；
- *   不因「后面还有更大阶段」而把本列回填成「已完成」。
- *   - 无该 Phase 的 Study → "—"（灰）
- *   - 有 Study 且阶段/全局已完成 → "已完成"（绿）
- *   - 有 Study 进行中 → pill = 里程碑子状态全文（蓝）；上方灰色 = 主节点名
- */
-export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase): ProjectCell {
-  const regulatory = getRegulatoryMilestoneCell(studies, targetPhase)
-  if (regulatory) return ensureRenderableCell(regulatory)
-
-  const study = findStudyByPhase(studies, targetPhase)
-  if (!study) {
-    return { label: '—', tone: 'empty', clickable: false }
-  }
+function studyToProjectCell(study: CellStudy, targetPhase: PipelinePhase): ProjectCell {
   if (study.currentPhaseCompleted || study.globallyCompleted) {
     return withTip(
       {
@@ -390,7 +313,7 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
         tone: 'green',
         clickable: true,
         studyId: study.id,
-        subText: targetPhase,
+        subText: study.code,
       },
       targetPhase,
       '已完成',
@@ -406,7 +329,7 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
         tone: 'blue',
         clickable: true,
         studyId: study.id,
-        subText: trimmedOrUndefined(study.mainStageLabel),
+        subText: study.code,
       },
       stage,
       subStatus,
@@ -421,9 +344,55 @@ export function getProjectCell(studies: CellStudy[], targetPhase: PipelinePhase)
       tone: 'blue',
       clickable: true,
       studyId: study.id,
+      subText: study.code,
     },
     trimmedOrUndefined(study.mainStageLabel) ?? targetPhase,
     fallback,
     study,
   ))
+}
+
+/**
+ * 返回某一列的全部单元格。
+ *
+ * 监管列（PRE_IND / IND / PRE_3 / PRE_NDA / NDA）返回 0/1 个 cell。
+ * 临床列（PHASE_1 / 2 / 3_1 / 3_2）返回该阶段全部 Study 对应的 cell，按 study.code 升序排列。
+ */
+export function getProjectPhaseCells(
+  studies: CellStudy[],
+  regulatory: RegulatoryStatus | undefined,
+  targetPhase: PipelinePhase,
+): ProjectCell[] {
+  const regulatoryCell = getRegulatoryMilestoneCell(regulatory, targetPhase)
+  if (regulatoryCell) {
+    return [ensureRenderableCell(regulatoryCell)]
+  }
+
+  if (!CLINICAL_PHASES.includes(targetPhase)) {
+    return []
+  }
+
+  return studies
+    .filter((s) => normalizePhase(s.phase) === targetPhase)
+    .sort((a, b) => (a.code ?? '').localeCompare(b.code ?? ''))
+    .map((study) => studyToProjectCell(study, targetPhase))
+}
+
+/**
+ * 单元格取数与状态（兼容旧调用：返回该列第一个 cell）。
+ *
+ * PRE_IND / IND / PRE_3（监管列）：逻辑不变，见 getRegulatoryMilestoneCell。
+ * 普通列（PHASE_1 / 2 / 3_1 / 3_2）：
+ *   只认本列对应 Phase 的 Study + 真实里程碑；
+ *   不因「后面还有更大阶段」而把本列回填成「已完成」。
+ *   - 无该 Phase 的 Study → "—"（灰）
+ *   - 有 Study 且阶段/全局已完成 → "已完成"（绿）
+ *   - 有 Study 进行中 → pill = 里程碑子状态全文（蓝）；上方灰色 = Study 编号
+ */
+export function getProjectCell(
+  studies: CellStudy[],
+  regulatory: RegulatoryStatus | undefined,
+  targetPhase: PipelinePhase,
+): ProjectCell {
+  return getProjectPhaseCells(studies, regulatory, targetPhase)[0] ?? emptyCell()
 }

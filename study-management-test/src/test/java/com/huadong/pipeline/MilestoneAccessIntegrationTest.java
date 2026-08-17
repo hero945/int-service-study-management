@@ -39,7 +39,7 @@ class MilestoneAccessIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.studyCode").value("MS-SCOPE-IN"));
 
-    mvc.perform(put("/api/v1/studies/{id}/milestones/{code}", studyId, "PreIND-0")
+    mvc.perform(put("/api/v1/studies/{id}/milestones/{code}", studyId, "Protocol-0")
             .with(user(MEMBER).authorities(authority("milestone.update")))
             .with(csrf())
             .contentType(MediaType.APPLICATION_JSON)
@@ -54,11 +54,11 @@ class MilestoneAccessIntegrationTest {
         SELECT group_type, group_code, scope_study_id
         FROM hd_plt_audit_log
         WHERE module_code = 'MILESTONE'
-          AND subject_code = 'PreIND-0'
+          AND subject_code = 'Protocol-0'
         """);
     org.assertj.core.api.Assertions.assertThat(auditGroup)
         .containsEntry("group_type", "MILESTONE_STAGE")
-        .containsEntry("group_code", "PreIND")
+        .containsEntry("group_code", "Protocol")
         .containsEntry("scope_study_id", studyId);
   }
 

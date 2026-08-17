@@ -92,6 +92,17 @@ public interface StudyApi {
       int openRiskCount) {
   }
 
+  record RegulatoryStatusResponse(
+      String mainStageCode,
+      String mainStageLabel,
+      String subStatusLabel,
+      boolean preindCompleted,
+      boolean indCompleted,
+      boolean pre3Completed,
+      boolean prendaCompleted,
+      boolean ndaCompleted) {
+  }
+
   record OverviewProjectResponse(
       long id,
       String code,
@@ -101,7 +112,8 @@ public interface StudyApi {
       String moa,
       String sourceCode,
       String originCode,
-      List<OverviewStudyResponse> studies) {
+      List<OverviewStudyResponse> studies,
+      RegulatoryStatusResponse regulatoryStatus) {
   }
 
   record OverviewAreaResponse(

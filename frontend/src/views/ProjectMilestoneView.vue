@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { apiClient } from '../api/client'
 import { formatApiError } from '../api/errors'
-import type { MilestoneNode, MilestonePage, MilestoneUpdateInput, StageProjection } from '../api/types'
+import type { MilestoneNode, MilestoneUpdateInput, ProjectMilestonePage, StageProjection } from '../api/types'
 import PageState from '../components/PageState.vue'
 import AuditLogDrawer from '../components/AuditLogDrawer.vue'
 import { milestoneNodeStatusClass, milestoneNodeStatusLabel } from '../domain/milestone-status'
@@ -14,7 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const loading = ref(true)
 const error = ref('')
-const page = ref<MilestonePage>()
+const page = ref<ProjectMilestonePage>()
 const projection = ref<StageProjection>()
 const editing = ref<Set<string>>(new Set())
 const saving = ref<Set<string>>(new Set())
@@ -23,15 +23,10 @@ const studyId = computed(() => Number(route.params.studyId))
 const editForm = reactive<Record<string, MilestoneUpdateInput>>({})
 
 const { can } = usePermissions()
-const canEditMilestone = can('milestone.update')
-const canEditProjectMilestone = can('project.milestone.update')
+const canEdit = can('project.milestone.update')
 const canAudit = can('audit.read')
 const { auditDrawer, openGroupedAuditLogs, closeAuditLogs } =
   useAuditLogDrawer('MILESTONE')
-
-function canEditNode(node: MilestoneNode) {
-  return node.source === 'PROJECT' ? canEditProjectMilestone.value : canEditMilestone.value
-}
 
 async function load(showLoading = true) {
   if (!studyId.value) { router.push('/studies'); return }
@@ -39,13 +34,13 @@ async function load(showLoading = true) {
   error.value = ''
   try {
     const [milestones, proj] = await Promise.all([
-      apiClient.getMilestones(studyId.value),
-      apiClient.getStageProjection(studyId.value).catch(() => undefined),
+      apiClient.getProjectMilestones(studyId.value),
+      apiClient.getProjectStageProjection(studyId.value).catch(() => undefined),
     ])
     page.value = milestones
     projection.value = proj
   } catch (reason) {
-    error.value = formatApiError(reason, '里程碑数据加载失败')
+    error.value = formatApiError(reason, '注册里程碑数据加载失败')
   } finally { loading.value = false }
 }
 
@@ -62,7 +57,7 @@ function isEditing(milestoneCode: string) {
   return editing.value.has(milestoneCode)
 }
 function startEdit(node: MilestoneNode) {
-  if (!canEditNode(node)) return
+  if (!canEdit.value) return
   const key = node.milestoneCode
   editForm[key] = {
     planV1Date: node.planV1Date ?? undefined,
@@ -80,15 +75,11 @@ function cancelEdit(milestoneCode: string) {
   delete editForm[milestoneCode]
 }
 async function saveEdit(node: MilestoneNode) {
-  if (!canEditNode(node)) return
+  if (!canEdit.value) return
   const code = node.milestoneCode
   saving.value = new Set([...saving.value, code])
   try {
-    if (node.source === 'PROJECT') {
-      await apiClient.updateProjectMilestone(studyId.value, code, editForm[code] ?? {})
-    } else {
-      await apiClient.updateMilestone(studyId.value, code, editForm[code] ?? {})
-    }
+    await apiClient.updateProjectMilestone(studyId.value, code, editForm[code] ?? {})
     cancelEdit(code)
     await load(false)
   } catch (reason) {
@@ -99,6 +90,11 @@ async function saveEdit(node: MilestoneNode) {
     saving.value = next
   }
 }
+
+const regulatoryStageCodes = ['PreIND', 'IND', 'Pre3', 'PreNDA_BLA', 'NDA_BLA']
+const displayGroups = computed(() =>
+  page.value?.groups.filter((g) => regulatoryStageCodes.includes(g.stageCode)) ?? [])
+
 function goBack() { router.push('/studies') }
 </script>
 
@@ -107,7 +103,7 @@ function goBack() { router.push('/studies') }
     <div class="page-toolbar milestone-toolbar">
       <div>
         <button class="text-button" type="button" @click="goBack">&larr; 返回 Study 列表</button>
-        <h1 v-if="page" class="milestone-title">{{ page.studyCode }} · 里程碑跟踪</h1>
+        <h1 v-if="page" class="milestone-title">{{ page.projectCode }} · 注册里程碑跟踪</h1>
       </div>
       <div v-if="projection" class="milestone-projection">
         <span class="milestone-badge" :class="projection.statusText === '已完成' ? 'milestone-badge--green' : projection.statusText === '进行中' ? 'milestone-badge--blue' : ''">
@@ -117,7 +113,7 @@ function goBack() { router.push('/studies') }
       </div>
     </div>
 
-    <PageState :loading :error retryable :empty="!page?.groups.length" empty-title="暂无里程碑数据" @retry="load">
+    <PageState :loading :error retryable :empty="!displayGroups.length" empty-title="暂无注册里程碑数据" @retry="load">
       <div class="data-card milestone-card" v-if="page">
         <div class="milestone-table-wrap">
           <table class="data-table milestone-table">
@@ -134,7 +130,7 @@ function goBack() { router.push('/studies') }
                 <th v-if="canAudit" class="milestone-col-action">操作日志</th>
               </tr>
             </thead>
-            <template v-for="group in page.groups" :key="group.stageCode">
+            <template v-for="group in displayGroups" :key="group.stageCode">
               <tbody>
                 <tr class="milestone-stage-row">
                   <td colspan="8" class="milestone-stage-title">{{ group.stageName }}</td>
@@ -180,8 +176,8 @@ function goBack() { router.push('/studies') }
                       </button>
                       <button class="text-button" type="button" @click="cancelEdit(node.milestoneCode)">取消</button>
                     </template>
-                    <button v-if="canEditNode(node) && !isEditing(node.milestoneCode)" class="text-button" type="button" @click="startEdit(node)">编辑</button>
-                    <span v-if="!canEditNode(node) && !isEditing(node.milestoneCode)" class="milestone-readonly">只读</span>
+                    <button v-if="canEdit && !isEditing(node.milestoneCode)" class="text-button" type="button" @click="startEdit(node)">编辑</button>
+                    <span v-if="!canEdit && !isEditing(node.milestoneCode)" class="milestone-readonly">只读</span>
                   </td>
                   <td v-if="canAudit"></td>
                 </tr>

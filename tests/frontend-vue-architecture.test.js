@@ -339,7 +339,7 @@ test('pipeline overview keeps sticky id columns and stacked project/study drawer
   assert.match(overview, /pipeline-id-cell/);
   assert.match(overview, /area-row-sticky/);
   assert.match(overview, /colspan="3"/);
-  assert.match(overview, /pipeline-stage-wrap/);
+  assert.match(overview, /pipeline-stage-stack/);
   assert.match(overview, /cell-stage-caption/);
   assert.match(overview, /pipeline-hover-tip/);
   assert.match(overview, /showCellTip/);

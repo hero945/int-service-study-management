@@ -38,6 +38,17 @@ export interface OverviewStudy {
   openRiskCount?: number
 }
 
+export interface RegulatoryStatus {
+  mainStageCode: string | null
+  mainStageLabel: string | null
+  subStatusLabel: string | null
+  preindCompleted: boolean
+  indCompleted: boolean
+  pre3Completed: boolean
+  prendaCompleted: boolean
+  ndaCompleted: boolean
+}
+
 export interface OverviewProject {
   id: number
   code: string
@@ -48,6 +59,7 @@ export interface OverviewProject {
   sourceCode: string
   originCode: string
   studies: OverviewStudy[]
+  regulatoryStatus?: RegulatoryStatus
 }
 
 export interface OverviewArea {
@@ -271,6 +283,7 @@ export interface MilestoneNode {
   actualEndDate: string | null
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
   deviationNote: string | null
+  source?: 'STUDY' | 'PROJECT'
 }
 
 export interface StageGroup {
@@ -281,6 +294,11 @@ export interface StageGroup {
 
 export interface MilestonePage {
   studyCode: string
+  groups: StageGroup[]
+}
+
+export interface ProjectMilestonePage {
+  projectCode: string
   groups: StageGroup[]
 }
 

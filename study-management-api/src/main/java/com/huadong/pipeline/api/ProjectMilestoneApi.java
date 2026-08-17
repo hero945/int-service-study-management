@@ -1,22 +1,21 @@
 package com.huadong.pipeline.api;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
-public interface MilestoneApi {
+public interface ProjectMilestoneApi {
 
-  /** GET /api/v1/studies/{studyId}/milestones */
-  MilestonePageResponse getMilestones(long studyId, String username);
+  /** GET /api/v1/studies/{studyId}/project-milestones */
+  ProjectMilestonePageResponse getProjectMilestones(long studyId, String username);
 
-  /** PUT /api/v1/studies/{studyId}/milestones/{milestoneCode} */
-  MilestonePageResponse updateMilestone(long studyId, String milestoneCode,
-      @Valid MilestoneUpdateRequest request, String username);
+  /** PUT /api/v1/studies/{studyId}/project-milestones/{milestoneCode} */
+  ProjectMilestonePageResponse updateProjectMilestone(long studyId, String milestoneCode,
+      @Valid ProjectMilestoneUpdateRequest request, String username);
 
-  /** GET /api/v1/studies/{studyId}/stage-projection */
-  StageProjectionResponse getStageProjection(long studyId, String username);
+  /** GET /api/v1/studies/{studyId}/project-milestones/stage-projection */
+  StageProjectionResponse getProjectStageProjection(long studyId, String username);
 
   // ──────────── response records ────────────
 
@@ -29,8 +28,7 @@ public interface MilestoneApi {
       LocalDate actualStartDate,
       LocalDate actualEndDate,
       String status,
-      String deviationNote,
-      String source
+      String deviationNote
   ) {}
 
   record StageGroupResponse(
@@ -39,8 +37,8 @@ public interface MilestoneApi {
       List<MilestoneNodeResponse> nodes
   ) {}
 
-  record MilestonePageResponse(
-      String studyCode,
+  record ProjectMilestonePageResponse(
+      String projectCode,
       List<StageGroupResponse> groups
   ) {}
 
@@ -54,7 +52,7 @@ public interface MilestoneApi {
 
   // ──────────── request records ────────────
 
-  record MilestoneUpdateRequest(
+  record ProjectMilestoneUpdateRequest(
       LocalDate planV1Date,
       LocalDate planV2Date,
       LocalDate actualStartDate,

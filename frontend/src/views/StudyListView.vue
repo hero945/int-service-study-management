@@ -18,6 +18,7 @@ const router = useRouter()
 const { can } = usePermissions()
 const canReadMonthly = can('monthly.read')
 const canReadMilestone = can('milestone.read')
+const canRegister = can('project.milestone.read')
 
 const filters = reactive({ ta: '', program: '', product: '', studyCode: '', status: '' })
 const statusOptions = ALL_MILESTONE_SUB_STATUSES
@@ -73,6 +74,10 @@ function openDrawer(study: Study) {
 function closeDrawer() {
   drawerOpen.value = false
   selectedStudy.value = null
+}
+
+function goProjectMilestones(studyId: number) {
+  router.push(`/studies/${studyId}/project-milestones`)
 }
 
 function goMilestones(studyId: number) {
@@ -167,6 +172,11 @@ onMounted(load)
                   @click.stop="goMilestones(study.id)"
                 >里程碑</button>
                 <button v-if="canReadMonthly" class="link-button" @click.stop="goMonthlyReport(study.id)">月报</button>
+                <button
+                  v-if="canRegister"
+                  class="link-button"
+                  @click.stop="goProjectMilestones(study.id)"
+                >注册</button>
               </td>
             </tr>
           </tbody>

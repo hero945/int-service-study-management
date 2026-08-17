@@ -13,6 +13,7 @@ import type {
   MilestoneNode,
   MilestoneUpdateInput,
   FunctionLineReport,
+  ProjectMilestonePage,
   MonthlyReportEntry,
   MonthlyReportPage,
   FunctionLineHistory,
@@ -53,6 +54,8 @@ const users: Array<CurrentUser & { password: string }> = [
       'study.read',
       'milestone.read',
       'milestone.update',
+      'project.milestone.read',
+      'project.milestone.update',
       'config.page.view',
       'config.create',
       'config.update',
@@ -88,7 +91,7 @@ const users: Array<CurrentUser & { password: string }> = [
     displayName: '张伟',
     title: '项目负责人 · PL',
     roles: ['USER'],
-    permissions: ['pipeline.page.view', 'study.read', 'milestone.read', 'milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'report.page.view', 'report.export', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
+    permissions: ['pipeline.page.view', 'study.read', 'milestone.read', 'milestone.update', 'project.milestone.read', 'project.milestone.update', 'monthly.read', 'monthly.create', 'monthly.update', 'report.page.view', 'report.export', 'risk.page.view', 'risk.read', 'risk.create', 'risk.update'],
     dataScope: 'ALL',
     password: '1234',
   },
@@ -119,7 +122,7 @@ function expand(base: StudyBase, variants: StudyVariant[]): StudySeed[] {
   return variants.map((variant) => ({ ...base, ...variant }))
 }
 
-// 演示数据集：HDM1005 · 1 Program · 2 Project · 7 Study（覆盖全部 phase，公开叙事）
+// 演示数据集：HDM1005 · 1 Program · 2 Project · 8 Study（覆盖全部 phase，公开叙事）
 const studySeeds: StudySeed[] = [
   ...expand({
     indication: '2型糖尿病',
@@ -152,6 +155,24 @@ const studySeeds: StudySeed[] = [
     { code: 'HDM1005-OBE-02', phase: 'PHASE_3_1', status: 'ACTIVE', ownerName: '王芳', startDate: '2026-02-28', updatedAt: '2026-07-20T09:00:00' },
     { code: 'HDM1005-OBE-03', phase: 'PHASE_3_2', status: 'ACTIVE', ownerName: '张伟', startDate: '2026-03-02', updatedAt: '2026-07-21T14:00:00' },
   ]),
+  // 追加在同 Project 的 I 期第二条 Study，演示临床列多 Study 纵向列表
+  {
+    code: 'HDM1005-T2DM-04',
+    indication: '2型糖尿病',
+    therapeuticAreaCode: 'METABOLIC_CARDIOVASCULAR',
+    therapeuticAreaName: '代谢与心血管',
+    programCode: 'HDM1005',
+    projectCode: 'HDM1005-T2DM',
+    productName: 'HDM1005',
+    moa: 'Peptide',
+    sourceCode: 'SELF_DEVELOPED',
+    originCode: 'DOMESTIC',
+    phase: 'PHASE_1',
+    status: 'ACTIVE',
+    ownerName: '李静',
+    startDate: '2026-01-15',
+    updatedAt: '2026-07-25T10:00:00',
+  },
 ]
 
 export const demoStudies: Study[] = studySeeds.map((seed, index) => ({
@@ -174,6 +195,7 @@ const mockOverviewMilestoneView: Record<string, {
   'HDM1005-OBE-01': { mainStageLabel: 'Pre3', subStatusLabel: 'Pre3 反馈-临床医学', currentPhaseCompleted: false },
   'HDM1005-OBE-02': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
   'HDM1005-OBE-03': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
+  'HDM1005-T2DM-04': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
 }
 
 /** 全量里程碑 code 顺序（与 MilestoneDefinition 一致） */
@@ -199,6 +221,7 @@ const STUDY_MILESTONE_FRONTIER: Record<string, { frontierCode: string; completed
   'HDM1005-OBE-01': { frontierCode: 'Pre3-3' },
   'HDM1005-OBE-02': { frontierCode: 'Enrollment-0' },
   'HDM1005-OBE-03': { frontierCode: 'Enrollment-0' },
+  'HDM1005-T2DM-04': { frontierCode: 'Enrollment-0' },
 }
 
 const SOURCE_LABEL = SOURCE_LABELS
@@ -412,6 +435,69 @@ const teamRoles: TeamMatrixRole[] = [
 function delay(ms: number) { return new Promise(r => setTimeout(r, ms)) }
 
 const mockMilestones = new Map<number, MilestonePage>()
+const mockProjectMilestones = new Map<string, ProjectMilestonePage>()
+
+const mockProjectRegulatoryStatus: Record<string, import('./types').RegulatoryStatus> = {
+  'HDM1005-T2DM': {
+    mainStageCode: 'IND',
+    mainStageLabel: 'IND',
+    subStatusLabel: 'IND 获批',
+    preindCompleted: true,
+    indCompleted: false,
+    pre3Completed: false,
+    prendaCompleted: false,
+    ndaCompleted: false,
+  },
+  'HDM1005-OBE': {
+    mainStageCode: 'Pre3',
+    mainStageLabel: 'Pre3',
+    subStatusLabel: 'Pre3 反馈-临床医学',
+    preindCompleted: true,
+    indCompleted: true,
+    pre3Completed: false,
+    prendaCompleted: false,
+    ndaCompleted: false,
+  },
+}
+
+function buildProjectMilestones(projectCode: string): ProjectMilestonePage {
+  const regulatory = mockProjectRegulatoryStatus[projectCode]
+  const base = buildBaseMilestones(projectCode)
+  const page: ProjectMilestonePage = {
+    projectCode,
+    groups: base.groups.map((g) => ({
+      stageCode: g.stageCode,
+      stageName: g.stageName,
+      nodes: g.nodes.map((n) => ({ ...n })),
+    })),
+  }
+  if (regulatory) {
+    // Derive a frontier from the regulatory status for demo realism
+    const frontier = frontierMilestoneForRegulatory(regulatory)
+    if (frontier) {
+      applyMilestoneFrontier(page as unknown as MilestonePage, frontier.code, frontier.completed)
+    }
+  }
+  return page
+}
+
+function frontierMilestoneForRegulatory(regulatory: import('./types').RegulatoryStatus):
+    { code: string; completed: boolean } | undefined {
+  if (regulatory.ndaCompleted) return { code: 'NDA_BLA-8', completed: true }
+  if (regulatory.prendaCompleted) return { code: 'PreNDA_BLA-5', completed: true }
+  if (regulatory.pre3Completed) return { code: 'Pre3-5', completed: true }
+  if (regulatory.indCompleted) return { code: 'IND-4', completed: true }
+  if (regulatory.preindCompleted) return { code: 'PreIND-5', completed: false }
+  return undefined
+}
+
+function findProjectMilestoneNode(page: ProjectMilestonePage, code: string): MilestoneNode | undefined {
+  for (const group of page.groups) {
+    const node = group.nodes.find((n) => n.milestoneCode === code)
+    if (node) return node
+  }
+  return undefined
+}
 
 function findMilestoneNode(page: MilestonePage, code: string): MilestoneNode | undefined {
   for (const group of page.groups) {
@@ -583,6 +669,31 @@ function buildStudyMilestones(studyId: number, studyCode: string): MilestonePage
     applyMilestoneFrontier(page, profile.frontierCode, profile.completed ?? false)
   }
   return page
+}
+
+const PROJECT_SOURCE_STAGE_CODES = ['PreIND', 'IND', 'Pre3', 'PreNDA_BLA', 'NDA_BLA']
+
+function mergeProjectMilestonesIntoStudy(studyPage: MilestonePage, study: Study | undefined): MilestonePage {
+  if (!study || !study.projectCode) return studyPage
+  let projectPage = mockProjectMilestones.get(study.projectCode)
+  if (!projectPage) {
+    projectPage = buildProjectMilestones(study.projectCode)
+    mockProjectMilestones.set(study.projectCode, projectPage)
+  }
+  const projectGroups = new Map(projectPage.groups.map((g) => [g.stageCode, g]))
+  return {
+    ...studyPage,
+    groups: studyPage.groups.map((group) => {
+      if (!PROJECT_SOURCE_STAGE_CODES.includes(group.stageCode)) return group
+      const projectGroup = projectGroups.get(group.stageCode)
+      if (!projectGroup) return group
+      return {
+        stageCode: group.stageCode,
+        stageName: group.stageName,
+        nodes: projectGroup.nodes.map((n) => ({ ...n, source: 'PROJECT' as const })),
+      }
+    }),
+  }
 }
 
 for (const study of demoStudies) {
@@ -857,6 +968,7 @@ export function createMockApiClient(): ApiClient {
       const byArea = new Map<string, { name: string; projects: OverviewProject[] }>()
       for (const [projectCode, studies] of byProject) {
         const first = studies[0]
+
         const project: OverviewProject = {
           id: first.id,
           code: projectCode,
@@ -891,6 +1003,7 @@ export function createMockApiClient(): ApiClient {
                 risk.studyId === s.id && risk.status === 'OPEN').length,
             }
           }),
+          regulatoryStatus: mockProjectRegulatoryStatus[projectCode],
         }
         const taCode = first.therapeuticAreaCode ?? 'OTHER'
         const taName = first.therapeuticAreaName ?? '其他'
@@ -1672,7 +1785,9 @@ export function createMockApiClient(): ApiClient {
         data = buildStudyMilestones(studyId, study.code)
         mockMilestones.set(studyId, data)
       }
-      return structuredClone(data)
+      const study = demoStudies.find((row) => row.id === studyId)
+      const merged = mergeProjectMilestonesIntoStudy(structuredClone(data), study)
+      return merged
     },
     async updateMilestone(studyId, milestoneCode, input) {
       await delay(200)
@@ -1714,6 +1829,62 @@ export function createMockApiClient(): ApiClient {
         return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '已完成' }
       }
       // Find first not-started
+      for (const group of page.groups) {
+        for (const node of group.nodes) {
+          if (node.status === 'NOT_STARTED') {
+            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
+              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
+              statusText: '未开始' }
+          }
+        }
+      }
+      return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '' }
+    },
+    async getProjectMilestones(studyId) {
+      await delay(200)
+      const study = demoStudies.find((row) => row.id === studyId)
+      if (!study || !study.projectCode) throw new Error('Study 不存在或无所属 Project')
+      let data = mockProjectMilestones.get(study.projectCode)
+      if (!data) {
+        data = buildProjectMilestones(study.projectCode)
+        mockProjectMilestones.set(study.projectCode, data)
+      }
+      return structuredClone(data)
+    },
+    async updateProjectMilestone(studyId, milestoneCode, input) {
+      await delay(200)
+      const study = demoStudies.find((row) => row.id === studyId)
+      if (!study || !study.projectCode) throw new Error('Study 不存在')
+      const page = mockProjectMilestones.get(study.projectCode)
+      if (!page) throw new Error('Project milestone 未初始化')
+      const node = findProjectMilestoneNode(page, milestoneCode)
+      if (!node) throw new Error('里程碑节点不存在: ' + milestoneCode)
+      if (input.planV1Date !== undefined) node.planV1Date = input.planV1Date
+      if (input.planV2Date !== undefined) node.planV2Date = input.planV2Date
+      if (input.actualStartDate !== undefined) node.actualStartDate = input.actualStartDate
+      if (input.actualEndDate !== undefined) node.actualEndDate = input.actualEndDate
+      if (input.deviationNote !== undefined) node.deviationNote = input.deviationNote
+      if (node.actualEndDate) node.status = 'COMPLETED'
+      else if (node.actualStartDate) node.status = 'IN_PROGRESS'
+      else node.status = 'NOT_STARTED'
+      return structuredClone(page)
+    },
+    async getProjectStageProjection(studyId) {
+      await delay(100)
+      const page = await this.getProjectMilestones(studyId)
+      for (const group of page.groups) {
+        for (const node of group.nodes) {
+          if (node.status === 'IN_PROGRESS') {
+            return { currentStageCode: group.stageCode, currentStageName: group.stageName,
+              currentMilestoneCode: node.milestoneCode, currentMilestoneName: node.milestoneName,
+              statusText: '进行中' }
+          }
+        }
+      }
+      const allCompleted = page.groups.every(g => g.nodes.every(n => n.status === 'COMPLETED'))
+      if (allCompleted) {
+        return { currentStageCode: '', currentStageName: '', currentMilestoneCode: '', currentMilestoneName: '', statusText: '已完成' }
+      }
       for (const group of page.groups) {
         for (const node of group.nodes) {
           if (node.status === 'NOT_STARTED') {
