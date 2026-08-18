@@ -42,7 +42,8 @@ public class MybatisPlusStudyRepository implements StudyRepository {
     StudyListQuery q = query.normalized();
     var wrapper = Wrappers.<StudyEntity>lambdaQuery()
         .eq(StudyEntity::getSysDeleted, 0)
-        .orderByDesc(StudyEntity::getSysUpdateTime)
+        .orderByAsc(StudyEntity::getProjectCodeSnapshot)
+        .orderByAsc(StudyEntity::getStudyCode)
         .orderByDesc(StudyEntity::getId);
     applyAccessScope(wrapper, accessScope);
     if (!q.therapeuticArea().isBlank()) {
@@ -55,6 +56,9 @@ public class MybatisPlusStudyRepository implements StudyRepository {
     }
     if (!q.product().isBlank()) {
       wrapper.like(StudyEntity::getProductNameSnapshot, q.product());
+    }
+    if (!q.project().isBlank()) {
+      wrapper.like(StudyEntity::getProjectCodeSnapshot, q.project());
     }
     if (!q.studyCode().isBlank()) {
       wrapper.like(StudyEntity::getStudyCode, q.studyCode());

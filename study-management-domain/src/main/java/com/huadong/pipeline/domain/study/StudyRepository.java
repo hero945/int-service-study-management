@@ -36,6 +36,7 @@ public interface StudyRepository {
       String therapeuticArea,
       String program,
       String product,
+      String project,
       String studyCode,
       String milestoneStatus,
       int page,
@@ -47,6 +48,7 @@ public interface StudyRepository {
           trim(therapeuticArea),
           trim(program),
           trim(product),
+          trim(project),
           trim(studyCode),
           trim(milestoneStatus),
           safePage,
@@ -54,12 +56,13 @@ public interface StudyRepository {
     }
 
     public StudyListQuery withoutMilestoneStatus() {
-      return new StudyListQuery(therapeuticArea, program, product, studyCode, "", page, pageSize);
+      return new StudyListQuery(
+          therapeuticArea, program, product, project, studyCode, "", page, pageSize);
     }
 
     public StudyListQuery withPaging(int page, int pageSize) {
       return new StudyListQuery(
-          therapeuticArea, program, product, studyCode, milestoneStatus, page, pageSize);
+          therapeuticArea, program, product, project, studyCode, milestoneStatus, page, pageSize);
     }
 
     private static String trim(String value) {

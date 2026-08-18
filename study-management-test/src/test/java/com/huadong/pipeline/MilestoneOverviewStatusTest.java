@@ -38,10 +38,10 @@ class MilestoneOverviewStatusTest {
 
     var result = manager.computeOverviewStatus(rows);
     assertThat(result).isNotNull();
-    assertThat(result.status().name()).isEqualTo("COMPLETED");
+    assertThat(result.status().name()).isEqualTo("ACTIVE");
     assertThat(result.preindCompleted()).isTrue();
     assertThat(result.indCompleted()).isTrue();
-    assertThat(result.globallyCompleted()).isTrue();
+    assertThat(result.globallyCompleted()).isFalse();
     assertThat(result.mainStageCode()).isEqualTo("IND");
     assertThat(result.mainStageLabel()).isEqualTo("IND");
   }
@@ -133,6 +133,36 @@ class MilestoneOverviewStatusTest {
     assertThat(result.currentPhaseCompleted()).isFalse();
     assertThat(result.mainStageLabel()).isEqualTo("IND");
     assertThat(result.subStatusLabel()).isEqualTo("IND 受理");
+  }
+
+  @Test
+  void globallyCompletedOnlyWhenCenterCloseHasActualEnd() {
+    LocalDate s = LocalDate.of(2026, 1, 1);
+    LocalDate e = LocalDate.of(2026, 2, 1);
+    var result = manager.computeOverviewStatus(List.of(
+        m("Data_Report", "Data_Report-7", s, e)));
+
+    assertThat(result).isNotNull();
+    assertThat(result.globallyCompleted()).isTrue();
+    assertThat(result.status().name()).isEqualTo("COMPLETED");
+    assertThat(result.subStatusLabel()).isEqualTo("中心关闭");
+  }
+
+  @Test
+  void enrollmentLpoCompleteIsNotStudyComplete() {
+    LocalDate s = LocalDate.of(2026, 1, 1);
+    LocalDate e = LocalDate.of(2026, 2, 1);
+    var rows = List.of(
+        m("Enrollment", "Enrollment-0", s, e),
+        m("Enrollment", "Enrollment-1", s, e),
+        m("Enrollment", "Enrollment-2", s, e));
+
+    var result = manager.computeOverviewStatus(rows);
+    assertThat(result).isNotNull();
+    assertThat(result.globallyCompleted()).isFalse();
+    assertThat(result.currentPhaseCompleted()).isTrue();
+    assertThat(result.subStatusLabel()).isEqualTo("LPO");
+    assertThat(result.status().name()).isEqualTo("ACTIVE");
   }
 
   @Test

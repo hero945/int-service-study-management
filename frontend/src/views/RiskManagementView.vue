@@ -6,7 +6,7 @@ import type { RiskFormOptions, RiskLevel, RiskPage, RiskStatus, RiskSummary } fr
 import ListPagination from '../components/ListPagination.vue'
 import PageState from '../components/PageState.vue'
 import RiskEditorDrawer from '../components/RiskEditorDrawer.vue'
-import { formatDateTime } from '../domain/date-format'
+import { formatDateTimeSeconds } from '../domain/date-format'
 import {
   riskActionSummaryLabel,
   riskLevelLabel,
@@ -36,14 +36,14 @@ const scoreTip = ref<{ left: number; top: number } | null>(null)
 
 const { can } = usePermissions()
 const canCreate = can('risk.create')
-const riskCols = useResizableColumns('risk-list', {
-  riskCode: 120, studyCode: 140, program: 160, function: 100, description: 220,
-  owner: 100, score: 80, level: 80, action: 120, status: 90, updatedAt: 120,
+const riskCols = useResizableColumns('risk-list-v2', {
+  program: 140, project: 150, studyCode: 150, function: 110, description: 200,
+  owner: 110, score: 80, level: 90, action: 110, status: 90, updatedAt: 160,
 })
 const functionOptions = computed(() => formOptions.value?.functions ?? [])
 const scoreRuleLines = computed(() => riskScoreRuleLines(formOptions.value?.scoringRule))
 
-type RiskSortKey = 'updatedAt' | 'riskCode' | 'studyCode' | 'score' | 'level' | 'registeredDate'
+type RiskSortKey = 'updatedAt' | 'studyCode' | 'score' | 'level' | 'registeredDate'
 
 const {
   result, loading, error,
@@ -72,6 +72,20 @@ const { sortKey, sortDirection, sortHeader } = useServerSort<RiskSortKey>({
 })
 
 const risks = computed(() => result.value?.data ?? [])
+const projectGroups = computed(() => {
+  const map = new Map<string, RiskSummary[]>()
+  for (const risk of risks.value) {
+    const key = risk.projectCode || risk.programCode || risk.studyCode
+    const list = map.get(key)
+    if (list) list.push(risk)
+    else map.set(key, [risk])
+  }
+  return [...map.entries()].map(([projectCode, groupRisks]) => ({
+    projectCode,
+    programCode: groupRisks[0].programCode,
+    risks: groupRisks,
+  }))
+})
 
 async function loadWithOptions() {
   await Promise.all([
@@ -184,71 +198,85 @@ onMounted(async () => {
 
     <PageState :loading :error retryable :empty="!result?.data.length" empty-title="暂无风险记录" @retry="loadWithOptions">
       <div class="data-card risk-table-card">
-        <table class="data-table risk-table">
+        <table class="data-table risk-table" :style="riskCols.tableStyle()">
           <thead>
             <tr>
-              <th v-bind="sortHeader('riskCode')" :style="riskCols.colStyle('riskCode')">Risk ID<ColResizer col-key="riskCode" :start-resize="riskCols.startResize" /></th>
-              <th v-bind="sortHeader('studyCode')" :style="riskCols.colStyle('studyCode')">Study No.<ColResizer col-key="studyCode" :start-resize="riskCols.startResize" /></th>
-              <th :style="riskCols.colStyle('program')">Program / Project<ColResizer col-key="program" :start-resize="riskCols.startResize" /></th>
-              <th :style="riskCols.colStyle('function')">功能线<ColResizer col-key="function" :start-resize="riskCols.startResize" /></th>
-              <th :style="riskCols.colStyle('description')">风险描述<ColResizer col-key="description" :start-resize="riskCols.startResize" /></th>
-              <th :style="riskCols.colStyle('owner')">Owner<ColResizer col-key="owner" :start-resize="riskCols.startResize" /></th>
-              <th v-bind="sortHeader('score')" :style="riskCols.colStyle('score')">评分<ColResizer col-key="score" :start-resize="riskCols.startResize" /></th>
-              <th v-bind="sortHeader('level')" :style="riskCols.colStyle('level')">等级<ColResizer col-key="level" :start-resize="riskCols.startResize" /></th>
-              <th :style="riskCols.colStyle('action')">措施<ColResizer col-key="action" :start-resize="riskCols.startResize" /></th>
-              <th :style="riskCols.colStyle('status')">Status<ColResizer col-key="status" :start-resize="riskCols.startResize" /></th>
-              <th v-bind="sortHeader('updatedAt')" :style="riskCols.colStyle('updatedAt')">更新时间<ColResizer col-key="updatedAt" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.fillColStyle('program')">Program<ColResizer col-key="program" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.fillColStyle('project')">Project<ColResizer col-key="project" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('studyCode')" :style="riskCols.fillColStyle('studyCode')">Study No.<ColResizer col-key="studyCode" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.fillColStyle('function')">功能线<ColResizer col-key="function" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.fillColStyle('description')">风险描述<ColResizer col-key="description" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.fillColStyle('owner')">Owner<ColResizer col-key="owner" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('score')" :style="riskCols.fillColStyle('score')">评分<ColResizer col-key="score" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('level')" :style="riskCols.fillColStyle('level')">等级<ColResizer col-key="level" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.fillColStyle('action')">措施<ColResizer col-key="action" :start-resize="riskCols.startResize" /></th>
+              <th :style="riskCols.fillColStyle('status')">Status<ColResizer col-key="status" :start-resize="riskCols.startResize" /></th>
+              <th v-bind="sortHeader('updatedAt')" :style="riskCols.fillColStyle('updatedAt')" title="该风险记录最近一次保存的时间">更新时间<ColResizer col-key="updatedAt" :start-resize="riskCols.startResize" /></th>
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="risk in risks"
-              :key="risk.riskCode"
-              tabindex="0"
-              @click="openRisk(risk)"
-              @keydown.enter="openRisk(risk)"
-              @keydown.space.prevent="openRisk(risk)"
-            >
-              <td>
-                <button class="risk-link mono" type="button" @click.stop="openRisk(risk)">{{ risk.riskCode }}</button>
-              </td>
-              <td class="mono">{{ risk.studyCode }}</td>
-              <td><strong>{{ risk.programCode }}</strong><small>{{ risk.projectCode }}</small></td>
-              <td>{{ risk.functionName }}</td>
-              <td class="risk-description">{{ risk.description }}</td>
-              <td>{{ risk.ownerName }}</td>
-              <td>
-                <span
-                  class="risk-score mono"
-                  tabindex="0"
-                  aria-describedby="risk-score-rule-tip"
-                  @mouseenter="showScoreTip"
-                  @mouseleave="hideScoreTip"
-                  @focus="showScoreTip"
-                  @blur="hideScoreTip"
+            <template v-for="group in projectGroups" :key="group.projectCode">
+              <tr
+                v-for="(risk, index) in group.risks"
+                :key="risk.riskCode"
+                tabindex="0"
+                @click="openRisk(risk)"
+                @keydown.enter="openRisk(risk)"
+                @keydown.space.prevent="openRisk(risk)"
+              >
+                <td
+                  v-if="index === 0"
+                  class="project-group-cell project-group-id"
+                  :rowspan="group.risks.length"
                   @click.stop
-                >{{ risk.score }}</span>
-              </td>
-              <td>
-                <span class="status-chip" :class="`status-chip--${riskLevelTone(risk.level)}`">
-                  {{ riskLevelLabel(risk.level) }}
-                </span>
-              </td>
-              <td>
-                <span
-                  v-if="risk.actionCount"
-                  class="status-chip"
-                  :class="risk.overdueActionCount ? 'status-chip--red' : 'status-chip--blue'"
-                >{{ riskActionSummaryLabel(risk) }}</span>
-                <span v-else>—</span>
-              </td>
-              <td>
-                <span class="status-chip" :class="risk.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">
-                  {{ riskStatusLabel(risk.status) }}
-                </span>
-              </td>
-              <td class="mono">{{ formatDateTime(risk.updatedAt) }}</td>
-            </tr>
+                >
+                  <strong class="mono">{{ group.programCode || '—' }}</strong>
+                </td>
+                <td
+                  v-if="index === 0"
+                  class="project-group-cell project-group-id"
+                  :rowspan="group.risks.length"
+                  @click.stop
+                >
+                  <strong class="mono">{{ group.projectCode || '—' }}</strong>
+                </td>
+                <td class="mono strong">{{ risk.studyCode }}</td>
+                <td>{{ risk.functionName }}</td>
+                <td class="risk-description">{{ risk.description }}</td>
+                <td>{{ risk.ownerName }}</td>
+                <td>
+                  <span
+                    class="risk-score mono"
+                    tabindex="0"
+                    aria-describedby="risk-score-rule-tip"
+                    @mouseenter="showScoreTip"
+                    @mouseleave="hideScoreTip"
+                    @focus="showScoreTip"
+                    @blur="hideScoreTip"
+                    @click.stop
+                  >{{ risk.score }}</span>
+                </td>
+                <td>
+                  <span class="status-chip" :class="`status-chip--${riskLevelTone(risk.level)}`">
+                    {{ riskLevelLabel(risk.level) }}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    v-if="risk.actionCount"
+                    class="status-chip"
+                    :class="risk.overdueActionCount ? 'status-chip--red' : 'status-chip--blue'"
+                  >{{ riskActionSummaryLabel(risk) }}</span>
+                  <span v-else>—</span>
+                </td>
+                <td>
+                  <span class="status-chip" :class="risk.status === 'OPEN' ? 'status-chip--orange' : 'status-chip--green'">
+                    {{ riskStatusLabel(risk.status) }}
+                  </span>
+                </td>
+                <td class="mono">{{ formatDateTimeSeconds(risk.updatedAt) }}</td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>

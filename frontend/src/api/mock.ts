@@ -193,7 +193,7 @@ const mockOverviewMilestoneView: Record<string, {
   'HDM1005-T2DM-00': { mainStageLabel: 'PreIND', subStatusLabel: 'PreIND 反馈-数统', currentPhaseCompleted: false },
   'HDM1005-T2DM-01': { mainStageLabel: 'IND', subStatusLabel: 'IND 获批', currentPhaseCompleted: false },
   'HDM1005-T2DM-02': { mainStageLabel: 'Enrollment', subStatusLabel: 'LPO', currentPhaseCompleted: true },
-  'HDM1005-T2DM-03': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR定稿', currentPhaseCompleted: true },
+  'HDM1005-T2DM-03': { mainStageLabel: 'Data & Report', subStatusLabel: 'TLR定稿', currentPhaseCompleted: false },
   'HDM1005-OBE-01': { mainStageLabel: 'Pre3', subStatusLabel: 'Pre3 反馈-临床医学', currentPhaseCompleted: false },
   'HDM1005-OBE-02': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
   'HDM1005-OBE-03': { mainStageLabel: 'Enrollment', subStatusLabel: 'FPI', currentPhaseCompleted: false },
@@ -219,7 +219,7 @@ const STUDY_MILESTONE_FRONTIER: Record<string, { frontierCode: string; completed
   'HDM1005-T2DM-00': { frontierCode: 'PreIND-2' },
   'HDM1005-T2DM-01': { frontierCode: 'IND-4' },
   'HDM1005-T2DM-02': { frontierCode: 'Enrollment-2', completed: true },
-  'HDM1005-T2DM-03': { frontierCode: 'Data_Report-2', completed: true },
+  'HDM1005-T2DM-03': { frontierCode: 'Data_Report-2' },
   'HDM1005-OBE-01': { frontierCode: 'Pre3-3' },
   'HDM1005-OBE-02': { frontierCode: 'Enrollment-0' },
   'HDM1005-OBE-03': { frontierCode: 'Enrollment-0' },
@@ -238,6 +238,7 @@ const OVERVIEW_STAGE_ORDER = [
  * When no full milestone tree exists, approximate MilestoneManager completion flags
  * from the overview frontier stage: stages already passed count as completed;
  * current stage counts when currentPhaseCompleted.
+ * globallyCompleted only when frontier has reached Data & Report's last node (中心关闭).
  */
 function deriveOverviewCompletionFromStage(
   mainStageLabel: string | null | undefined,
@@ -249,10 +250,11 @@ function deriveOverviewCompletionFromStage(
   if (rank < 0) {
     return { preindCompleted: false, indCompleted: false, globallyCompleted: false }
   }
+  const dataReportRank = (OVERVIEW_STAGE_ORDER as readonly string[]).indexOf('Data & Report')
   return {
     preindCompleted: rank > 0 || (rank === 0 && currentPhaseCompleted),
     indCompleted: rank > 1 || (rank === 1 && currentPhaseCompleted),
-    globallyCompleted: rank === OVERVIEW_STAGE_ORDER.length - 1 && currentPhaseCompleted,
+    globallyCompleted: rank > dataReportRank || (rank === dataReportRank && currentPhaseCompleted),
   }
 }
 
@@ -1059,6 +1061,10 @@ export function createMockApiClient(): ApiClient {
           (study.programCode ?? '').includes(query.program) ||
           (study.program ?? '').includes(query.program)
         )) return false
+        if (query.project && !(
+          (study.projectCode ?? '').includes(query.project) ||
+          (study.project ?? '').includes(query.project)
+        )) return false
         if (query.product && !(
           (study.productName ?? '').includes(query.product) ||
           (study.product ?? '').includes(query.product)
@@ -1069,7 +1075,12 @@ export function createMockApiClient(): ApiClient {
       })
       const page = query.page ?? 1
       const pageSize = query.pageSize ?? 10
-      const sorted = sortByUpdatedAtDesc(all)
+      const sorted = [...all].sort((a, b) => {
+        const projectCmp = String(a.projectCode ?? a.project ?? '').localeCompare(
+          String(b.projectCode ?? b.project ?? ''), 'zh-CN', { numeric: true })
+        if (projectCmp !== 0) return projectCmp
+        return String(a.code ?? '').localeCompare(String(b.code ?? ''), 'zh-CN', { numeric: true })
+      })
       const total = sorted.length
       const totalPages = Math.max(1, Math.ceil(total / pageSize))
       return {

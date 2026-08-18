@@ -129,13 +129,26 @@ describe('getProjectCell', () => {
     expect(displaySubNodeLabel('方案摘要定稿', 'Protocol')).toBe('方案摘要定稿')
   })
 
-  it('shows 已完成 on own-phase column when that phase milestone is completed', () => {
+  it('shows frontier sub-node when current phase is done but study is not closed', () => {
     const studies = [ms({
       phase: 'PHASE_2',
       code: 'COMP-001',
       mainStageLabel: 'Enrollment',
       subStatusLabel: 'LPO',
       currentPhaseCompleted: true,
+    })]
+    expect(getProjectCell(studies, undefined, 'PHASE_2')).toMatchObject({
+      label: 'LPO', tone: 'blue', subText: 'COMP-001',
+    })
+  })
+
+  it('shows 已完成 on own-phase column only when the study is globally completed', () => {
+    const studies = [ms({
+      phase: 'PHASE_2',
+      code: 'COMP-001',
+      mainStageLabel: 'Data & Report',
+      subStatusLabel: '中心关闭',
+      globallyCompleted: true,
     })]
     expect(getProjectCell(studies, undefined, 'PHASE_2')).toMatchObject({
       label: '已完成', tone: 'green', subText: 'COMP-001',

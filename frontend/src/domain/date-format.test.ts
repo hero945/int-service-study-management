@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDate, formatDateTime, formatIsoDate, formatIsoMinute, todayIso } from './date-format'
+import { formatDate, formatDateTime, formatDateTimeSeconds, formatIsoDate, formatIsoMinute, todayIso } from './date-format'
 
 describe('date-format', () => {
   it('formatDate 空值返回 fallback，非法值原样返回', () => {
@@ -14,6 +14,13 @@ describe('date-format', () => {
     const result = formatDate('2026-07-28T10:00:00Z')
     expect(result).toContain('2026')
     expect(result).toContain('7')
+  })
+
+  it('formatDateTimeSeconds 精确到秒', () => {
+    const result = formatDateTimeSeconds('2026-07-28T10:05:09')
+    expect(result).toContain('2026')
+    expect(result).toMatch(/10:05:09/)
+    expect(formatDateTimeSeconds(null)).toBe('—')
   })
 
   it('formatDateTime 精确到分钟', () => {

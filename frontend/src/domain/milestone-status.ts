@@ -18,7 +18,11 @@ export interface MilestoneNodeDates {
 
 export interface MilestoneNodeWithStage extends MilestoneNodeDates {
   stageCode: string
+  milestoneCode?: string
 }
+
+/** Study 完成节点：中心关闭（Data & Report 最后一节点） */
+export const STUDY_COMPLETED_CODE = 'Data_Report-7'
 
 /**
  * 导出 Study 状态（对齐 MonthlyExportManager.deriveMilestoneStatus）：
@@ -49,7 +53,7 @@ function isStageLastNodeCompleted(nodes: MilestoneNodeWithStage[], stageCode: st
 /**
  * 总览完成标志（对齐 MilestoneManager.computeOverviewStatus）：
  * - preindCompleted / indCompleted：对应 stage 最后一个节点有 actual_end
- * - globallyCompleted：全局最后一个里程碑节点有 actual_end
+ * - globallyCompleted：Data_Report-7（中心关闭）有 actual_end；缺行视为未完成
  */
 export function deriveOverviewCompletionFlags(nodes: MilestoneNodeWithStage[]): {
   preindCompleted: boolean
@@ -62,17 +66,20 @@ export function deriveOverviewCompletionFlags(nodes: MilestoneNodeWithStage[]): 
   return {
     preindCompleted: isStageLastNodeCompleted(nodes, 'PreIND'),
     indCompleted: isStageLastNodeCompleted(nodes, 'IND'),
-    globallyCompleted: nodes[nodes.length - 1].actualEndDate != null,
+    globallyCompleted: nodes.some(
+      (n) => n.milestoneCode === STUDY_COMPLETED_CODE && n.actualEndDate != null,
+    ),
   }
 }
 
 /** 从 MilestonePage.groups 展平为定义顺序节点（含 stageCode） */
 export function flattenMilestoneNodes(
-  groups: Array<{ stageCode: string; nodes: MilestoneNodeDates[] }>,
+  groups: Array<{ stageCode: string; nodes: Array<MilestoneNodeDates & { milestoneCode?: string }> }>,
 ): MilestoneNodeWithStage[] {
   return groups.flatMap((g) =>
     g.nodes.map((n) => ({
       stageCode: g.stageCode,
+      milestoneCode: n.milestoneCode,
       actualStartDate: n.actualStartDate,
       actualEndDate: n.actualEndDate,
     })),

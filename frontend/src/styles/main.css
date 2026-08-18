@@ -644,6 +644,44 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   border-bottom: 1px solid #e8ebef;
 }
 .study-row--clickable { cursor: pointer; }
+.data-table td.project-group-cell {
+  background: var(--surface);
+  vertical-align: middle;
+}
+.data-table tbody tr:hover td.project-group-cell {
+  background: var(--surface);
+}
+.project-group-id strong,
+.project-group-id small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-group-id__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.project-group-id__title strong {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.project-group-id__title .link-button {
+  flex: none;
+  font-weight: 600;
+}
+.project-group-id strong {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.project-group-id small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 500;
+}
 .study-no-with-risk {
   display: inline-flex;
   align-items: center;
@@ -953,11 +991,8 @@ th.sort-desc {
 }
 .risk-stats .risk-stat--red { color: var(--red-text); }
 .risk-stats .risk-stat--orange { color: var(--orange-text); }
-.risk-table { min-width: 1320px; }
 .risk-table tbody tr { cursor: pointer; }
-.risk-table td small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
-.risk-description { min-width: 240px; max-width: 360px; line-height: 1.5; }
-.risk-link { padding: 0; border: 0; background: transparent; color: var(--accent); font-weight: 600; cursor: pointer; }
+.risk-description { line-height: 1.5; }
 .risk-score {
   display: inline-flex;
   min-width: 32px;

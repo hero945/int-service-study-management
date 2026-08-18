@@ -264,14 +264,15 @@ public class MilestoneManager {
    * The three booleans describe per-study milestone completion:
    *   - preindCompleted:  PreIND stage's last node has actual_end_date != null
    *   - indCompleted:     IND stage's last node has actual_end_date != null
-   *   - globallyCompleted: study's globally-last milestone node has actual_end_date != null
+   *   - globallyCompleted: Data_Report-7（中心关闭）has actual_end_date != null；缺行视为未完成
    *
    * NOTE: the frontend cell rendering no longer keys off these booleans per column.
    * It uses a phase-relative rule against the project's furthest phase
    * (see pipeline-aggregation.getProjectCell): earlier columns → "已完成",
    * the current column → this study's milestone sub-status (主状态作为副文本),
-   * later columns → "—". These booleans remain available for per-study detail
-   * (e.g. the current column forces "已完成" when currentPhaseCompleted).
+   * later columns → "—". Clinical Ph1/Ph2/Ph3 pills use globallyCompleted only
+   * (中心关闭 Actual End) for the green「已完成」state; currentPhaseCompleted is
+   * not used to paint the overview cell.
    *
    * @return null when the study has no milestone rows (caller falls back to date-based status).
    */
@@ -313,12 +314,10 @@ public class MilestoneManager {
     boolean preindCompleted = isStageLastNodeCompleted(nodes, "PreIND");
     boolean indCompleted = isStageLastNodeCompleted(nodes, "IND");
 
-    // Global completion: the absolute last milestone node in definition order has actual_end
-    LocalDate lastMilestoneActualEnd = rows.stream()
-        .max(Comparator.comparingInt(this::position))
-        .map(PersistedMilestone::actualEndDate)
-        .orElse(null);
-    boolean globallyCompleted = lastMilestoneActualEnd != null;
+    // Study completion: only 中心关闭 (Data_Report-7) Actual End counts; missing row = not done.
+    boolean globallyCompleted = rows.stream()
+        .anyMatch(row -> MilestoneDefinition.STUDY_COMPLETED_CODE.equals(row.milestoneCode())
+            && row.actualEndDate() != null);
 
     // Current-phase completion (per product owner rule):
     // the frontier node is the LAST node of its stage AND has actual_end set,
@@ -482,8 +481,7 @@ public class MilestoneManager {
 
   private static StudyStatus mapStatus(String milestoneStatus) {
     return switch (milestoneStatus) {
-      case "COMPLETED" -> StudyStatus.COMPLETED;
-      case "IN_PROGRESS" -> StudyStatus.ACTIVE;
+      case "COMPLETED", "IN_PROGRESS" -> StudyStatus.ACTIVE;
       default -> StudyStatus.PLANNED;
     };
   }
@@ -591,7 +589,7 @@ public class MilestoneManager {
    * @param subStatusLabel   子状态: reached node label (e.g. "LPI"), or "未开始"
    * @param preindCompleted  PreIND stage 最后节点 actual_end != null
    * @param indCompleted     IND stage 最后节点 actual_end != null
-   * @param globallyCompleted 全局最末里程碑节点 actual_end != null
+   * @param globallyCompleted Data_Report-7（中心关闭）actual_end != null
    * @param currentPhaseCompleted 当前阶段对应里程碑最后节点 actual_end != null（即当前阶段已完成）
    */
   public record MilestoneOverviewStatus(

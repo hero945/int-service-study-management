@@ -45,10 +45,11 @@ class PipelineOverviewMilestoneIntegrationTest {
     mvc.perform(get("/api/v1/clinical-pipeline/overview")
             .with(user(userDetailsService.loadUserByUsername("admin@example.com"))))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].status").value("COMPLETED"))
-        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].statusLabel").value("已完成"))
+        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].status").value("ACTIVE"))
+        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].statusLabel").value("进行中"))
         .andExpect(jsonPath("$.areas[0].projects[0].studies[0].mainStageLabel").value("IND"))
         .andExpect(jsonPath("$.areas[0].projects[0].studies[0].subStatusLabel").value("IND 获批"))
+        .andExpect(jsonPath("$.areas[0].projects[0].studies[0].globallyCompleted").value(false))
         .andExpect(jsonPath("$.areas[0].projects[0].studies[0].currentPhaseCompleted").value(true));
   }
 

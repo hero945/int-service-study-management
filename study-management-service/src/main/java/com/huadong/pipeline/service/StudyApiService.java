@@ -67,12 +67,13 @@ public class StudyApiService implements StudyApi {
       String therapeuticArea,
       String program,
       String product,
+      String project,
       String studyCode,
       String milestoneStatus,
       int page,
       int pageSize) {
     var result = manager.list(username, new StudyRepository.StudyListQuery(
-        therapeuticArea, program, product, studyCode, milestoneStatus, page, pageSize));
+        therapeuticArea, program, product, project, studyCode, milestoneStatus, page, pageSize));
     int totalPages = Math.max(1, (int) Math.ceil((double) result.totalItems() / result.pageSize()));
     return new StudyPageResponse(
         result.data().stream().map(this::toResponse).toList(),

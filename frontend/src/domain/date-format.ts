@@ -10,6 +10,22 @@ export function formatDate(value: string | null | undefined, fallback = '—'): 
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('zh-CN')
 }
 
+/** '2026/08/17 14:05:30' 风格（zh-CN 区域，精确到秒） */
+export function formatDateTimeSeconds(value: string | null | undefined, fallback = '—'): string {
+  if (!value) return fallback
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  })
+}
+
 /** '2026-07-28 14:05' 风格（zh-CN 区域，精确到分钟） */
 export function formatDateTime(value: string | null | undefined, fallback = '—'): string {
   if (!value) return fallback

@@ -64,6 +64,9 @@ public final class MilestoneDefinition {
       "NDA/BLA 发补", "NDA/BLA 补正", "NDA/BLA 获批"))
   );
 
+  /** Study 完成节点：中心关闭（Data & Report 最后一节点）。缺行或 Actual End 为空均视为未完成。 */
+  public static final String STUDY_COMPLETED_CODE = "Data_Report-7";
+
   /**
    * All 60 nodes flattened in definition order, each keyed by {@code stageCode + "-" + nodeIndex}.
    */

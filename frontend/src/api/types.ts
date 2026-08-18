@@ -114,6 +114,7 @@ export interface StudyListQuery {
   therapeuticArea?: string
   program?: string
   product?: string
+  project?: string
   studyCode?: string
   milestoneStatus?: string
   page?: number

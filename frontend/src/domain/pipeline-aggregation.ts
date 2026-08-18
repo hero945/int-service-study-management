@@ -337,7 +337,7 @@ function getRegulatoryMilestoneCell(
 }
 
 function studyToProjectCell(study: CellStudy, targetPhase: PipelinePhase): ProjectCell {
-  if (study.currentPhaseCompleted || study.globallyCompleted) {
+  if (study.globallyCompleted) {
     return withTip(
       {
         label: '已完成',

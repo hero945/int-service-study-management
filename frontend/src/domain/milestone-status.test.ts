@@ -45,10 +45,18 @@ describe('deriveOverviewCompletionFlags', () => {
     expect(flags.globallyCompleted).toBe(false)
   })
 
-  it('marks globallyCompleted from the absolute last node', () => {
+  it('does not mark globallyCompleted from a later non-close node', () => {
     const flags = deriveOverviewCompletionFlags([
       { stageCode: 'PreIND', actualStartDate: 'a', actualEndDate: 'b' },
-      { stageCode: 'NDA_BLA', actualStartDate: 'c', actualEndDate: 'd' },
+      { stageCode: 'NDA_BLA', milestoneCode: 'NDA_BLA-8', actualStartDate: 'c', actualEndDate: 'd' },
+    ])
+    expect(flags.globallyCompleted).toBe(false)
+  })
+
+  it('marks globallyCompleted only when 中心关闭 has actual_end', () => {
+    const flags = deriveOverviewCompletionFlags([
+      { stageCode: 'Enrollment', milestoneCode: 'Enrollment-2', actualStartDate: 'a', actualEndDate: 'b' },
+      { stageCode: 'Data_Report', milestoneCode: 'Data_Report-7', actualStartDate: 'c', actualEndDate: 'd' },
     ])
     expect(flags.globallyCompleted).toBe(true)
   })
@@ -61,8 +69,8 @@ describe('flattenMilestoneNodes', () => {
       { stageCode: 'IND', nodes: [{ actualStartDate: null, actualEndDate: null }] },
     ])
     expect(nodes).toEqual([
-      { stageCode: 'PreIND', actualStartDate: 'a', actualEndDate: 'b' },
-      { stageCode: 'IND', actualStartDate: null, actualEndDate: null },
+      { stageCode: 'PreIND', milestoneCode: undefined, actualStartDate: 'a', actualEndDate: 'b' },
+      { stageCode: 'IND', milestoneCode: undefined, actualStartDate: null, actualEndDate: null },
     ])
   })
 })

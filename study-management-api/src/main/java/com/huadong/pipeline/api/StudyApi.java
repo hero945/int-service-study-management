@@ -16,6 +16,7 @@ public interface StudyApi {
       String therapeuticArea,
       String program,
       String product,
+      String project,
       String studyCode,
       String milestoneStatus,
       int page,

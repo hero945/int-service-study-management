@@ -250,6 +250,7 @@ export function createHttpApiClient(): ApiClient {
         therapeuticArea: query.therapeuticArea,
         program: query.program,
         product: query.product,
+        project: query.project,
         studyCode: query.studyCode,
         milestoneStatus: query.milestoneStatus,
       })}`),

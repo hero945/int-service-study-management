@@ -72,7 +72,10 @@ export function useResizableColumns(tableId: string, defaults: Record<string, nu
   }
 
   function totalWidth() {
-    return Object.values(widths).reduce((sum, value) => sum + value, 0)
+    return Object.keys(defaults).reduce(
+      (sum, key) => sum + (widths[key] ?? defaults[key] ?? 0),
+      0,
+    )
   }
 
   function cssVars(prefix = 'col') {
@@ -92,6 +95,14 @@ export function useResizableColumns(tableId: string, defaults: Record<string, nu
     }
   }
 
+  /** 只锁 minWidth，不锁 maxWidth，让 table-layout:fixed 把剩余宽度按比例铺满整行。 */
+  function fillColStyle(key: string) {
+    const width = columnWidth(key)
+    if (!width) return undefined
+    const px = `${width}px`
+    return { width: px, minWidth: px }
+  }
+
   /** 末列只保底、不锁 maxWidth，用来吃掉容器比列宽之和多出来的空间。 */
   function fluidColStyle(key: string) {
     const width = columnWidth(key)
@@ -100,5 +111,5 @@ export function useResizableColumns(tableId: string, defaults: Record<string, nu
 
   onUnmounted(() => persist())
 
-  return { widths, startResize, colStyle, cssVars, tableStyle, fluidColStyle, totalWidth }
+  return { widths, startResize, colStyle, fillColStyle, cssVars, tableStyle, fluidColStyle, totalWidth }
 }

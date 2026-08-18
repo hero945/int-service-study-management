@@ -47,10 +47,44 @@ describe('RiskManagementView', () => {
   it('renders risk statistics and opens the selected risk', async () => {
     const wrapper = mount(RiskManagementView, { attachTo: document.body })
     await vi.waitFor(() => expect(listRisks).toHaveBeenCalled())
-    await vi.waitFor(() => expect(wrapper.text()).toContain('RSK-2026-000018'))
+    await vi.waitFor(() => expect(wrapper.text()).toContain('HDM1005-302'))
     expect(wrapper.text()).toContain('高危')
-    await wrapper.get('.risk-link').trigger('click')
+    expect(wrapper.text()).not.toContain('RSK-2026-000018')
+    await wrapper.get('tbody tr').trigger('click')
     expect(wrapper.get('[data-testid="risk-drawer"]').text()).toBe('RSK-2026-000018')
+    wrapper.unmount()
+  })
+
+  it('groups Program and Project cells by project across risk rows', async () => {
+    listRisks.mockResolvedValue({
+      ...page,
+      data: [
+        page.data[0],
+        {
+          ...page.data[0],
+          riskCode: 'RSK-2026-000019',
+          studyCode: 'HDM1005-303',
+          description: '第二条同项目风险',
+        },
+        {
+          ...page.data[0],
+          riskCode: 'RSK-2026-000020',
+          studyCode: 'HDM2001-101',
+          programCode: 'HDM2001',
+          projectCode: 'HDM2001-1',
+          description: '另一项目风险',
+        },
+      ],
+    })
+    const wrapper = mount(RiskManagementView)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('HDM1005-303'))
+    const merged = wrapper.findAll('td.project-group-cell')
+    expect(merged).toHaveLength(4)
+    expect(merged[0].attributes('rowspan')).toBe('2')
+    expect(merged[1].attributes('rowspan')).toBe('2')
+    expect(merged[2].attributes('rowspan')).toBe('1')
+    expect(wrapper.text()).toContain('HDM1005-3')
+    expect(wrapper.text()).toContain('HDM2001-1')
     wrapper.unmount()
   })
 

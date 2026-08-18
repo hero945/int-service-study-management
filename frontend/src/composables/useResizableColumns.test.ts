@@ -23,4 +23,16 @@ describe('useResizableColumns', () => {
     })
     expect(fluidColStyle('b')).toEqual({ minWidth: '80px' })
   })
+
+  it('fillColStyle keeps min width without locking maxWidth so columns can share leftover space', () => {
+    const { fillColStyle, totalWidth } = useResizableColumns('fill', { a: 120, b: 80 })
+    expect(fillColStyle('a')).toEqual({ width: '120px', minWidth: '120px' })
+    expect(totalWidth()).toBe(200)
+  })
+
+  it('ignores leftover stored keys that are no longer in the table defaults', () => {
+    localStorage.setItem('table-col-widths:stale', JSON.stringify({ a: 120, b: 80, indication: 160 }))
+    const { totalWidth } = useResizableColumns('stale', { a: 120, b: 80 })
+    expect(totalWidth()).toBe(200)
+  })
 })
