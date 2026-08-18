@@ -35,7 +35,12 @@ const displayGroups = computed(() =>
 const stageItems = computed(() =>
   displayGroups.value.map((group) => ({ code: group.stageCode, name: group.stageName })))
 const clinicalProjection = computed(() => deriveMilestoneProjection(displayGroups.value))
-const { activeStage, selectStage } = useMilestoneStageFocus(stageItems)
+const milestoneReady = computed(() => !loading.value && stageItems.value.length > 0)
+const { activeStage, selectStage } = useMilestoneStageFocus(stageItems, {
+  fallbackStage: computed(() => clinicalProjection.value.currentStageCode || undefined),
+  focusMilestoneCode: computed(() => clinicalProjection.value.currentMilestoneCode || undefined),
+  ready: milestoneReady,
+})
 const milestoneCols = useResizableColumns('study-milestone', {
   name: 220, v1: 120, v2: 120, start: 130, end: 130, status: 100, note: 200, action: 120, audit: 100,
 })
@@ -160,6 +165,7 @@ function goBack() { router.push('/studies') }
                   </td>
                 </tr>
                 <tr v-for="node in group.nodes" :key="node.milestoneCode"
+                  :data-milestone-code="node.milestoneCode"
                   :class="{ 'milestone-row--active': node.status === 'IN_PROGRESS', 'milestone-row--editing': isEditing(node.milestoneCode) }">
                   <td class="mono milestone-cell-name">
                     <span class="milestone-cell-name-inner">
